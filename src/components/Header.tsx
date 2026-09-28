@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useAlert } from '../context/AlertContext';
 
 interface HeaderProps {
   currentScreen: ScreenId;
@@ -26,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
+  const { getActiveAlertText } = useAlert();
+  const activeAlertMessage = getActiveAlertText(language);
 
   const navItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
     { id: 'emergency-hub', label: t.navEmergencyHub, icon: 'emergency_home' },
@@ -58,18 +61,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Continuous Sliding / Marquee Ticker */}
-          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={t.criticalAlertText}>
+          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={activeAlertMessage}>
             <div className="animate-marquee-infinite flex items-center shrink-0">
               {/* Set 1 */}
               <div className="flex items-center gap-6 px-3 shrink-0">
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
-                  <span>{t.criticalAlertText}</span>
+                  <span>{activeAlertMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">bloodtype</span>
-                  <span>{t.criticalAlertText}</span>
+                  <span>{activeAlertMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
               </div>
@@ -77,12 +80,12 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center gap-6 px-3 shrink-0" aria-hidden="true">
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
-                  <span>{t.criticalAlertText}</span>
+                  <span>{activeAlertMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">bloodtype</span>
-                  <span>{t.criticalAlertText}</span>
+                  <span>{activeAlertMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
               </div>

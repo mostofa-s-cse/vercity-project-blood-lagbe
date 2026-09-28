@@ -3,6 +3,7 @@ import { BloodGroup, EmergencyDemand, ScreenId } from '../types/blood';
 import { INITIAL_DEMANDS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useAlert } from '../context/AlertContext';
 
 interface EmergencyHubProps {
   onNavigate: (screen: ScreenId) => void;
@@ -16,6 +17,8 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
   onSelectDonorCommit,
 }) => {
   const { language, t } = useLanguage();
+  const { getActiveRadiusText } = useAlert();
+  const activeRadiusMessage = getActiveRadiusText(language);
   const [selectedBlood, setSelectedBlood] = useState<BloodGroup | 'ALL'>('ALL');
   const [demands, setDemands] = useState<EmergencyDemand[]>(INITIAL_DEMANDS);
   const [isAvailableOnDuty, setIsAvailableOnDuty] = useState<boolean>(true);
@@ -104,18 +107,18 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
           </div>
 
           {/* Continuous Sliding / Marquee Ticker */}
-          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={t.criticalRadiusSub}>
+          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={activeRadiusMessage}>
             <div className="animate-marquee-infinite flex items-center shrink-0">
               {/* Set 1 */}
               <div className="flex items-center gap-6 px-3 shrink-0">
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">local_hospital</span>
-                  <span>{t.criticalRadiusSub}</span>
+                  <span>{activeRadiusMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">near_me</span>
-                  <span>{t.criticalRadiusSub}</span>
+                  <span>{activeRadiusMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
               </div>
@@ -123,12 +126,12 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex items-center gap-6 px-3 shrink-0" aria-hidden="true">
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">local_hospital</span>
-                  <span>{t.criticalRadiusSub}</span>
+                  <span>{activeRadiusMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
                   <span className="material-symbols-outlined text-sm text-amber-300">near_me</span>
-                  <span>{t.criticalRadiusSub}</span>
+                  <span>{activeRadiusMessage}</span>
                 </span>
                 <span className="text-red-300/80 font-bold">•</span>
               </div>

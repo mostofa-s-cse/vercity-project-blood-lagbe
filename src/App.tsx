@@ -24,6 +24,7 @@ import { RequisitionModal } from './components/RequisitionModal';
 import { OtpVerificationModal } from './components/OtpVerificationModal';
 import { sound } from './utils/audio';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { AlertProvider } from './context/AlertContext';
 
 function getScreenFromHash(): ScreenId {
   const hash = window.location.hash.toLowerCase().replace('#', '').trim();
@@ -176,6 +177,49 @@ function AppContent() {
 
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
 
+  if (currentScreen === 'admin-panel') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-red-500 selection:text-white">
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-4 max-w-md">
+            <span className="material-symbols-outlined text-emerald-400 text-xl">verified</span>
+            <span className="text-xs font-semibold">{toastMessage}</span>
+            <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white ml-auto cursor-pointer">
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        )}
+
+        <AdminPanelScreen
+          onNavigate={handleNavigate}
+          onOpenRequisition={handleOpenRequisition}
+        />
+
+        {/* Notifications Modal */}
+        <NotificationsModal
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
+          notifications={notifications}
+          onMarkAsRead={handleMarkNotificationRead}
+          onClearAll={handleClearAllNotifications}
+          onNavigate={handleNavigate}
+        />
+
+        {/* Requisition Verification Modal */}
+        <RequisitionModal
+          isOpen={requisitionModal.isOpen}
+          onClose={() => setRequisitionModal({ isOpen: false })}
+          patientName={requisitionModal.patientName}
+          hospitalName={requisitionModal.hospitalName}
+          doctorName={requisitionModal.doctorName}
+          bloodGroup={requisitionModal.bloodGroup}
+          units={requisitionModal.units}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-red-500 selection:text-white">
       {/* Toast Notification */}
@@ -254,12 +298,6 @@ function AppContent() {
             onOpenRequisition={handleOpenRequisition}
           />
         )}
-        {currentScreen === 'admin-panel' && (
-          <AdminPanelScreen
-            onNavigate={handleNavigate}
-            onOpenRequisition={handleOpenRequisition}
-          />
-        )}
         {currentScreen === 'ops-command' && (
           <OpsCommandScreen
             onNavigate={handleNavigate}
@@ -311,7 +349,9 @@ function AppContent() {
 export default function App() {
   return (
     <LanguageProvider>
-      <AppContent />
+      <AlertProvider>
+        <AppContent />
+      </AlertProvider>
     </LanguageProvider>
   );
 }
