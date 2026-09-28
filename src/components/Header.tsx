@@ -10,6 +10,8 @@ interface HeaderProps {
   onSelectDivision: (div: string) => void;
   isAudioMuted: boolean;
   onToggleAudioMute: () => void;
+  unreadCount?: number;
+  onOpenNotifications?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,6 +21,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectDivision,
   isAudioMuted,
   onToggleAudioMute,
+  unreadCount = 2,
+  onOpenNotifications,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
@@ -27,9 +31,12 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'emergency-hub', label: t.navEmergencyHub, icon: 'emergency_home' },
     { id: 'donor-directory', label: t.navDonorDirectory, icon: 'person_search' },
     { id: 'create-sos', label: t.navCreateSos, icon: 'add_circle' },
+    { id: 'request-tracking', label: t.navRequestTracking, icon: 'track_changes', badge: 'NEW' },
+    { id: 'donor-register', label: t.navDonorRegister, icon: 'how_to_reg' },
     { id: 'live-tracker', label: t.navLiveTracker, icon: 'near_me', badge: 'LIVE' },
+    { id: 'hospital-org', label: t.navHospitalOrg, icon: 'local_hospital' },
+    { id: 'admin-panel', label: t.navAdminPanel, icon: 'admin_panel_settings' },
     { id: 'donor-passport', label: t.navDonorPassport, icon: 'badge' },
-    { id: 'ops-command', label: t.navOpsCommand, icon: 'dashboard' },
     { id: 'pitch-deck', label: t.navPitchDeck, icon: 'co_present' },
   ];
 
@@ -163,6 +170,25 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right CTA Actions */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Real-Time Emergency Notification Bell */}
+          <button
+            onClick={() => {
+              if (onOpenNotifications) {
+                onOpenNotifications();
+                sound.playTap();
+              }
+            }}
+            title={language === 'bn' ? 'জরুরি রক্ত বিজ্ঞপ্তি' : 'Emergency Blood Alerts'}
+            className="relative p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-red-600 rounded-xl border border-slate-300 shadow-xs transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined text-lg sm:text-xl">notifications</span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-bounce shadow-sm">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
           {/* Language Switcher Button (বাংলা / English) */}
           <button
             onClick={() => {

@@ -7,14 +7,18 @@ import { useLanguage } from '../context/LanguageContext';
 interface DonorDirectoryProps {
   onNavigate: (screen: ScreenId) => void;
   onInitiateEmergencyForDonor?: (donor: Donor) => void;
+  donors?: Donor[];
 }
 
 export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
   onNavigate,
   onInitiateEmergencyForDonor,
+  donors: propDonors,
 }) => {
   const { language, t } = useLanguage();
-  const [donors, setDonors] = useState<Donor[]>(INITIAL_DONORS);
+  const [internalDonors, setInternalDonors] = useState<Donor[]>(INITIAL_DONORS);
+  const donors = propDonors || internalDonors;
+  const setDonors = setInternalDonors;
   const [selectedGroup, setSelectedGroup] = useState<BloodGroup | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [maxDistance, setMaxDistance] = useState<number>(15);

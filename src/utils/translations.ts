@@ -19,10 +19,15 @@ export const TRANSLATIONS = {
     navEmergencyHub: 'জরুরি হাব',
     navDonorDirectory: 'ডোনার খুঁজুন',
     navCreateSos: 'SOS রিকোয়েস্ট তৈরি',
+    navRequestTracking: 'রিকোয়েস্ট ট্র্যাকিং',
+    navDonorRegister: 'ডোনার রেজিস্ট্রেশন',
     navLiveTracker: 'লাইভ ট্র্যাকার',
     navDonorPassport: 'ডোনার পাসপোর্ট',
+    navHospitalOrg: 'হাসপাতাল ও ব্লাড ব্যাংক',
+    navAdminPanel: 'অ্যাডমিন প্যানেল',
     navOpsCommand: 'ডিজিএইচএস কন্ট্রোল',
     navPitchDeck: 'পিচ ডেক',
+    navNotifications: 'নোটিফিকেশন',
 
     // Emergency Hub
     criticalRadius: 'জরুরি ব্যাসার্ধ:',
@@ -187,10 +192,15 @@ export const TRANSLATIONS = {
     navEmergencyHub: 'Emergency Hub',
     navDonorDirectory: 'Donor Directory',
     navCreateSos: 'Create SOS Request',
+    navRequestTracking: 'Track Requests',
+    navDonorRegister: 'Register as Donor',
     navLiveTracker: 'Live Tracker',
     navDonorPassport: 'Donor Passport',
+    navHospitalOrg: 'Hospitals & Blood Banks',
+    navAdminPanel: 'Admin Panel',
     navOpsCommand: 'DGHS Ops Command',
     navPitchDeck: 'Pitch Deck',
+    navNotifications: 'Notifications',
 
     // Emergency Hub
     criticalRadius: 'CRITICAL RADIUS:',

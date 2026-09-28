@@ -1,4 +1,4 @@
-import { EmergencyDemand, Donor, ActiveMission, ChillerUnit, HospitalStock, FraudIncident } from '../types/blood';
+import { EmergencyDemand, Donor, ActiveMission, ChillerUnit, HospitalStock, FraudIncident, BloodRequest, HospitalOrganization, DonationCamp, DonorNotification, DonationRecord } from '../types/blood';
 
 export const INITIAL_DEMANDS: EmergencyDemand[] = [
   {
@@ -434,3 +434,466 @@ export const FRAUD_INCIDENTS: FraudIncident[] = [
     status: 'pending'
   }
 ];
+
+export const INITIAL_BLOOD_REQUESTS: BloodRequest[] = [
+  {
+    id: 'REQ-1092',
+    patientName: 'Tamanna Akhter',
+    age: 29,
+    gender: 'Female',
+    condition: 'Postpartum Hemorrhage (PPH) during emergency delivery',
+    bloodGroup: 'O-',
+    bagsRequired: 2,
+    bagsFulfilled: 0,
+    hospital: 'Dhaka Medical College Hospital (DMCH)',
+    wardBed: 'ICU Bed 14',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    locationDetails: 'Bakshibazar, Dhaka Central',
+    attendantName: 'Kamrul Hassan (Spouse)',
+    attendantPhone: '01711-889922',
+    doctorName: 'Dr. Farhana Yasmin, FCPS',
+    bmdcReg: 'BMDC-89210-A',
+    urgency: 'immediate',
+    urgencyLabel: 'Code Red • Within 1 Hour',
+    status: 'pending',
+    createdAt: '15 mins ago',
+    slipVerified: true,
+    notes: 'Severe bleeding in ICU bed 14. O- negative blood urgently needed.'
+  },
+  {
+    id: 'REQ-1088',
+    patientName: 'Nahidul Islam',
+    age: 34,
+    gender: 'Male',
+    condition: 'Open Heart Bypass Surgery (Coronary Artery Graft)',
+    bloodGroup: 'O+',
+    bagsRequired: 2,
+    bagsFulfilled: 1,
+    hospital: 'Dhaka Medical College Hospital (DMCH)',
+    wardBed: 'Emergency Room • Bed 14A',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    locationDetails: 'Bakshibazar, Dhaka Central',
+    attendantName: 'Sharmin Nahid (Sister)',
+    attendantPhone: '01712-489021',
+    doctorName: 'Prof. Dr. M. K. Anam',
+    bmdcReg: 'BMDC-41209-B',
+    urgency: 'immediate',
+    urgencyLabel: 'Code Red • Within 2 Hours',
+    status: 'donor_found',
+    createdAt: '34 mins ago',
+    slipVerified: true,
+    assignedDonors: [
+      {
+        id: 'DON-01',
+        name: 'Tanvir Ahmed',
+        phone: '+880 1712-489021',
+        etaMinutes: 8,
+        status: 'En Route on Motorcycle'
+      },
+      {
+        id: 'DON-07',
+        name: 'Kamrul Ahsan',
+        phone: '+880 1819-334455',
+        etaMinutes: 12,
+        status: 'In Lab Cross-Match'
+      }
+    ],
+    notes: 'Cross-match underway in central lab. Attendant is at Room 104.'
+  },
+  {
+    id: 'REQ-1075',
+    patientName: 'Subir Kumar Roy',
+    age: 46,
+    gender: 'Male',
+    condition: 'Major Road Traffic Accident (Polytrauma)',
+    bloodGroup: 'AB-',
+    bagsRequired: 3,
+    bagsFulfilled: 3,
+    hospital: 'National Heart Foundation',
+    wardBed: 'OT Complex Bed 3',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    locationDetails: 'Mirpur-2, Dhaka',
+    attendantName: 'Ranjit Roy (Brother)',
+    attendantPhone: '01819-552194',
+    doctorName: 'Prof. Dr. M. K. Jahangir',
+    bmdcReg: 'BMDC-21094-A',
+    urgency: 'urgent',
+    urgencyLabel: 'Urgent • Completed Today',
+    status: 'completed',
+    createdAt: '3 hours ago',
+    slipVerified: true,
+    assignedDonors: [
+      {
+        id: 'DON-06',
+        name: 'Nusrat Jahan Tina',
+        phone: '+880 1733-445566',
+        etaMinutes: 0,
+        status: 'Transfusion Completed & Verified'
+      }
+    ],
+    notes: 'Transfusion successfully completed. Patient stabilized in post-op ICU.'
+  },
+  {
+    id: 'REQ-1061',
+    patientName: 'Taslima Khatun',
+    age: 52,
+    gender: 'Female',
+    condition: 'Aplastic Anemia Platelet Support',
+    bloodGroup: 'B+',
+    bagsRequired: 2,
+    bagsFulfilled: 0,
+    hospital: 'BSMMU (PG Hospital)',
+    wardBed: 'Hematology Ward Bed 22',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    locationDetails: 'Shahbag, Dhaka',
+    attendantName: 'Monirul Islam',
+    attendantPhone: '01911-332211',
+    doctorName: 'Dr. Shahedur Rahman',
+    bmdcReg: 'BMDC-67123-C',
+    urgency: 'scheduled',
+    urgencyLabel: 'Scheduled • Next 24 Hours',
+    status: 'cancelled',
+    createdAt: '1 day ago',
+    slipVerified: true,
+    notes: 'Family arranged blood from Sandhani central blood bank. Request marked cancelled.'
+  },
+  {
+    id: 'REQ-1050',
+    patientName: 'Arafat Rahman (7 yrs)',
+    age: 7,
+    gender: 'Male',
+    condition: 'Beta Thalassemia Major Regular Monthly Transfusion',
+    bloodGroup: 'A+',
+    bagsRequired: 1,
+    bagsFulfilled: 0,
+    hospital: 'Sir Salimullah Medical College & Mitford',
+    wardBed: 'Pediatric Thalassemia Ward Bed 08',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    locationDetails: 'Mitford Road, Old Dhaka',
+    attendantName: 'Rokeya Begum (Mother)',
+    attendantPhone: '01722-667788',
+    doctorName: 'Dr. Nusrat Jahan',
+    bmdcReg: 'BMDC-34190-B',
+    urgency: 'scheduled',
+    urgencyLabel: 'Scheduled • 24 Hours',
+    status: 'pending',
+    createdAt: '2 hours ago',
+    slipVerified: true,
+    notes: 'Child needs regular monthly fresh blood A+ packed red cells.'
+  }
+];
+
+export const SAMPLE_HOSPITAL_ORGS: HospitalOrganization[] = [
+  {
+    id: 'ORG-01',
+    name: 'Dhaka Medical College Hospital (DMCH)',
+    shortCode: 'DMCH',
+    type: 'government_hospital',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    address: 'Secretariat Road, Bakshibazar, Dhaka 1000',
+    hotline: '+880 2-55165001',
+    emergencyContact: '+880 1711-002233',
+    directorName: 'Brig. Gen. Md. Asaduzzaman',
+    licenseNumber: 'DGHS-GOV-HOSP-0012',
+    isVerified: true,
+    verifiedBadge: 'DGHS Tier 1 Tertiary Facility',
+    totalBeds: 2600,
+    icuBeds: 84,
+    availableBags: 1024,
+    bloodStock: {
+      'A+': 240,
+      'A-': 38,
+      'B+': 310,
+      'B-': 42,
+      'O+': 290,
+      'O-': 14, // critically low
+      'AB+': 72,
+      'AB-': 18
+    },
+    coldStorageTempC: 3.4,
+    coldStorageStatus: 'optimal',
+    lastAuditDate: '2026-09-20'
+  },
+  {
+    id: 'ORG-02',
+    name: 'BSMMU (Bangabandhu Sheikh Mujib Medical University)',
+    shortCode: 'BSMMU',
+    type: 'government_hospital',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    address: 'Shahbagh, Dhaka 1000',
+    hotline: '+880 2-9661051',
+    emergencyContact: '+880 1712-445566',
+    directorName: 'Prof. Dr. Sharfuddin Ahmed',
+    licenseNumber: 'DGHS-GOV-HOSP-0004',
+    isVerified: true,
+    verifiedBadge: 'Premier Autonomous Medical University',
+    totalBeds: 1900,
+    icuBeds: 62,
+    availableBags: 840,
+    bloodStock: {
+      'A+': 180,
+      'A-': 25,
+      'B+': 240,
+      'B-': 30,
+      'O+': 260,
+      'O-': 35,
+      'AB+': 55,
+      'AB-': 15
+    },
+    coldStorageTempC: 2.8,
+    coldStorageStatus: 'optimal',
+    lastAuditDate: '2026-09-22'
+  },
+  {
+    id: 'ORG-03',
+    name: 'Sandhani Central Blood Bank & Club',
+    shortCode: 'SANDHANI',
+    type: 'volunteer_org',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    address: 'DMCH Hostel Complex, Dhaka',
+    hotline: '+880 2-9668690',
+    emergencyContact: '+880 1819-223344',
+    directorName: 'Dr. Tanvir Mahmud (President)',
+    licenseNumber: 'DGHS-VOL-ORG-0089',
+    isVerified: true,
+    verifiedBadge: 'Govt. Recognized Voluntary Blood Network',
+    totalBeds: 0,
+    icuBeds: 0,
+    availableBags: 620,
+    bloodStock: {
+      'A+': 130,
+      'A-': 20,
+      'B+': 190,
+      'B-': 18,
+      'O+': 210,
+      'O-': 24,
+      'AB+': 40,
+      'AB-': 12
+    },
+    coldStorageTempC: 3.2,
+    coldStorageStatus: 'optimal',
+    lastAuditDate: '2026-09-25'
+  },
+  {
+    id: 'ORG-04',
+    name: 'Quantum Foundation Voluntary Blood Lab',
+    shortCode: 'QUANTUM',
+    type: 'blood_bank',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    address: '31/V Shilpacharya Zainul Abedin Sarak, Shantinagar',
+    hotline: '+880 2-9351969',
+    emergencyContact: '+880 1714-010869',
+    directorName: 'M. Rezaul Hasan',
+    licenseNumber: 'DGHS-BB-2018-041',
+    isVerified: true,
+    verifiedBadge: 'ISO 9001 Certified Modern Blood Lab',
+    totalBeds: 0,
+    icuBeds: 0,
+    availableBags: 1480,
+    bloodStock: {
+      'A+': 320,
+      'A-': 52,
+      'B+': 410,
+      'B-': 48,
+      'O+': 480,
+      'O-': 72,
+      'AB+': 84,
+      'AB-': 22
+    },
+    coldStorageTempC: 3.0,
+    coldStorageStatus: 'optimal',
+    lastAuditDate: '2026-09-26'
+  },
+  {
+    id: 'ORG-05',
+    name: 'Badhan (A Voluntary Blood Donors Organization)',
+    shortCode: 'BADHAN',
+    type: 'volunteer_org',
+    division: 'Dhaka Central',
+    district: 'Dhaka',
+    address: 'TSC 3rd Floor, University of Dhaka',
+    hotline: '+880 2-9668987',
+    emergencyContact: '+880 1715-998877',
+    directorName: 'Md. Al Amin (Central President)',
+    licenseNumber: 'DGHS-VOL-ORG-0102',
+    isVerified: true,
+    verifiedBadge: 'National Student Blood Network',
+    totalBeds: 0,
+    icuBeds: 0,
+    availableBags: 340,
+    bloodStock: {
+      'A+': 80,
+      'A-': 12,
+      'B+': 110,
+      'B-': 15,
+      'O+': 115,
+      'O-': 8,
+      'AB+': 28,
+      'AB-': 6
+    },
+    coldStorageTempC: 3.8,
+    coldStorageStatus: 'optimal',
+    lastAuditDate: '2026-09-18'
+  },
+  {
+    id: 'ORG-06',
+    name: 'Evercare Hospital Dhaka Blood Bank',
+    shortCode: 'EVERCARE',
+    type: 'private_hospital',
+    division: 'Dhaka North',
+    district: 'Dhaka',
+    address: 'Plot 81, Block E, Bashundhara R/A, Dhaka 1229',
+    hotline: '+880 2-8431661',
+    emergencyContact: '+880 1713-047461',
+    directorName: 'Dr. Arif Mahmud',
+    licenseNumber: 'DGHS-PVT-HOSP-0198',
+    isVerified: true,
+    verifiedBadge: 'JCI Accredited International Hospital',
+    totalBeds: 450,
+    icuBeds: 48,
+    availableBags: 520,
+    bloodStock: {
+      'A+': 110,
+      'A-': 22,
+      'B+': 140,
+      'B-': 19,
+      'O+': 160,
+      'O-': 28,
+      'AB+': 35,
+      'AB-': 11
+    },
+    coldStorageTempC: 3.1,
+    coldStorageStatus: 'optimal',
+    lastAuditDate: '2026-09-24'
+  }
+];
+
+export const SAMPLE_CAMPS: DonationCamp[] = [
+  {
+    id: 'CAMP-01',
+    title: 'Dhaka University Central Blood Donation Drive 2026',
+    organizer: 'Badhan Central & Sandhani Joint Committee',
+    venue: 'TSC Premises, Dhaka University',
+    division: 'Dhaka Central',
+    date: 'Tomorrow, Oct 1, 2026',
+    timeRange: '9:00 AM – 5:00 PM',
+    targetBags: 350,
+    registeredDonors: 248,
+    contactNumber: '+880 1715-998877',
+    status: 'upcoming'
+  },
+  {
+    id: 'CAMP-02',
+    title: 'BUET Campus Emergency Blood Screening & Donation Drive',
+    organizer: 'Rotaract Club of BUET & Red Crescent Society',
+    venue: 'BUET Auditorium Complex, Palashi',
+    division: 'Dhaka Central',
+    date: 'Oct 4, 2026',
+    timeRange: '10:00 AM – 6:00 PM',
+    targetBags: 200,
+    registeredDonors: 142,
+    contactNumber: '+880 1819-332211',
+    status: 'upcoming'
+  },
+  {
+    id: 'CAMP-03',
+    title: 'Old Dhaka Community Thalassemia Support Camp',
+    organizer: 'Sandhani Sir Salimullah Medical College Unit',
+    venue: 'Mitford Hospital Premises, Armanitola',
+    division: 'Dhaka Central',
+    date: 'Oct 7, 2026',
+    timeRange: '9:30 AM – 4:30 PM',
+    targetBags: 180,
+    registeredDonors: 95,
+    contactNumber: '+880 1711-209482',
+    status: 'upcoming'
+  }
+];
+
+export const INITIAL_NOTIFICATIONS: DonorNotification[] = [
+  {
+    id: 'NOTIF-01',
+    title: '🚨 জরুরি ও-নেগেটিভ (O-) রক্তের রিকোয়েস্ট!',
+    message: 'ঢাকা মেডিকেল কলেজ হাসপাতালে (ICU বেড ১৪) ও-নেগেটিভ রক্ত অতি জরুরি • ২ ব্যাগ প্রয়োজন (আপনার থেকে ১.৮ কিমি দূরে)।',
+    timestamp: '১০ মিনিট আগে',
+    type: 'urgent_request',
+    read: false,
+    bloodGroup: 'O-',
+    hospital: 'Dhaka Medical College Hospital',
+    distanceKm: 1.8,
+    requestId: 'REQ-1092'
+  },
+  {
+    id: 'NOTIF-02',
+    title: '🤝 ডোনার ম্যাচ সম্পন্ন হয়েছে!',
+    message: 'আপনার রিকোয়েস্ট #REQ-1088 এ রক্তদাতা তানভীর আহমেদ মোটরসাইকেলে হাসপাতালের উদ্দেশ্যে রওয়ানা হয়েছেন (ইটিএ ৮ মিনিট)।',
+    timestamp: '২৫ মিনিট আগে',
+    type: 'match_found',
+    read: false,
+    bloodGroup: 'O+',
+    hospital: 'DMCH',
+    requestId: 'REQ-1088'
+  },
+  {
+    id: 'NOTIF-03',
+    title: '🎉 আপনি রক্তদানের জন্য পুনরায় উপযুক্ত!',
+    message: 'আপনার পূর্ববর্তী রক্তদানের ৯০ দিনের বিশ্রাম মেয়াদ সফলভাবে পূর্ণ হয়েছে। আপনি এখন পুনরায় যেকোনো রোগীর জীবন বাঁচাতে প্রস্তুত।',
+    timestamp: '১ দিন আগে',
+    type: 'eligibility_alert',
+    read: true
+  },
+  {
+    id: 'NOTIF-04',
+    title: '📢 ডিজিএইচএস জরুরি নোটিশ',
+    message: 'ব্লাড ব্যাংকে রক্তের বাণিজ্যিক কেনাবেচা বা দালাল চক্র সম্পূর্ণ নিষিদ্ধ। যেকোনো অনিয়ম ১০৬৫৫ বা ৯৯৯ নম্বরে জানান।',
+    timestamp: '২ দিন আগে',
+    type: 'system_alert',
+    read: true
+  }
+];
+
+export const SAMPLE_DONATIONS: DonationRecord[] = [
+  {
+    id: 'REC-01',
+    donationDate: '2026-06-18',
+    hospital: 'Dhaka Medical College Hospital',
+    recipientName: 'Maternal Delivery Patient (ICU-4)',
+    bloodGroup: 'O+',
+    bagsDonated: 1,
+    certificateNumber: 'BDRCS-DMCH-2026-8941',
+    verifiedByDoctor: 'Dr. Ashfaqul Alam, MD',
+    badgeEarned: 'Lifeline Savior Award'
+  },
+  {
+    id: 'REC-02',
+    donationDate: '2026-02-10',
+    hospital: 'BSMMU (PG Hospital)',
+    recipientName: 'Child Cardiac Surgery Unit',
+    bloodGroup: 'O+',
+    bagsDonated: 1,
+    certificateNumber: 'BSMMU-TRANS-2026-3021',
+    verifiedByDoctor: 'Prof. Dr. M. K. Jahangir',
+    badgeEarned: 'Gold Donor Milestone'
+  },
+  {
+    id: 'REC-03',
+    donationDate: '2025-10-05',
+    hospital: 'Square Hospital Blood Bank',
+    recipientName: 'Emergency Trauma Surgery',
+    bloodGroup: 'O+',
+    bagsDonated: 1,
+    certificateNumber: 'SQH-BB-2025-7712',
+    verifiedByDoctor: 'Dr. Tariqul Islam, FCPS',
+    badgeEarned: 'Community Hero Pin'
+  }
+];
+

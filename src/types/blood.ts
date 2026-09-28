@@ -6,10 +6,111 @@ export type ScreenId =
   | 'emergency-hub'
   | 'donor-directory'
   | 'create-sos'
+  | 'request-tracking'
+  | 'donor-register'
   | 'live-tracker'
   | 'donor-passport'
+  | 'hospital-org'
+  | 'admin-panel'
   | 'ops-command'
   | 'pitch-deck';
+
+export type RequestStatus = 'pending' | 'donor_found' | 'completed' | 'cancelled';
+
+export interface BloodRequest {
+  id: string;
+  patientName: string;
+  age: number;
+  gender: 'Male' | 'Female' | 'Other';
+  condition: string;
+  bloodGroup: BloodGroup;
+  bagsRequired: number;
+  bagsFulfilled: number;
+  hospital: string;
+  wardBed: string;
+  division: string;
+  district: string;
+  locationDetails: string;
+  attendantName: string;
+  attendantPhone: string;
+  doctorName?: string;
+  bmdcReg?: string;
+  urgency: 'immediate' | 'urgent' | 'scheduled';
+  urgencyLabel: string;
+  status: RequestStatus;
+  createdAt: string;
+  slipVerified: boolean;
+  assignedDonors?: {
+    id: string;
+    name: string;
+    phone: string;
+    etaMinutes: number;
+    status: string;
+  }[];
+  notes?: string;
+}
+
+export interface HospitalOrganization {
+  id: string;
+  name: string;
+  shortCode: string;
+  type: 'government_hospital' | 'private_hospital' | 'blood_bank' | 'volunteer_org';
+  division: string;
+  district: string;
+  address: string;
+  hotline: string;
+  emergencyContact: string;
+  directorName: string;
+  licenseNumber: string;
+  isVerified: boolean;
+  verifiedBadge: string;
+  totalBeds: number;
+  icuBeds: number;
+  availableBags: number;
+  bloodStock: Record<BloodGroup, number>;
+  coldStorageTempC: number;
+  coldStorageStatus: 'optimal' | 'warning' | 'critical';
+  lastAuditDate: string;
+}
+
+export interface DonationCamp {
+  id: string;
+  title: string;
+  organizer: string;
+  venue: string;
+  division: string;
+  date: string;
+  timeRange: string;
+  targetBags: number;
+  registeredDonors: number;
+  contactNumber: string;
+  status: 'upcoming' | 'ongoing' | 'completed';
+}
+
+export interface DonorNotification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  type: 'urgent_request' | 'match_found' | 'handshake_completed' | 'system_alert' | 'eligibility_alert';
+  read: boolean;
+  bloodGroup?: BloodGroup;
+  hospital?: string;
+  distanceKm?: number;
+  requestId?: string;
+}
+
+export interface DonationRecord {
+  id: string;
+  donationDate: string;
+  hospital: string;
+  recipientName: string;
+  bloodGroup: BloodGroup;
+  bagsDonated: number;
+  certificateNumber: string;
+  verifiedByDoctor: string;
+  badgeEarned?: string;
+}
 
 export type OpsSubTab = 
   | 'overview'

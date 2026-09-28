@@ -54,7 +54,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-4 sm:gap-6 font-medium">
+        <nav className="flex flex-wrap items-center gap-3 sm:gap-5 font-semibold text-xs">
           <button onClick={() => onNavigate('emergency-hub')} className="hover:text-white transition-colors cursor-pointer">
             {t.navEmergencyHub}
           </button>
@@ -64,14 +64,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <button onClick={() => onNavigate('create-sos')} className="hover:text-white transition-colors cursor-pointer">
             {t.navCreateSos}
           </button>
+          <button onClick={() => onNavigate('request-tracking')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navRequestTracking}
+          </button>
+          <button onClick={() => onNavigate('donor-register')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navDonorRegister}
+          </button>
           <button onClick={() => onNavigate('live-tracker')} className="hover:text-white transition-colors cursor-pointer">
             {t.navLiveTracker}
           </button>
+          <button onClick={() => onNavigate('hospital-org')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navHospitalOrg}
+          </button>
+          <button onClick={() => onNavigate('admin-panel')} className="hover:text-white transition-colors cursor-pointer text-red-400 font-bold">
+            {t.navAdminPanel}
+          </button>
           <button onClick={() => onNavigate('donor-passport')} className="hover:text-white transition-colors cursor-pointer">
             {t.navDonorPassport}
-          </button>
-          <button onClick={() => onNavigate('ops-command')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navOpsCommand}
           </button>
           <button onClick={() => onNavigate('pitch-deck')} className="hover:text-white transition-colors cursor-pointer">
             {t.navPitchDeck}
