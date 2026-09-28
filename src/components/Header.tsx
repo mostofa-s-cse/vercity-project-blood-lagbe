@@ -1,0 +1,266 @@
+import React, { useState } from 'react';
+import { ScreenId } from '../types/blood';
+import { sound } from '../utils/audio';
+
+interface HeaderProps {
+  currentScreen: ScreenId;
+  onNavigate: (screen: ScreenId) => void;
+  selectedDivision: string;
+  onSelectDivision: (div: string) => void;
+  isAudioMuted: boolean;
+  onToggleAudioMute: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  currentScreen,
+  onNavigate,
+  selectedDivision,
+  onSelectDivision,
+  isAudioMuted,
+  onToggleAudioMute,
+}) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
+    { id: 'emergency-hub', label: 'Emergency Hub', icon: 'emergency_home' },
+    { id: 'donor-directory', label: 'Donor Directory', icon: 'person_search' },
+    { id: 'create-sos', label: 'Create SOS Request', icon: 'add_circle' },
+    { id: 'live-tracker', label: 'Live Tracker', icon: 'near_me', badge: 'LIVE' },
+    { id: 'donor-passport', label: 'Donor Passport', icon: 'badge' },
+    { id: 'ops-command', label: 'DGHS Ops Command', icon: 'dashboard' },
+    { id: 'pitch-deck', label: 'Pitch Deck', icon: 'co_present' },
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl shadow-sm border-b border-slate-200">
+      {/* 1. Top Critical Alert Ribbon */}
+      <div className="bg-red-600 text-white px-4 md:px-8 py-1.5 text-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between font-semibold gap-3">
+          <div className="flex items-center gap-2 overflow-hidden min-w-0">
+            <span className="flex h-2.5 w-2.5 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+            </span>
+            <span className="uppercase tracking-wider font-extrabold shrink-0 text-[11px] bg-red-700/80 px-1.5 py-0.5 rounded">
+              CRITICAL ALERT:
+            </span>
+            <span className="truncate text-xs font-medium">
+              O- Negative needed urgently at Dhaka Medical College Hospital (ICU Bed 14) • 2 Units Pending
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <span className="hidden sm:inline opacity-90 text-[11px] font-mono">
+              Helpline 24/7: 10655 / 999
+            </span>
+            <button
+              onClick={() => {
+                onToggleAudioMute();
+                sound.playTap();
+              }}
+              title={isAudioMuted ? 'Unmute Live Alert Chimes' : 'Mute Live Alert Chimes'}
+              className="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">
+                {isAudioMuted ? 'volume_off' : 'volume_up'}
+              </span>
+              <span>{isAudioMuted ? 'Muted' : 'Audio On'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Main Brand & Action Bar */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-2.5 flex items-center justify-between gap-3">
+        {/* Brand Logo & Division Selector */}
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+          <button
+            onClick={() => {
+              onNavigate('emergency-hub');
+              sound.playTap();
+            }}
+            className="flex items-center gap-2.5 text-left group shrink-0 cursor-pointer"
+          >
+            {/* Blood Droplet Logo */}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white shadow-md shadow-red-500/25 group-hover:scale-105 transition-transform shrink-0">
+              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                <path
+                  d="M9 13h2l1-2 2 4 1-2h2"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-lg sm:text-xl text-red-600 leading-tight tracking-tight">
+                  Blood Lagbe?
+                </span>
+                <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">
+                  রক্ত লাগবে?
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium leading-none">
+                Emergency Lifeline Network
+              </span>
+            </div>
+          </button>
+
+          {/* Division Selector */}
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-xl text-slate-800 text-xs font-semibold transition-colors border border-slate-200/60 shrink-0">
+            <span className="material-symbols-outlined text-red-600 text-base">location_on</span>
+            <select
+              value={selectedDivision}
+              onChange={(e) => onSelectDivision(e.target.value)}
+              className="bg-transparent font-bold outline-none cursor-pointer pr-1 text-xs"
+            >
+              <option value="Dhaka Central">Dhaka Central (DMCH / BSMMU)</option>
+              <option value="Dhaka North">Dhaka North (Uttara / Kurmitola)</option>
+              <option value="Chattogram Port">Chattogram Port Hub</option>
+              <option value="Sylhet Sadar">Sylhet Osmani Zone</option>
+              <option value="Rajshahi Division">Rajshahi Sadar</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Right CTA Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* SOS Trigger Primary CTA Button */}
+          <button
+            onClick={() => {
+              onNavigate('create-sos');
+              sound.playEmergencyChime();
+            }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-extrabold rounded-xl shadow-md shadow-red-600/30 transition-all transform active:scale-95 animate-pulse shrink-0 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-base sm:text-lg">emergency_share</span>
+            <span className="tracking-wide uppercase">SOS TRIGGER</span>
+          </button>
+
+          {/* User Profile Avatar Pill */}
+          <button
+            onClick={() => onNavigate('donor-passport')}
+            className="flex items-center gap-2 pl-0.5 group cursor-pointer shrink-0"
+            title="View Lifeline Donor Passport"
+          >
+            <div className="relative">
+              <img
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI"
+                alt="Profile"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 group-hover:ring-red-500 transition-all"
+              />
+              <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[9px] font-black px-1 rounded-full border border-white">
+                O+
+              </span>
+            </div>
+          </button>
+
+          {/* Mobile Hamburger Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 cursor-pointer border border-slate-200"
+            title="Toggle Menu"
+          >
+            <span className="material-symbols-outlined text-xl">
+              {isMobileMenuOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Dedicated Horizontal Navigation Tab Strip */}
+      <div className="border-t border-slate-100 bg-slate-50/80">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <nav className="flex items-center gap-1.5 overflow-x-auto py-2 scrollbar-none">
+            {navItems.map((item) => {
+              const isActive = currentScreen === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onNavigate(item.id);
+                    sound.playTap();
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                    isActive
+                      ? 'bg-red-600 text-white shadow-sm shadow-red-600/25 scale-[1.02]'
+                      : 'text-slate-600 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[17px]">{item.icon}</span>
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span
+                      className={`text-[9px] px-1 py-0.2 rounded font-black tracking-wider ${
+                        isActive
+                          ? 'bg-white text-red-600'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* 4. Mobile Menu Dropdown (when hamburger is clicked) */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-white border-t border-slate-200 px-4 py-3 shadow-xl animate-in slide-in-from-top-2">
+          {/* Mobile Division Selector */}
+          <div className="mb-3 p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+            <span className="text-slate-500 font-semibold flex items-center gap-1">
+              <span className="material-symbols-outlined text-red-600 text-sm">location_on</span>
+              Division:
+            </span>
+            <select
+              value={selectedDivision}
+              onChange={(e) => onSelectDivision(e.target.value)}
+              className="font-bold text-slate-800 bg-transparent outline-none text-xs"
+            >
+              <option value="Dhaka Central">Dhaka Central</option>
+              <option value="Dhaka North">Dhaka North</option>
+              <option value="Chattogram Port">Chattogram Port</option>
+              <option value="Sylhet Sadar">Sylhet Osmani</option>
+              <option value="Rajshahi Division">Rajshahi Sadar</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1">
+            {navItems.map((item) => {
+              const isActive = currentScreen === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onNavigate(item.id);
+                    setIsMobileMenuOpen(false);
+                    sound.playTap();
+                  }}
+                  className={`w-full px-3 py-2.5 rounded-xl text-xs font-bold text-left flex items-center justify-between ${
+                    isActive
+                      ? 'bg-red-600 text-white'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </span>
+                  {isActive && <span className="text-xs">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </header>
+  );
+};

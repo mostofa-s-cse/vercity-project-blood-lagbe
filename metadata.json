@@ -1,0 +1,6 @@
+{
+  "name": "Blood Lagbe? (রক্ত লাগবে?)",
+  "description": "Emergency Medical Lifeline Portal & Centralized Blood Rescue Network for Bangladesh. Real-time geo-matched donor broadcast, live telemetry tracker, and DGHS operations command.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
