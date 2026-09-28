@@ -18,10 +18,11 @@ import { PitchDeckScreen } from './components/PitchDeckScreen';
 import { RequisitionModal } from './components/RequisitionModal';
 import { OtpVerificationModal } from './components/OtpVerificationModal';
 import { sound } from './utils/audio';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 
-export default function App() {
+function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('emergency-hub');
-  const [selectedDivision, setSelectedDivision] = useState<string>('Dhaka Central (DMCH / BSMMU)');
+  const [selectedDivision, setSelectedDivision] = useState<string>('Dhaka Central');
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
 
   // Demands state for live creation
@@ -48,6 +49,7 @@ export default function App() {
   });
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { language } = useLanguage();
 
   const handleNavigate = (screen: ScreenId) => {
     setCurrentScreen(screen);
@@ -74,7 +76,11 @@ export default function App() {
 
   const handleSosCreated = (newDemand: EmergencyDemand) => {
     setDemands((prev) => [newDemand, ...prev]);
-    setToastMessage(`Broadcast Active: ${newDemand.bloodGroup} SOS dispatched to 450+ donors near ${newDemand.hospital}.`);
+    setToastMessage(
+      language === 'bn'
+        ? `জরুরি ব্রডকাস্ট চালু: ${newDemand.hospital}-এর কাছাকাছি ৪৫০+ রক্তদাতার কাছে ${newDemand.bloodGroup} রক্তের এসওএস পাঠানো হয়েছে।`
+        : `Broadcast Active: ${newDemand.bloodGroup} SOS dispatched to 450+ donors near ${newDemand.hospital}.`
+    );
     setTimeout(() => setToastMessage(null), 5000);
   };
 
@@ -86,7 +92,11 @@ export default function App() {
   };
 
   const handleOtpSuccess = () => {
-    setToastMessage('Transfusion Handshake Confirmed! Official digital blood exchange receipt recorded.');
+    setToastMessage(
+      language === 'bn'
+        ? 'রক্তদান সম্পন্ন ও নিশ্চিত করা হয়েছে! ডিজিটাল সনদ ও রসিদ রেকর্ড করা হলো।'
+        : 'Transfusion Handshake Confirmed! Official digital blood exchange receipt recorded.'
+    );
     setTimeout(() => setToastMessage(null), 5000);
   };
 
@@ -97,7 +107,7 @@ export default function App() {
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-4 max-w-md">
           <span className="material-symbols-outlined text-emerald-400 text-xl">verified</span>
           <span className="text-xs font-semibold">{toastMessage}</span>
-          <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white ml-auto">
+          <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white ml-auto cursor-pointer">
             <span className="material-symbols-outlined text-sm">close</span>
           </button>
         </div>
@@ -119,7 +129,7 @@ export default function App() {
           <EmergencyHub
             onNavigate={handleNavigate}
             onOpenRequisition={handleOpenRequisition}
-            onSelectDonorCommit={(demand) => {
+            onSelectDonorCommit={() => {
               sound.playSuccessTone();
               handleNavigate('live-tracker');
             }}
@@ -179,5 +189,13 @@ export default function App() {
         onSuccess={handleOtpSuccess}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }

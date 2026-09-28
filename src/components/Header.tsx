@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface HeaderProps {
   currentScreen: ScreenId;
@@ -20,38 +21,71 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleAudioMute,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { language, toggleLanguage, t } = useLanguage();
 
   const navItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
-    { id: 'emergency-hub', label: 'Emergency Hub', icon: 'emergency_home' },
-    { id: 'donor-directory', label: 'Donor Directory', icon: 'person_search' },
-    { id: 'create-sos', label: 'Create SOS Request', icon: 'add_circle' },
-    { id: 'live-tracker', label: 'Live Tracker', icon: 'near_me', badge: 'LIVE' },
-    { id: 'donor-passport', label: 'Donor Passport', icon: 'badge' },
-    { id: 'ops-command', label: 'DGHS Ops Command', icon: 'dashboard' },
-    { id: 'pitch-deck', label: 'Pitch Deck', icon: 'co_present' },
+    { id: 'emergency-hub', label: t.navEmergencyHub, icon: 'emergency_home' },
+    { id: 'donor-directory', label: t.navDonorDirectory, icon: 'person_search' },
+    { id: 'create-sos', label: t.navCreateSos, icon: 'add_circle' },
+    { id: 'live-tracker', label: t.navLiveTracker, icon: 'near_me', badge: 'LIVE' },
+    { id: 'donor-passport', label: t.navDonorPassport, icon: 'badge' },
+    { id: 'ops-command', label: t.navOpsCommand, icon: 'dashboard' },
+    { id: 'pitch-deck', label: t.navPitchDeck, icon: 'co_present' },
   ];
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl shadow-sm border-b border-slate-200">
       {/* 1. Top Critical Alert Ribbon */}
-      <div className="bg-red-600 text-white px-4 md:px-8 py-1.5 text-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between font-semibold gap-3">
-          <div className="flex items-center gap-2 overflow-hidden min-w-0">
+      <div className="bg-red-600 text-white px-3 md:px-8 py-1.5 text-xs overflow-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between font-semibold gap-2 md:gap-4">
+          {/* Static Alert Badge */}
+          <div className="flex items-center gap-2 shrink-0">
             <span className="flex h-2.5 w-2.5 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
             </span>
-            <span className="uppercase tracking-wider font-extrabold shrink-0 text-[11px] bg-red-700/80 px-1.5 py-0.5 rounded">
-              CRITICAL ALERT:
-            </span>
-            <span className="truncate text-xs font-medium">
-              O- Negative needed urgently at Dhaka Medical College Hospital (ICU Bed 14) • 2 Units Pending
+            <span className="uppercase tracking-wider font-extrabold shrink-0 text-[11px] bg-red-700/90 px-2 py-0.5 rounded shadow-xs flex items-center gap-1">
+              <span className="material-symbols-outlined text-[13px] animate-pulse">campaign</span>
+              {t.criticalAlertPrefix}
             </span>
           </div>
 
+          {/* Continuous Sliding / Marquee Ticker */}
+          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={t.criticalAlertText}>
+            <div className="animate-marquee-infinite flex items-center shrink-0">
+              {/* Set 1 */}
+              <div className="flex items-center gap-6 px-3 shrink-0">
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
+                  <span>{t.criticalAlertText}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">bloodtype</span>
+                  <span>{t.criticalAlertText}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+              </div>
+              {/* Set 2 (Identical for seamless infinite continuous sliding loop) */}
+              <div className="flex items-center gap-6 px-3 shrink-0" aria-hidden="true">
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
+                  <span>{t.criticalAlertText}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">bloodtype</span>
+                  <span>{t.criticalAlertText}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Helpline & Audio controls */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <span className="hidden sm:inline opacity-90 text-[11px] font-mono">
-              Helpline 24/7: 10655 / 999
+              {t.helplineText}
             </span>
             <button
               onClick={() => {
@@ -64,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="material-symbols-outlined text-sm">
                 {isAudioMuted ? 'volume_off' : 'volume_up'}
               </span>
-              <span>{isAudioMuted ? 'Muted' : 'Audio On'}</span>
+              <span>{isAudioMuted ? t.audioMuted : t.audioOn}</span>
             </button>
           </div>
         </div>
@@ -98,14 +132,14 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-lg sm:text-xl text-red-600 leading-tight tracking-tight">
-                  Blood Lagbe?
+                  {t.brandName}
                 </span>
                 <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">
-                  রক্ত লাগবে?
+                  {t.banglaTag}
                 </span>
               </div>
               <span className="text-[11px] text-slate-500 font-medium leading-none">
-                Emergency Lifeline Network
+                {t.brandSub}
               </span>
             </div>
           </button>
@@ -118,17 +152,33 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => onSelectDivision(e.target.value)}
               className="bg-transparent font-bold outline-none cursor-pointer pr-1 text-xs"
             >
-              <option value="Dhaka Central">Dhaka Central (DMCH / BSMMU)</option>
-              <option value="Dhaka North">Dhaka North (Uttara / Kurmitola)</option>
-              <option value="Chattogram Port">Chattogram Port Hub</option>
-              <option value="Sylhet Sadar">Sylhet Osmani Zone</option>
-              <option value="Rajshahi Division">Rajshahi Sadar</option>
+              <option value="Dhaka Central">{language === 'bn' ? 'ঢাকা সেন্ট্রাল (DMCH / BSMMU)' : 'Dhaka Central (DMCH / BSMMU)'}</option>
+              <option value="Dhaka North">{language === 'bn' ? 'ঢাকা উত্তর (উত্তরা / কুর্মিটোলা)' : 'Dhaka North (Uttara / Kurmitola)'}</option>
+              <option value="Chattogram Port">{language === 'bn' ? 'চট্টগ্রাম পোর্ট হাব' : 'Chattogram Port Hub'}</option>
+              <option value="Sylhet Sadar">{language === 'bn' ? 'সিলেট ওসমানী জোন' : 'Sylhet Osmani Zone'}</option>
+              <option value="Rajshahi Division">{language === 'bn' ? 'রাজশাহী সদর' : 'Rajshahi Sadar'}</option>
             </select>
           </div>
         </div>
 
         {/* Right CTA Actions */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Language Switcher Button (বাংলা / English) */}
+          <button
+            onClick={() => {
+              toggleLanguage();
+              sound.playTap();
+            }}
+            title={language === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 shadow-sm transition-all cursor-pointer active:scale-95"
+          >
+            <span className="material-symbols-outlined text-base text-red-600">translate</span>
+            <span className="font-extrabold">{t.langToggle}</span>
+            <span className="px-1 py-0.2 rounded bg-red-100 text-red-700 text-[10px] font-black uppercase">
+              {language.toUpperCase()}
+            </span>
+          </button>
+
           {/* SOS Trigger Primary CTA Button */}
           <button
             onClick={() => {
@@ -138,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-extrabold rounded-xl shadow-md shadow-red-600/30 transition-all transform active:scale-95 animate-pulse shrink-0 cursor-pointer"
           >
             <span className="material-symbols-outlined text-base sm:text-lg">emergency_share</span>
-            <span className="tracking-wide uppercase">SOS TRIGGER</span>
+            <span className="tracking-wide uppercase">{t.sosTriggerBtn}</span>
           </button>
 
           {/* User Profile Avatar Pill */}
@@ -214,22 +264,22 @@ export const Header: React.FC<HeaderProps> = ({
       {/* 4. Mobile Menu Dropdown (when hamburger is clicked) */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-slate-200 px-4 py-3 shadow-xl animate-in slide-in-from-top-2">
-          {/* Mobile Division Selector */}
-          <div className="mb-3 p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+          {/* Mobile Language & Division Selector */}
+          <div className="mb-3 p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs gap-2">
             <span className="text-slate-500 font-semibold flex items-center gap-1">
               <span className="material-symbols-outlined text-red-600 text-sm">location_on</span>
-              Division:
+              {t.divisionLabel}
             </span>
             <select
               value={selectedDivision}
               onChange={(e) => onSelectDivision(e.target.value)}
               className="font-bold text-slate-800 bg-transparent outline-none text-xs"
             >
-              <option value="Dhaka Central">Dhaka Central</option>
-              <option value="Dhaka North">Dhaka North</option>
-              <option value="Chattogram Port">Chattogram Port</option>
-              <option value="Sylhet Sadar">Sylhet Osmani</option>
-              <option value="Rajshahi Division">Rajshahi Sadar</option>
+              <option value="Dhaka Central">{language === 'bn' ? 'ঢাকা সেন্ট্রাল' : 'Dhaka Central'}</option>
+              <option value="Dhaka North">{language === 'bn' ? 'ঢাকা উত্তর' : 'Dhaka North'}</option>
+              <option value="Chattogram Port">{language === 'bn' ? 'চট্টগ্রাম' : 'Chattogram'}</option>
+              <option value="Sylhet Sadar">{language === 'bn' ? 'সিলেট' : 'Sylhet'}</option>
+              <option value="Rajshahi Division">{language === 'bn' ? 'রাজশাহী' : 'Rajshahi'}</option>
             </select>
           </div>
 

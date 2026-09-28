@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BloodGroup, Donor, ScreenId } from '../types/blood';
 import { INITIAL_DONORS } from '../data/mockData';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DonorDirectoryProps {
   onNavigate: (screen: ScreenId) => void;
@@ -12,6 +13,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
   onNavigate,
   onInitiateEmergencyForDonor,
 }) => {
+  const { language, t } = useLanguage();
   const [donors, setDonors] = useState<Donor[]>(INITIAL_DONORS);
   const [selectedGroup, setSelectedGroup] = useState<BloodGroup | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,18 +86,18 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[11px] font-bold tracking-wide uppercase border border-red-500/30">
-                Verified Blood Roster
+                {t.verifiedRosterBadge}
               </span>
               <span className="text-xs text-slate-300 font-medium flex items-center gap-1">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                2,480 Active Donors Across Dhaka
+                {t.activeDonorsCount}
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              Direct Donor Registry & Geo-Match
+              {t.donorRegistryTitle}
             </h1>
             <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-              Find pre-screened voluntary donors near Dhaka Medical College, BSMMU, Mitford, and Evercare. All donors possess certified NID identity, verified BDRCS donor records, and fresh biological rest cooldowns.
+              {t.donorRegistryDesc}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
@@ -104,20 +106,20 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 sound.playSosSiren();
                 onNavigate('create-sos');
               }}
-              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 hover:scale-[1.02] transition-all"
+              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 hover:scale-[1.02] transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">emergency_share</span>
-              <span>Broadcast SOS to All</span>
+              <span>{t.broadcastSosBtn}</span>
             </button>
             <button
               onClick={() => {
                 sound.playTap();
                 onNavigate('donor-passport');
               }}
-              className="w-full sm:w-auto px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 border border-white/20 transition-colors"
+              className="w-full sm:w-auto px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 border border-white/20 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">badge</span>
-              <span>My Donor Passport</span>
+              <span>{t.navDonorPassport}</span>
             </button>
           </div>
         </div>
@@ -128,7 +130,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
         {/* Blood Group Pills */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Filter Blood Group:
+            {language === 'bn' ? 'রক্তের গ্রুপ ফিল্টার:' : 'Filter Blood Group:'}
           </span>
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             {bloodGroups.map((grp) => {
@@ -140,13 +142,13 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                     setSelectedGroup(grp);
                     sound.playTap();
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 cursor-pointer ${
                     isSelected
                       ? 'bg-red-600 text-white shadow-md shadow-red-600/30 scale-105'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
-                  {grp}
+                  {grp === 'ALL' && language === 'bn' ? 'সব' : grp}
                 </button>
               );
             })}
@@ -162,7 +164,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             </span>
             <input
               type="text"
-              placeholder="Search donor name, area (e.g. Dhanmondi, Shahbagh), hospital..."
+              placeholder={t.searchDonorPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -182,7 +184,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             <span className="material-symbols-outlined text-slate-500 text-lg">distance</span>
             <div className="flex-1 flex flex-col">
               <div className="flex justify-between text-[11px] font-semibold text-slate-600">
-                <span>Max Radius</span>
+                <span>{t.maxRadiusLabel}</span>
                 <span className="text-red-600 font-bold">{maxDistance} km</span>
               </div>
               <input
@@ -205,7 +207,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 onChange={(e) => setOnlyAvailable(e.target.checked)}
                 className="w-4 h-4 rounded text-red-600 focus:ring-red-500 accent-red-600"
               />
-              <span>Available Now</span>
+              <span>{t.availableNowOnly}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -214,7 +216,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 onChange={(e) => setOnlyVerified(e.target.checked)}
                 className="w-4 h-4 rounded text-red-600 focus:ring-red-500 accent-red-600"
               />
-              <span>BDRCS Verified</span>
+              <span>{t.bdrcsVerifiedOnly}</span>
             </label>
           </div>
         </div>
@@ -223,11 +225,15 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
       {/* Results Count & Status */}
       <div className="flex items-center justify-between text-xs text-slate-500 px-1">
         <span>
-          Showing <strong className="text-slate-900">{filteredDonors.length}</strong> verified voluntary donors matching criteria
+          {language === 'bn' ? (
+            <>তালিকাভুক্ত <strong className="text-slate-900">{filteredDonors.length}</strong> জন ভেরিফাইড রক্তদাতা পাওয়া গেছে</>
+          ) : (
+            <>Showing <strong className="text-slate-900">{filteredDonors.length}</strong> verified voluntary donors matching criteria</>
+          )}
         </span>
         <span className="flex items-center gap-1 text-emerald-600 font-semibold">
           <span className="material-symbols-outlined text-base">verified_user</span>
-          100% Free Honorary Donation Only
+          {t.freeDonationGuarantee}
         </span>
       </div>
 
@@ -300,11 +306,11 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">military_tech</span>
-                    {donor.badge} ({donor.donationCount} donations)
+                    {donor.badge} ({donor.donationCount} {language === 'bn' ? 'বার রক্তদান' : 'donations'})
                   </span>
                   {donor.bmdcReg && (
                     <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
-                      Doctor Volunteer
+                      {t.doctorVolunteer}
                     </span>
                   )}
                   <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium flex items-center gap-1">
@@ -316,22 +322,22 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 {/* Vitals & Cooldown Row */}
                 <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-xl p-2.5 text-center mb-4 border border-slate-100">
                   <div>
-                    <span className="text-[10px] text-slate-600 block">Hemoglobin</span>
+                    <span className="text-[10px] text-slate-600 block">{t.hemoglobinLabel}</span>
                     <span className="text-xs font-bold text-slate-800">{donor.hbLevel} g/dL</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-600 block">Rest Period</span>
+                    <span className="text-[10px] text-slate-600 block">{t.restPeriodLabel}</span>
                     <span
                       className={`text-xs font-bold ${
                         isEligible ? 'text-emerald-700' : 'text-amber-700'
                       }`}
                     >
-                      {donor.daysElapsedSinceDonation}d ago
+                      {donor.daysElapsedSinceDonation}{language === 'bn' ? ' দিন আগে' : 'd ago'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-600 block">Transit ETA</span>
-                    <span className="text-xs font-bold text-slate-800">~{donor.commuteEtaMin} min</span>
+                    <span className="text-[10px] text-slate-600 block">{t.transitEtaLabel}</span>
+                    <span className="text-xs font-bold text-slate-800">~{donor.commuteEtaMin} {language === 'bn' ? 'মিনিট' : 'min'}</span>
                   </div>
                 </div>
               </div>
@@ -340,18 +346,18 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
               <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                 <button
                   onClick={(e) => handleCallDonor(donor, e)}
-                  className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                  className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-base">call</span>
-                  <span>Direct Call</span>
+                  <span>{t.directCallBtn}</span>
                 </button>
                 <button
                   onClick={(e) => handleSendUrgentNudge(donor, e)}
                   title="Dispatch High-Priority SOS SMS"
-                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1 transition-colors"
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-base text-red-500">notifications_active</span>
-                  <span className="hidden sm:inline">SOS Ping</span>
+                  <span className="hidden sm:inline">{t.sosPingBtn}</span>
                 </button>
               </div>
             </div>

@@ -1,11 +1,14 @@
 import React from 'react';
 import { ScreenId } from '../types/blood';
+import { useLanguage } from '../context/LanguageContext';
 
 interface FooterProps {
   onNavigate: (screen: ScreenId) => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+  const { t } = useLanguage();
+
   return (
     <footer className="w-full bg-slate-900 text-slate-300 mt-16 border-t border-slate-800">
       {/* Upper Legal & Ethical Guarantee Banner */}
@@ -17,23 +20,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-white text-base">Blood Lagbe 100% Voluntary Guarantee</h4>
+                <h4 className="font-bold text-white text-base">{t.legalGuaranteeTitle}</h4>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold uppercase">
                   Strict Non-Commercial
                 </span>
               </div>
               <p className="text-xs text-slate-400 max-w-2xl mt-1 leading-relaxed">
-                Blood donation in Bangladesh is completely honorary and free under Ministry of Health and DGHS regulations. Any broker solicitation, extortion, or selling of blood is strictly illegal. Report suspicious demands immediately.
+                {t.legalGuaranteeDesc}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <a
               href="tel:10655"
-              className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5"
+              className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">support_agent</span>
-              <span>Legal Hotline: 10655 / 999</span>
+              <span>{t.legalHotlineBtn}</span>
             </a>
           </div>
         </div>
@@ -47,37 +50,37 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </div>
           <div>
             <span className="font-bold text-white text-sm">Blood Lagbe? (রক্ত লাগবে?)</span>
-            <p className="text-[11px] text-slate-400">Emergency Lifeline & Centralized Blood Rescue Network of Bangladesh</p>
+            <p className="text-[11px] text-slate-400">{t.brandSub}</p>
           </div>
         </div>
 
-        <nav className="flex items-center gap-6 font-medium">
-          <button onClick={() => onNavigate('emergency-hub')} className="hover:text-white transition-colors">
-            Emergency Hub
+        <nav className="flex flex-wrap items-center gap-4 sm:gap-6 font-medium">
+          <button onClick={() => onNavigate('emergency-hub')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navEmergencyHub}
           </button>
-          <button onClick={() => onNavigate('donor-directory')} className="hover:text-white transition-colors">
-            Find Donors
+          <button onClick={() => onNavigate('donor-directory')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navDonorDirectory}
           </button>
-          <button onClick={() => onNavigate('create-sos')} className="hover:text-white transition-colors">
-            Create SOS
+          <button onClick={() => onNavigate('create-sos')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navCreateSos}
           </button>
-          <button onClick={() => onNavigate('live-tracker')} className="hover:text-white transition-colors">
-            Live Tracker
+          <button onClick={() => onNavigate('live-tracker')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navLiveTracker}
           </button>
-          <button onClick={() => onNavigate('donor-passport')} className="hover:text-white transition-colors">
-            Donor Passport
+          <button onClick={() => onNavigate('donor-passport')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navDonorPassport}
           </button>
-          <button onClick={() => onNavigate('ops-command')} className="hover:text-white transition-colors">
-            DGHS Command
+          <button onClick={() => onNavigate('ops-command')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navOpsCommand}
           </button>
-          <button onClick={() => onNavigate('pitch-deck')} className="hover:text-white transition-colors">
-            Pitch Deck
+          <button onClick={() => onNavigate('pitch-deck')} className="hover:text-white transition-colors cursor-pointer">
+            {t.navPitchDeck}
           </button>
         </nav>
 
-        <p className="text-[11px] text-slate-400">
-          © {new Date().getFullYear()} Blood Lagbe? Lifeline. Non-profit public healthcare initiative.
-        </p>
+        <div className="text-[11px] text-slate-500">
+          © 2026 Blood Lagbe? • DGHS & BDRCS Affiliated
+        </div>
       </div>
     </footer>
   );

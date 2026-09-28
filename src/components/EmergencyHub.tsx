@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BloodGroup, EmergencyDemand, ScreenId } from '../types/blood';
 import { INITIAL_DEMANDS } from '../data/mockData';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface EmergencyHubProps {
   onNavigate: (screen: ScreenId) => void;
@@ -14,6 +15,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
   onOpenRequisition,
   onSelectDonorCommit,
 }) => {
+  const { language, t } = useLanguage();
   const [selectedBlood, setSelectedBlood] = useState<BloodGroup | 'ALL'>('ALL');
   const [demands, setDemands] = useState<EmergencyDemand[]>(INITIAL_DEMANDS);
   const [isAvailableOnDuty, setIsAvailableOnDuty] = useState<boolean>(true);
@@ -87,28 +89,60 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
       )}
 
       {/* Critical Radius Ticker Strip */}
-      <div className="w-full bg-red-600 text-white px-4 md:px-8 py-2.5 shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs md:text-sm font-semibold">
+      <div className="w-full bg-red-600 text-white px-3 md:px-8 py-2.5 shadow-sm overflow-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-4">
+          {/* Static Radar Badge */}
+          <div className="flex items-center gap-2 text-xs md:text-sm font-semibold shrink-0">
             <span className="flex h-2.5 w-2.5 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
             </span>
-            <span className="font-extrabold uppercase tracking-wider flex items-center gap-1 shrink-0">
-              <span className="material-symbols-outlined text-base">radar</span>
-              CRITICAL RADIUS:
-            </span>
-            <span className="truncate">
-              14 urgent blood requests within 5km in Dhaka Central (DMCH, BSMMU, Birdem & Square Zone)
+            <span className="font-extrabold uppercase tracking-wider flex items-center gap-1 shrink-0 text-xs md:text-sm bg-red-700/80 px-2 py-0.5 rounded shadow-xs">
+              <span className="material-symbols-outlined text-base animate-spin text-amber-300" style={{ animationDuration: '4s' }}>radar</span>
+              {t.criticalRadius}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-xs opacity-90 shrink-0">
-            <span className="bg-white/20 px-2 py-0.5 rounded-full font-bold">
-              Live GPS Sync: Active
+
+          {/* Continuous Sliding / Marquee Ticker */}
+          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={t.criticalRadiusSub}>
+            <div className="animate-marquee-infinite flex items-center shrink-0">
+              {/* Set 1 */}
+              <div className="flex items-center gap-6 px-3 shrink-0">
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">local_hospital</span>
+                  <span>{t.criticalRadiusSub}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">near_me</span>
+                  <span>{t.criticalRadiusSub}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+              </div>
+              {/* Set 2 (Identical for seamless infinite continuous loop) */}
+              <div className="flex items-center gap-6 px-3 shrink-0" aria-hidden="true">
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">local_hospital</span>
+                  <span>{t.criticalRadiusSub}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                  <span className="material-symbols-outlined text-sm text-amber-300">near_me</span>
+                  <span>{t.criticalRadiusSub}</span>
+                </span>
+                <span className="text-red-300/80 font-bold">•</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right GPS & Sync Badge */}
+          <div className="flex items-center gap-2 md:gap-3 text-xs opacity-90 shrink-0">
+            <span className="bg-white/20 px-2 py-0.5 rounded-full font-bold text-[11px] md:text-xs">
+              {t.liveGpsActive}
             </span>
-            <span className="hidden md:inline flex items-center gap-1">
+            <span className="hidden lg:inline-flex items-center gap-1 font-mono text-[11px]">
               <span className="material-symbols-outlined text-sm">schedule</span>
-              Auto-refreshed just now
+              {t.autoRefreshed}
             </span>
           </div>
         </div>
@@ -126,20 +160,20 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider">
                   <span className="material-symbols-outlined text-sm">emergency_home</span>
-                  Dhaka Lifeline SOS Relay
+                  {language === 'bn' ? 'ঢাকা লাইফলাইন এসওএস রিলে' : 'Dhaka Lifeline SOS Relay'}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-white/90 font-semibold">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                  1,248 Donors On-Call Nearby
+                  {language === 'bn' ? '১,২৪৮ জন ডোনার কাছাকাছি প্রস্তুত' : '1,248 Donors On-Call Nearby'}
                 </span>
               </div>
 
               <div className="mt-2">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                  Need Blood Urgently?
+                  {t.needBloodTitle}
                 </h1>
                 <p className="text-sm md:text-base text-white/90 max-w-xl mt-2 leading-relaxed">
-                  Broadcast an instant SOS alert directly to verified ABO/Rh matched donors and regional hospital volunteers across Dhaka in under 45 seconds.
+                  {t.needBloodDesc}
                 </p>
               </div>
             </div>
@@ -150,14 +184,14 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                   sound.playEmergencyChime();
                   onNavigate('create-sos');
                 }}
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-red-600 font-extrabold text-sm md:text-base shadow-lg hover:bg-slate-50 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-red-600 font-extrabold text-sm md:text-base shadow-lg hover:bg-slate-50 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-xl">campaign</span>
-                <span>Create Emergency Request →</span>
+                <span>{t.broadcastSosBtn} →</span>
               </button>
               <div className="flex items-center gap-1 text-white/90 text-xs font-semibold">
                 <span className="material-symbols-outlined text-emerald-400 text-lg">verified_user</span>
-                <span>Hospital Verified Dispatch</span>
+                <span>{language === 'bn' ? 'হাসপাতাল প্রত্যয়িত প্রেরণ' : 'Hospital Verified Dispatch'}</span>
               </div>
             </div>
           </div>
@@ -214,7 +248,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-100/80 border border-slate-200">
                 <div className="flex flex-col max-w-[240px]">
                   <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    Instant Availability Beacon
+                    {t.volunteerTitle}
                     <span
                       className={`w-2 h-2 rounded-full ${
                         isAvailableOnDuty ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
@@ -222,7 +256,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                     ></span>
                   </span>
                   <span className="text-[11px] text-slate-600 leading-tight mt-0.5">
-                    Live radar beacon visible to nearby hospital ICU & OT desks
+                    {t.volunteerDesc}
                   </span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer select-none">
@@ -240,13 +274,13 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
               <span className="flex items-center gap-1 text-slate-600">
                 <span className="material-symbols-outlined text-sm text-emerald-600">shield</span>
-                Privacy Protected Anonymized IVR
+                {language === 'bn' ? 'গোপনীয়তা সংরক্ষিত এনক্রিপ্টেড সিস্টেম' : 'Privacy Protected Anonymized IVR'}
               </span>
               <button
                 onClick={() => onNavigate('donor-passport')}
-                className="text-red-600 hover:text-red-700 font-bold transition-colors"
+                className="text-red-600 hover:text-red-700 font-bold transition-colors cursor-pointer"
               >
-                View Donor Passport →
+                {language === 'bn' ? 'ডোনার পাসপোর্ট দেখুন →' : 'View Donor Passport →'}
               </button>
             </div>
           </div>
@@ -257,14 +291,14 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-red-600 text-xl">bloodtype</span>
-              <h2 className="font-bold text-base text-slate-900">ABO / Rh Quick Filter</h2>
+              <h2 className="font-bold text-base text-slate-900">{t.bloodCompatibilityTitle}</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full hidden md:inline">
-                Select blood group to filter emergency roster
+                {language === 'bn' ? 'জরুরি ডোনার তালিকা দেখতে রক্তের গ্রুপ নির্বাচন করুন' : 'Select blood group to filter emergency roster'}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600"></span>
-              <span>Critical Shortage (&lt;10 Units in Cluster)</span>
+              <span>{language === 'bn' ? 'তীব্র সংকট (১০ ইউনিটের কম)' : 'Critical Shortage (<10 Units in Cluster)'}</span>
             </div>
           </div>
 
@@ -548,25 +582,25 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                       </button>
                       <a
                         href={`tel:${demand.attendantPhone}`}
-                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm shadow-sm transition-all flex items-center gap-1.5"
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-base">call</span>
-                        <span>Call Attendant ({demand.attendantPhone})</span>
+                        <span>{t.callAttendant} ({demand.attendantPhone})</span>
                       </a>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleShare(demand)}
-                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                        title="Share WhatsApp SOS"
+                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                        title={t.shareWhatsApp}
                       >
                         <span className="material-symbols-outlined text-lg text-emerald-600">share</span>
                       </button>
                       <button
                         onClick={() => onOpenRequisition(demand)}
-                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                        title="Inspect Hospital Requisition Slip"
+                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                        title={t.inspectDoctorSlip}
                       >
                         <span className="material-symbols-outlined text-lg">description</span>
                       </button>
@@ -580,10 +614,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             <div className="text-center pt-2">
               <button
                 onClick={() => onNavigate('live-tracker')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-800 hover:bg-slate-200 font-bold text-xs md:text-sm transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-800 hover:bg-slate-200 font-bold text-xs md:text-sm transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-lg">format_list_bulleted</span>
-                <span>View All Active Requests Across Dhaka Command Grid</span>
+                <span>{language === 'bn' ? 'সকল সক্রিয় রক্তের জরুরি রিকোয়েস্ট দেখুন' : 'View All Active Requests Across Dhaka Command Grid'}</span>
               </button>
             </div>
           </div>
@@ -595,10 +629,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex items-center justify-between">
                 <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-red-600">insights</span>
-                  Dhaka Lifeline Impact
+                  {language === 'bn' ? 'লাইফলাইন প্রভাব ও পরিসংখ্যান' : 'Dhaka Lifeline Impact'}
                 </span>
                 <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
-                  Verified 24/7
+                  {language === 'bn' ? 'যাচাইকৃত ২৪/৭' : 'Verified 24/7'}
                 </span>
               </div>
 
@@ -610,8 +644,8 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                       <span className="material-symbols-outlined text-xl">favorite</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold">Lives Saved</span>
-                      <span className="text-xs text-slate-600">Through app alerts</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold">{language === 'bn' ? 'জীবন বাঁচানো হয়েছে' : 'Lives Saved'}</span>
+                      <span className="text-xs text-slate-600">{language === 'bn' ? 'অ্যাপ অ্যালার্টের মাধ্যমে' : 'Through app alerts'}</span>
                     </div>
                   </div>
                   <span className="font-mono text-lg font-black text-slate-900">4,820+</span>
