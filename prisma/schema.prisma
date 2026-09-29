@@ -23,12 +23,14 @@ enum BloodGroup {
   @@map("blood_group")
 }
 
-enum SosStatus {
-  ACTIVE
-  FULFILLED
+/// The life of a blood request. Allowed moves are in src/lib/requestStatus.ts.
+enum RequestStatus {
+  PENDING
+  DONOR_FOUND
+  COMPLETED
   CANCELLED
 
-  @@map("sos_status")
+  @@map("request_status")
 }
 
 /// One row per signed-in person. `id` is the Supabase Auth user id (auth.users.id).
@@ -64,30 +66,60 @@ model Donor {
   isAvailable        Boolean    @default(true) @map("is_available")
   createdAt          DateTime   @default(now()) @map("created_at")
 
+  responses RequestResponse[]
+
   @@index([bloodGroup, area])
+  @@index([isAvailable, createdAt])
   @@index([userId])
   @@map("donors")
 }
 
 model SosRequest {
-  id         String     @id @default(cuid())
-  userId     String?    @map("user_id") @db.Uuid
-  user       Profile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
-  area       String?
-  problem    String?
-  bloodGroup BloodGroup @map("blood_group")
-  bags       Int        @default(1)
-  place      String
-  phones     String[]
-  isCritical Boolean    @default(true) @map("is_critical")
-  language   String     @default("bn")
-  postText   String     @map("post_text")
-  status     SosStatus  @default(ACTIVE)
-  createdAt  DateTime   @default(now()) @map("created_at")
+  id              String            @id @default(cuid())
+  userId          String?           @map("user_id") @db.Uuid
+  user            Profile?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  area            String?
+  problem         String?
+  patientName     String?           @map("patient_name")
+  patientAge      Int?              @map("patient_age")
+  attendantName   String?           @map("attendant_name")
+  bloodGroup      BloodGroup        @map("blood_group")
+  bags            Int               @default(1)
+  place           String
+  phones          String[]
+  isCritical      Boolean           @default(true) @map("is_critical")
+  language        String            @default("bn")
+  postText        String            @map("post_text")
+  status          RequestStatus     @default(PENDING)
+  /// SHA-256 of the manage token given once to whoever made the request; lets a person without an account
+  /// complete or cancel it later. The token itself is never stored.
+  manageTokenHash String?           @map("manage_token_hash")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at")
+  completedAt     DateTime?         @map("completed_at")
+  responses       RequestResponse[]
 
   @@index([status, createdAt])
+  @@index([isCritical, status, createdAt])
   @@index([userId])
   @@map("sos_requests")
+}
+
+/// Someone who said "I can donate" for a request.
+model RequestResponse {
+  id        String     @id @default(cuid())
+  requestId String     @map("request_id")
+  request   SosRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  donorId   String?    @map("donor_id")
+  donor     Donor?     @relation(fields: [donorId], references: [id], onDelete: SetNull)
+  userId    String?    @map("user_id") @db.Uuid
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@unique([requestId, phone])
+  @@index([donorId])
+  @@map("request_responses")
 }
 
 /// A named set of permissions that an admin creates in the admin panel. The permission ids are a fixed

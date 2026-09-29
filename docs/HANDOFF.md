@@ -77,3 +77,4 @@ Newest last. One line per finished task: date, what, commit.
 
 - 2026-09-29: M1 started. Created `CLAUDE.md`, this file and the M1 plan.
 - 2026-09-29: M1 Task 1 done: Redux Toolkit store + RTK Query slice (`src/store`), `getDonors` endpoint with tests, provider mounted.
+- 2026-09-29: M1 Task 2 done: schema (RequestStatus, RequestResponse, manage token hash, patient fields), migration 0005 verified on real Postgres (status conversion, default, unique, cascade, no drift), idempotent `npm run db:seed`.
