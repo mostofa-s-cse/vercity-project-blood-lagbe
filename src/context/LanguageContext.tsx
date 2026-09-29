@@ -30,7 +30,7 @@ export const LanguageProvider: React.FC<{ language: Language; children: React.Re
   const setLanguage = useCallback(
     (next: Language) => {
       if (next === language) return;
-      router.push(`${switchLanguagePath(pathname, next)}${window.location.search}`, { scroll: false });
+      router.push(`${switchLanguagePath(pathname, next)}${window.location.search}${window.location.hash}`, { scroll: false });
     },
     [language, pathname, router]
   );
