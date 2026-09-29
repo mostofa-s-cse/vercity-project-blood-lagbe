@@ -1,6 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BLOOD_GROUPS, DB_BLOOD_GROUP, parseDonorInput, parseGrantInput, parseRoleInput, parseSosInput, parseStockInput } from './validation.ts';
+import {
+  BLOOD_GROUPS,
+  DB_BLOOD_GROUP,
+  parseDonorInput,
+  parseDonorQuery,
+  parseGrantInput,
+  parseRequestQuery,
+  parseRespondInput,
+  parseRoleInput,
+  parseSosInput,
+  parseStatusInput,
+  parseStockInput,
+} from './validation.ts';
 
 const donor = { name: 'Tanvir Ahmed', phone: '017-5249 4315', bloodGroup: 'O+', area: 'Dhanmondi 27' };
 const sos = { bloodGroup: 'AB+', bags: 1, place: 'Chander Hashi Hospital', phones: ['01752494315'], postText: 'post' };
@@ -162,4 +174,104 @@ test('stock updates take a known blood group and a whole number of units from 0 
   assert.equal(bad({ units: '5' }), 'units');
   assert.equal(bad({ units: Number.NaN }), 'units');
   assert.notEqual(parseStockInput(undefined).error, null);
+});
+
+test('an SOS may carry optional patient details, trimmed and range-checked', () => {
+  const ok = parseSosInput({ ...sos, patientName: ' Rahim ', patientAge: 34, attendantName: ' Karim ' });
+  assert.equal(ok.error, null);
+  if (!ok.error) {
+    assert.equal(ok.value.patientName, 'Rahim');
+    assert.equal(ok.value.patientAge, 34);
+    assert.equal(ok.value.attendantName, 'Karim');
+  }
+  const plain = parseSosInput(sos);
+  if (!plain.error) assert.deepEqual([plain.value.patientName, plain.value.patientAge, plain.value.attendantName], [undefined, undefined, undefined]);
+  const bad = (patch: object) => parseSosInput({ ...sos, ...patch }).error ?? 'ok';
+  assert.equal(bad({ patientName: 'R' }), 'patientName');
+  assert.equal(bad({ patientName: 'x'.repeat(81) }), 'patientName');
+  assert.equal(bad({ patientAge: -1 }), 'patientAge');
+  assert.equal(bad({ patientAge: 121 }), 'patientAge');
+  assert.equal(bad({ patientAge: 30.5 }), 'patientAge');
+  assert.equal(bad({ patientAge: '30' }), 'patientAge');
+  assert.equal(bad({ attendantName: 'K' }), 'attendantName');
+  assert.equal(bad({ patientAge: 0 }), 'ok');
+  assert.equal(bad({ patientAge: 120 }), 'ok');
+});
+
+test('a response needs a name and a Bangladesh phone, which is normalised', () => {
+  const ok = parseRespondInput({ name: '  Sadia ', phone: '017-5249 4315' });
+  assert.equal(ok.error, null);
+  if (!ok.error) assert.deepEqual(ok.value, { name: 'Sadia', phone: '01752494315' });
+  const bad = (patch: object) => parseRespondInput({ name: 'Sadia', phone: '01752494315', ...patch }).error ?? 'ok';
+  assert.equal(bad({ name: 'S' }), 'name');
+  assert.equal(bad({ name: 5 }), 'name');
+  assert.equal(bad({ phone: '123' }), 'phone');
+  assert.equal(bad({ phone: undefined }), 'phone');
+  assert.notEqual(parseRespondInput(null).error, null);
+});
+
+test('a status change takes one of the four statuses', () => {
+  for (const status of ['PENDING', 'DONOR_FOUND', 'COMPLETED', 'CANCELLED']) {
+    const result = parseStatusInput({ status });
+    assert.equal(result.error, null, status);
+  }
+  for (const bad of [{ status: 'DONE' }, { status: 'pending' }, { status: 7 }, {}, null, 'COMPLETED']) {
+    assert.notEqual(parseStatusInput(bad).error, null, JSON.stringify(bad));
+  }
+});
+
+const params = (query: string) => new URLSearchParams(query);
+
+test('donor query defaults', () => {
+  const result = parseDonorQuery(params(''));
+  assert.equal(result.error, null);
+  if (!result.error) assert.deepEqual(result.value, { bloodGroup: undefined, q: undefined, available: false, page: 1, pageSize: 20 });
+});
+
+test('donor query reads its filters', () => {
+  const result = parseDonorQuery(params('bloodGroup=O%2B&q=%20dhanmondi%20&available=true&page=3&pageSize=10'));
+  assert.equal(result.error, null);
+  if (!result.error) assert.deepEqual(result.value, { bloodGroup: 'O+', q: 'dhanmondi', available: true, page: 3, pageSize: 10 });
+});
+
+test('donor query rejects an unknown blood group but clamps paging quietly', () => {
+  assert.equal(parseDonorQuery(params('bloodGroup=Z%2B')).error, 'bloodGroup');
+  const clamped = parseDonorQuery(params('page=-4&pageSize=9999'));
+  if (!clamped.error) assert.deepEqual([clamped.value.page, clamped.value.pageSize], [1, 50]);
+  const junk = parseDonorQuery(params('page=abc&pageSize=xyz'));
+  if (!junk.error) assert.deepEqual([junk.value.page, junk.value.pageSize], [1, 20]);
+  const zero = parseDonorQuery(params('pageSize=0'));
+  if (!zero.error) assert.equal(zero.value.pageSize, 1);
+  const text = parseDonorQuery(params(`q=${'x'.repeat(200)}`));
+  if (!text.error) assert.equal(text.value.q?.length, 60);
+  const blank = parseDonorQuery(params('q=%20%20'));
+  if (!blank.error) assert.equal(blank.value.q, undefined);
+  const flag = parseDonorQuery(params('available=yes'));
+  if (!flag.error) assert.equal(flag.value.available, false);
+});
+
+test('request query defaults and filters', () => {
+  const none = parseRequestQuery(params(''));
+  assert.equal(none.error, null);
+  if (!none.error) assert.deepEqual(none.value, { status: undefined, emergency: false, bloodGroup: undefined, ids: undefined, mine: false, page: 1, pageSize: 20 });
+  const some = parseRequestQuery(params('status=DONOR_FOUND&emergency=true&bloodGroup=AB-&mine=1&page=2'));
+  assert.equal(some.error, null);
+  if (!some.error) assert.deepEqual(some.value, { status: 'DONOR_FOUND', emergency: true, bloodGroup: 'AB-', ids: undefined, mine: true, page: 2, pageSize: 20 });
+});
+
+test('request query rejects unknown status and blood group', () => {
+  assert.equal(parseRequestQuery(params('status=DONE')).error, 'status');
+  assert.equal(parseRequestQuery(params('bloodGroup=Q')).error, 'bloodGroup');
+});
+
+test('request query ids are cleaned, de-duplicated and capped', () => {
+  const some = parseRequestQuery(params('ids=a1,%20b2%20,,a1,c-3,bad%20id,d_4'));
+  assert.equal(some.error, null);
+  if (!some.error) assert.deepEqual(some.value.ids, ['a1', 'b2', 'c-3', 'd_4']);
+  const many = parseRequestQuery(params(`ids=${Array.from({ length: 80 }, (_, i) => `id${i}`).join(',')}`));
+  if (!many.error) assert.equal(many.value.ids?.length, 50);
+  const empty = parseRequestQuery(params('ids=,,'));
+  if (!empty.error) assert.equal(empty.value.ids, undefined);
+  const long = parseRequestQuery(params(`ids=${'x'.repeat(70)},ok`));
+  if (!long.error) assert.deepEqual(long.value.ids, ['ok']);
 });

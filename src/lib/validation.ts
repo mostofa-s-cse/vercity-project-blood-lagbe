@@ -1,5 +1,6 @@
 import { isValidBdPhone } from '../utils/phone.ts';
 import { isPermission, normalizePermissions, type Permission } from './permissions.ts';
+import { REQUEST_STATUSES, type RequestStatusValue } from './requestStatus.ts';
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 export type BloodGroupValue = (typeof BLOOD_GROUPS)[number];
@@ -38,6 +39,9 @@ export interface DonorInput {
 export interface SosInput {
   area?: string;
   problem?: string;
+  patientName?: string;
+  patientAge?: number;
+  attendantName?: string;
   bloodGroup: BloodGroupValue;
   bags: number;
   place: string;
@@ -64,6 +68,12 @@ function text(value: unknown, min: number, max: number): string | null {
 function optionalText(value: unknown, max: number): string | undefined | null {
   if (value === undefined || value === null || value === '') return undefined;
   return text(value, 1, max);
+}
+
+/** A person's name, 2 to 80 characters. undefined when absent, null when present but invalid. */
+function optionalPersonName(value: unknown): string | undefined | null {
+  if (value === undefined || value === null || value === '') return undefined;
+  return text(value, 2, 80);
 }
 
 function optionalInt(value: unknown, min: number, max: number): number | undefined | null {
@@ -131,6 +141,12 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
   if (area === null) return { value: null, error: 'area' };
   const problem = optionalText(raw.problem, 120);
   if (problem === null) return { value: null, error: 'problem' };
+  const patientName = optionalPersonName(raw.patientName);
+  if (patientName === null) return { value: null, error: 'patientName' };
+  const patientAge = optionalInt(raw.patientAge, 0, 120);
+  if (patientAge === null) return { value: null, error: 'patientAge' };
+  const attendantName = optionalPersonName(raw.attendantName);
+  if (attendantName === null) return { value: null, error: 'attendantName' };
   if (raw.isCritical !== undefined && typeof raw.isCritical !== 'boolean') return { value: null, error: 'isCritical' };
   if (raw.language !== undefined && raw.language !== 'bn' && raw.language !== 'en') return { value: null, error: 'language' };
   const postText = text(raw.postText, 1, 1000);
@@ -141,6 +157,9 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
     value: {
       area,
       problem,
+      patientName,
+      patientAge,
+      attendantName,
       bloodGroup: raw.bloodGroup,
       bags: raw.bags,
       place,
@@ -217,3 +236,116 @@ export function parseStockInput(raw: unknown): ParseResult<StockInput> {
 export const BLOOD_GROUP_FROM_DB: Record<string, BloodGroupValue> = Object.fromEntries(
   BLOOD_GROUPS.map((group) => [DB_BLOOD_GROUP[group], group])
 );
+
+export interface RespondInput {
+  name: string;
+  /** Normalised: spaces and dashes removed. */
+  phone: string;
+}
+
+/** Someone answers a blood request with "I can donate". */
+export function parseRespondInput(raw: unknown): ParseResult<RespondInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  const name = text(raw.name, 2, 80);
+  if (name === null) return { value: null, error: 'name' };
+  if (typeof raw.phone !== 'string' || !isValidBdPhone(raw.phone)) return { value: null, error: 'phone' };
+  return { error: null, value: { name, phone: compactPhone(raw.phone) } };
+}
+
+/** A request's new status. Whether the move is allowed is decided by `canTransition`. */
+export function parseStatusInput(raw: unknown): ParseResult<{ status: RequestStatusValue }> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  if (typeof raw.status !== 'string' || !(REQUEST_STATUSES as readonly string[]).includes(raw.status)) {
+    return { value: null, error: 'status' };
+  }
+  return { error: null, value: { status: raw.status as RequestStatusValue } };
+}
+
+/** Anything with `.get(name)`, such as `URLSearchParams`. */
+interface Params {
+  get(name: string): string | null;
+}
+
+const MAX_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 20;
+
+/** Page numbers and sizes are clamped rather than rejected: a bad one just gives the nearest valid page. */
+function readPaging(params: Params): { page: number; pageSize: number } {
+  const page = Number.parseInt(params.get('page') ?? '', 10);
+  const size = Number.parseInt(params.get('pageSize') ?? '', 10);
+  return {
+    page: Number.isFinite(page) && page >= 1 ? Math.min(page, 100_000) : 1,
+    pageSize: Number.isFinite(size) ? Math.min(Math.max(size, 1), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE,
+  };
+}
+
+const readFlag = (value: string | null): boolean => value === 'true' || value === '1';
+
+export interface DonorQuery {
+  bloodGroup: BloodGroupValue | undefined;
+  q: string | undefined;
+  available: boolean;
+  page: number;
+  pageSize: number;
+}
+
+/** `GET /api/donors` filters. */
+export function parseDonorQuery(params: Params): ParseResult<DonorQuery> {
+  const group = params.get('bloodGroup');
+  if (group !== null && group !== '' && !isBloodGroup(group)) return { value: null, error: 'bloodGroup' };
+  const q = (params.get('q') ?? '').trim().slice(0, 60);
+  return {
+    error: null,
+    value: {
+      bloodGroup: group ? (group as BloodGroupValue) : undefined,
+      q: q || undefined,
+      available: readFlag(params.get('available')),
+      ...readPaging(params),
+    },
+  };
+}
+
+export interface RequestQuery {
+  status: RequestStatusValue | undefined;
+  emergency: boolean;
+  bloodGroup: BloodGroupValue | undefined;
+  /** Request ids, for showing "my requests" from this browser. At most 50. */
+  ids: string[] | undefined;
+  /** Only the signed-in person's own requests. */
+  mine: boolean;
+  page: number;
+  pageSize: number;
+}
+
+const MAX_IDS = 50;
+
+/** `GET /api/requests` filters. */
+export function parseRequestQuery(params: Params): ParseResult<RequestQuery> {
+  const status = params.get('status');
+  if (status !== null && status !== '' && !(REQUEST_STATUSES as readonly string[]).includes(status)) {
+    return { value: null, error: 'status' };
+  }
+  const group = params.get('bloodGroup');
+  if (group !== null && group !== '' && !isBloodGroup(group)) return { value: null, error: 'bloodGroup' };
+
+  const ids = [
+    ...new Set(
+      (params.get('ids') ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0 && id.length <= 64 && /^[\w-]+$/.test(id))
+    ),
+  ].slice(0, MAX_IDS);
+
+  return {
+    error: null,
+    value: {
+      status: status ? (status as RequestStatusValue) : undefined,
+      emergency: readFlag(params.get('emergency')),
+      bloodGroup: group ? (group as BloodGroupValue) : undefined,
+      ids: ids.length > 0 ? ids : undefined,
+      mine: readFlag(params.get('mine')),
+      ...readPaging(params),
+    },
+  };
+}
