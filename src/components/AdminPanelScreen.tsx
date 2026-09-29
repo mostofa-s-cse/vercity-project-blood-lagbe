@@ -4,6 +4,8 @@ import { INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS, INITIAL_BLOOD_REQUESTS, FRAUD_INC
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
+import { useAuth } from '../context/AuthContext';
+import type { Permission } from '../lib/permissions';
 import { AdminRolesPanel } from './AdminRolesPanel';
 
 interface AdminPanelScreenProps {
@@ -12,6 +14,18 @@ interface AdminPanelScreenProps {
 }
 
 type AdminTab = 'overview' | 'alerts' | 'donors' | 'requests' | 'hospitals' | 'fraud' | 'logs' | 'access';
+
+/** The permission each tab needs. Overview needs only `panel.open`, which anyone who reaches this screen has. */
+const TAB_PERMISSION: Record<AdminTab, Permission> = {
+  overview: 'panel.open',
+  alerts: 'panel.alerts',
+  donors: 'panel.donors',
+  requests: 'panel.requests',
+  hospitals: 'panel.hospitals',
+  fraud: 'panel.fraud',
+  logs: 'panel.logs',
+  access: 'roles.manage',
+};
 
 export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onNavigate,
@@ -27,8 +41,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     getActiveAlertText,
     getActiveRadiusText,
   } = useAlert();
+  const { can } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [selectedTab, setActiveTab] = useState<AdminTab>('overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodFilter, setBloodFilter] = useState<string>('ALL');
@@ -184,7 +199,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     return matchesSearch && matchesBlood && matchesStatus;
   });
 
-  const navTabs: { id: AdminTab; label: string; icon: string; count?: number; badgeColor?: string; description?: string }[] = [
+  const allTabs: { id: AdminTab; label: string; icon: string; count?: number; badgeColor?: string; description?: string }[] = [
     { 
       id: 'overview', 
       label: t.admin.tabs.overview, 
@@ -244,6 +259,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       description: t.admin.tabs.accessDesc
     },
   ];
+  const navTabs = allTabs.filter((tab) => tab.id === 'overview' || can(TAB_PERMISSION[tab.id]));
+
+  // Show only a tab the person may see: if the chosen one is hidden (or disappears), fall back to the first visible tab.
+  const activeTab: AdminTab = navTabs.some((tab) => tab.id === selectedTab) ? selectedTab : (navTabs[0]?.id ?? 'overview');
 
   const publicLinks: { id: ScreenId; label: string; icon: string }[] = [
     { id: 'emergency-hub', label: t.admin.publicLinks.emergencyHub, icon: 'emergency' },
@@ -691,17 +710,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setActiveTab('alerts');
-                sound.playTap();
-              }}
-              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shrink-0 shadow-lg shadow-red-600/30 cursor-pointer transition-all hover:scale-105 active:scale-95"
-            >
-              <span className="material-symbols-outlined text-base">tune</span>
-              <span>{t.admin.overview.configure}</span>
-              <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
+{can('panel.alerts') && (
+              <button
+                onClick={() => {
+                  setActiveTab('alerts');
+                  sound.playTap();
+                }}
+                className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shrink-0 shadow-lg shadow-red-600/30 cursor-pointer transition-all hover:scale-105 active:scale-95"
+              >
+                <span className="material-symbols-outlined text-base">tune</span>
+                <span>{t.admin.overview.configure}</span>
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            )}
           </div>
 
           {/* Key Metric Cards */}
@@ -847,17 +868,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               </div>
 
               <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    setActiveTab('requests');
-                    setBloodFilter('O-');
-                    sound.playTap();
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  <span className="material-symbols-outlined text-base">filter_list</span>
-                  <span>{t.admin.overview.manageONeg}</span>
-                </button>
+                {can('panel.requests') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('requests');
+                      setBloodFilter('O-');
+                      sound.playTap();
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-base">filter_list</span>
+                    <span>{t.admin.overview.manageONeg}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => onNavigate('hospital-org')}
                   className="w-full py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border border-red-200"

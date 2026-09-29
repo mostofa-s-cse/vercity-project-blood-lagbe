@@ -1,4 +1,5 @@
 import { isValidBdPhone } from '../utils/phone.ts';
+import { isPermission, normalizePermissions, type Permission } from './permissions.ts';
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 export type BloodGroupValue = (typeof BLOOD_GROUPS)[number];
@@ -151,31 +152,51 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
   };
 }
 
-export interface RoleGrantInput {
+export interface GrantInput {
   email: string;
-  role: 'admin' | 'hospital';
-  /** Set for `hospital` grants only. */
+  roleId: string;
+  /** Only for roles tied to one hospital; whether it is needed is decided by the role, not here. */
   hospitalId: string | null;
 }
 
 /** An admin gives someone a role by email. `hospitalIds` are the hospitals that exist. */
-export function parseRoleGrantInput(raw: unknown, hospitalIds: readonly string[]): ParseResult<RoleGrantInput> {
+export function parseGrantInput(raw: unknown, hospitalIds: readonly string[]): ParseResult<GrantInput> {
   if (!isObject(raw)) return { value: null, error: 'body' };
 
   const email = typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : '';
   if (email.length === 0 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { value: null, error: 'email' };
   }
-  if (raw.role !== 'admin' && raw.role !== 'hospital') return { value: null, error: 'role' };
+  const roleId = text(raw.roleId, 1, 64);
+  if (roleId === null) return { value: null, error: 'roleId' };
 
-  if (raw.role === 'hospital') {
-    if (typeof raw.hospitalId !== 'string' || !hospitalIds.includes(raw.hospitalId)) {
-      return { value: null, error: 'hospitalId' };
-    }
-    return { error: null, value: { email, role: 'hospital', hospitalId: raw.hospitalId } };
+  let hospitalId: string | null = null;
+  if (raw.hospitalId !== undefined && raw.hospitalId !== null && raw.hospitalId !== '') {
+    if (typeof raw.hospitalId !== 'string' || !hospitalIds.includes(raw.hospitalId)) return { value: null, error: 'hospitalId' };
+    hospitalId = raw.hospitalId;
   }
-  if (raw.hospitalId !== undefined && raw.hospitalId !== null) return { value: null, error: 'hospitalId' };
-  return { error: null, value: { email, role: 'admin', hospitalId: null } };
+  return { error: null, value: { email, roleId, hospitalId } };
+}
+
+export interface RoleValue {
+  name: string;
+  description: string | null;
+  permissions: Permission[];
+}
+
+/** A role an admin creates or edits: a name, an optional description and a choice of permissions. */
+export function parseRoleInput(raw: unknown): ParseResult<RoleValue> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+
+  const name = text(raw.name, 2, 40);
+  if (name === null) return { value: null, error: 'name' };
+  const description = optionalText(raw.description, 200);
+  if (description === null) return { value: null, error: 'description' };
+
+  if (!Array.isArray(raw.permissions) || raw.permissions.length === 0 || !raw.permissions.every(isPermission)) {
+    return { value: null, error: 'permissions' };
+  }
+  return { error: null, value: { name, description: description ?? null, permissions: normalizePermissions(raw.permissions) } };
 }
 
 export interface StockInput {

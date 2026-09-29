@@ -47,7 +47,7 @@ interface UserDocsScreenProps {
 
 export const UserDocsScreen: React.FC<UserDocsScreenProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
-  const { isAdmin } = useAuth();
+  const { can } = useAuth();
   const d = t.docs;
   const [activeId, setActiveId] = useState<string>(SECTIONS[0].id);
 
@@ -172,7 +172,7 @@ export const UserDocsScreen: React.FC<UserDocsScreenProps> = ({ onNavigate }) =>
                   </div>
                 )}
 
-                {s.screen && (isAdmin || (s.screen !== 'admin-panel' && s.screen !== 'ops-command')) && (
+                {s.screen && (s.screen === 'admin-panel' ? can('panel.open') : s.screen === 'ops-command' ? can('ops.command') : true) && (
                   <div>
                     <button
                       onClick={() => onNavigate(s.screen as ScreenId)}

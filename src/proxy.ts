@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE, isLanguage, localizedPath, splitLanguage } from './utils/routes';
 import { refreshSession } from './lib/supabase/session';
-import { canAccess, requiredLevel } from './lib/roles';
+import { canAccessPath, requiredAccess } from './lib/roles';
 
 /**
  * Runs before every page request.
  * - A URL without /bn or /en is sent to the saved language (cookie) or the default one: `/donors` to `/bn/donors`.
- * - A URL that has a language keeps the Supabase login session fresh, and admin / signed-in pages are
- *   only served to people allowed to see them (see src/lib/roles.ts); everyone else is sent to a
+ * - A URL that has a language keeps the Supabase login session fresh, and the admin / signed-in pages are
+ *   only served to people who have the needed permission (see src/lib/roles.ts); everyone else is sent to a
  *   "no access" page.
  */
 export async function proxy(request: NextRequest) {
@@ -25,10 +25,10 @@ export async function proxy(request: NextRequest) {
 
   const { response, claims, configured } = await refreshSession(request);
 
-  const level = requiredLevel(path);
-  if (level && !canAccess(level, { adminOpen: process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true', configured, claims })) {
+  const need = requiredAccess(path);
+  if (need && !canAccessPath(need, { adminOpen: process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true', configured, claims })) {
     const url = request.nextUrl.clone();
-    url.pathname = localizedPath(language, `/no-access/${level}`);
+    url.pathname = localizedPath(language, `/no-access/${need.level}`);
     url.search = `?from=${encodeURIComponent(`${pathname}${request.nextUrl.search}`)}`;
     const denied = NextResponse.redirect(url);
     // Keep any session cookies the refresh just issued.

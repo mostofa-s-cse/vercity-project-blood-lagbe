@@ -3,10 +3,9 @@ import { ScreenId } from '../types/blood';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { safeNextPath } from '../lib/safeRedirect';
-import type { AccessLevel } from '../lib/roles';
 
 interface NoAccessScreenProps {
-  need: AccessLevel;
+  need: 'admin' | 'user';
   onNavigate: (screen: ScreenId) => void;
 }
 

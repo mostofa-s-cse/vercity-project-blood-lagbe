@@ -9,7 +9,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
-  const { isAdmin } = useAuth();
+  const { can } = useAuth();
 
   return (
     <footer className="w-full bg-slate-900 text-slate-300 mt-16 border-t border-slate-800">
@@ -78,7 +78,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <button onClick={() => onNavigate('hospital-org')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.hospitalOrg}
           </button>
-          {isAdmin && (
+          {can('panel.open') && (
             <button onClick={() => onNavigate('admin-panel')} className="hover:text-white transition-colors cursor-pointer text-red-400 font-bold">
               {t.header.nav.adminPanel}
             </button>

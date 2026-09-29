@@ -49,11 +49,11 @@ export const faq: DocFaq = {
     },
     q12: {
       q: 'Who can open the Admin Panel, Ops Command and Donor Passport?',
-      a: 'The Admin Panel and Ops Command are only for administrator accounts. If the site has no sign-in set up, they are closed unless the site owner opens them for a demo. The Donor Passport needs you to sign in once sign-in is switched on. Every other page is open to everyone, because nobody should need an account in an emergency.',
+      a: 'It depends on the permissions in your role. The Admin Panel opens for people whose role includes the Admin Panel permission, and inside it each tab needs its own permission. Ops Command opens for people whose role includes the Ops Command permission. The built-in Admin role has every permission. If the site has no sign-in set up, both stay closed unless the site owner opens them for a demo. The Donor Passport needs you to sign in once sign-in is switched on. Every other page is open to everyone, because nobody should need an account in an emergency.',
     },
     q13: {
-      q: 'How do I give someone the hospital or admin role?',
-      a: 'An admin opens the Admin Panel, goes to the Access & Roles tab, types the person\'s Google account email, picks Hospital (and which hospital) or Admin, and presses "Give role". The person then signs in with Google using exactly that email. If they have never signed in, the role starts at their first sign-in. If they are already signed in, they need to sign out and sign in again. A hospital account manages the blood stock of its own hospital only, and the hospitals are the sample hospitals of this demo. Roles can be taken away with "Revoke", but nobody can remove their own role. This only works when the site owner has connected the database and the Supabase service key.',
+      q: 'How do I create a role and give it to someone?',
+      a: 'Someone whose role includes "Manage roles" (for example an Admin) opens the Admin Panel and goes to the Access & Roles tab. Under Roles, they can use a built-in role (Admin, or Hospital staff, who manage their own hospital\'s stock and can add camps) or press "New role", give it a name and tick what it may do. Under People, they type the person\'s Google account email, choose the role (and the hospital, for a role tied to one hospital) and press "Give role". The person then signs in with Google using exactly that email. If they have never signed in, the role starts at their first sign-in. If they are already signed in, they need to sign out and sign in again. The hospitals are the sample hospitals of this demo. Roles can be taken away with "Revoke", but nobody can remove their own role. This only works when the site owner has connected the database and the Supabase service key.',
     },
   },
 };

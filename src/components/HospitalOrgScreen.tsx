@@ -46,7 +46,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   onOpenRequisition
 }) => {
   const { t } = useLanguage();
-  const { configured, loading: authLoading, user, role, canManageHospital } = useAuth();
+  const { configured, loading: authLoading, user, can, canManageHospital } = useAuth();
   const [selectedOrgId, setSelectedOrgId] = useState<string>(SAMPLE_HOSPITAL_ORGS[0].id);
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
   const [camps, setCamps] = useState<DonationCamp[]>(SAMPLE_CAMPS);
@@ -64,7 +64,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   // Demo mode (no Supabase): everyone may try it locally. Otherwise admins, or this hospital's own account.
   const canEdit = canManageHospital(selectedOrg.id);
   // Camps are not saved yet, so only admin and hospital accounts may create them (everyone in demo mode).
-  const canCreateCamp = !configured || role !== null;
+  const canCreateCamp = can('camps.create');
 
   // Load the stock hospitals have saved; without a database this stays null and the sample data is kept.
   useEffect(() => {

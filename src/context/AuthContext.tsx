@@ -3,7 +3,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createBrowserSupabase } from '../lib/supabase/client';
-import { canAccess, canManageHospital, roleOf, type AppRoleName } from '../lib/roles';
+import { ADMIN_AREA_PERMISSIONS, type Permission } from '../lib/permissions';
+import { can as claimsCan, canManageHospital as claimsCanManageHospital } from '../lib/roles';
 
 export interface AuthUser {
   id: string;
@@ -20,13 +21,15 @@ interface AuthContextType {
   /** True until the first session check finishes. */
   loading: boolean;
   user: AuthUser | null;
-  /** Whether this person may see the admin area. Only used to hide links: the proxy is what enforces it. */
-  isAdmin: boolean;
-  /** The person's role from their login token (null for a normal user). */
-  role: AppRoleName | null;
   /**
-   * Whether this person may change the stock of this hospital (admins: any, hospital accounts: their own).
-   * Without Supabase (demo mode) everyone may, because nothing is saved. The server checks again on every save.
+   * Whether this person has a permission. Only used to show or hide things: the proxy and the API check
+   * again on the server. In demo mode (no Supabase) the hospital actions are open to everyone, because
+   * nothing is saved, and the admin area is open only when `NEXT_PUBLIC_ADMIN_OPEN=true`.
+   */
+  can: (permission: Permission) => boolean;
+  /**
+   * Whether this person may change the stock of this hospital (`stock.all`: any; `stock.own`: their own).
+   * Without Supabase (demo mode) everyone may, because nothing is saved.
    */
   canManageHospital: (hospitalId: string) => boolean;
   /** `next` is the same-site path to return to after signing in (default: the current page). */
@@ -95,19 +98,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabase]);
 
   const configured = supabase !== null;
-  const isAdmin = canAccess('admin', {
-    adminOpen: process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true',
-    configured,
-    claims: user ? { sub: user.id, app_metadata: user.appMetadata } : null,
-  });
-
+  const adminOpen = process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true';
   const claims = user ? { sub: user.id, app_metadata: user.appMetadata } : null;
-  const role = roleOf(claims);
-  const canManage = (hospitalId: string) => !configured || canManageHospital(claims, hospitalId);
+
+  const can = (permission: Permission): boolean => {
+    const inAdminArea = ADMIN_AREA_PERMISSIONS.includes(permission);
+    if (adminOpen && inAdminArea) return true;
+    if (!configured) return !inAdminArea;
+    return claimsCan(claims, permission);
+  };
+  const canManage = (hospitalId: string) => !configured || claimsCanManageHospital(claims, hospitalId);
 
   return (
     <AuthContext.Provider
-      value={{ configured, loading, user, isAdmin, role, canManageHospital: canManage, signInWithGoogle, signOut }}
+      value={{ configured, loading, user, can, canManageHospital: canManage, signInWithGoogle, signOut }}
     >
       {children}
     </AuthContext.Provider>

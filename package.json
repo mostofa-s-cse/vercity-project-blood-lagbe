@@ -9,7 +9,7 @@
     "start": "next start",
     "clean": "rm -rf .next",
     "lint": "tsc --noEmit",
-    "test": "node --test src/utils/routes.test.ts src/utils/sosPost.test.ts src/utils/phone.test.ts src/lib/validation.test.ts src/lib/safeRedirect.test.ts src/lib/roles.test.ts src/lib/grantService.test.ts src/locales/locales.test.ts",
+    "test": "node --test src/lib/permissions.test.ts src/utils/routes.test.ts src/utils/sosPost.test.ts src/utils/phone.test.ts src/lib/validation.test.ts src/lib/safeRedirect.test.ts src/lib/roles.test.ts src/lib/grantService.test.ts src/locales/locales.test.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
   const { getActiveAlertText } = useAlert();
-  const { isAdmin } = useAuth();
+  const { can } = useAuth();
   const activeAlertMessage = getActiveAlertText(language);
 
   const allNavItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
@@ -46,8 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'pitch-deck', label: t.header.nav.pitchDeck, icon: 'co_present' },
     { id: 'user-docs', label: t.header.nav.userDocs, icon: 'menu_book' },
   ];
-  // The Admin Panel link is only for admins (the proxy also blocks the page itself).
-  const navItems = allNavItems.filter((item) => item.id !== 'admin-panel' || isAdmin);
+  // The Admin Panel link is only for people who may open it (the proxy also blocks the page itself).
+  const navItems = allNavItems.filter((item) => item.id !== 'admin-panel' || can('panel.open'));
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl shadow-sm border-b border-slate-200">
