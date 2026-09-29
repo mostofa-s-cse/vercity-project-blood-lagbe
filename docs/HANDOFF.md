@@ -79,3 +79,4 @@ Newest last. One line per finished task: date, what, commit.
 - 2026-09-29: M1 Task 1 done: Redux Toolkit store + RTK Query slice (`src/store`), `getDonors` endpoint with tests, provider mounted.
 - 2026-09-29: M1 Task 2 done: schema (RequestStatus, RequestResponse, manage token hash, patient fields), migration 0005 verified on real Postgres (status conversion, default, unique, cascade, no drift), idempotent `npm run db:seed`.
 - 2026-09-29: M1 Task 3 done: pure rules with tests: status transitions + time left, phone masking, manage token hashing, validation for respond/status/queries/patient fields.
+- 2026-09-29: M1 Task 4 done: read APIs (donors list, donor contact, requests list, request detail) verified against a seeded real Postgres: filters, paging, ordering, masked phones, error answers.
