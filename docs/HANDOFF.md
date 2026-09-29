@@ -76,3 +76,4 @@ Bengali written in Latin letters mixed with English. Prefers action on sensible 
 Newest last. One line per finished task: date, what, commit.
 
 - 2026-09-29: M1 started. Created `CLAUDE.md`, this file and the M1 plan.
+- 2026-09-29: M1 Task 1 done: Redux Toolkit store + RTK Query slice (`src/store`), `getDonors` endpoint with tests, provider mounted.
