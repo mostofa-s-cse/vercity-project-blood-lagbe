@@ -6,6 +6,12 @@ export const common: Common = {
   banglaTag: 'রক্ত লাগবে?',
   close: 'বন্ধ করুন',
   cancel: 'বাতিল',
+  metaTitle: 'Blood Lagbe? (রক্ত লাগবে?) - জরুরি লাইফলাইন নেটওয়ার্ক',
+  metaDescription:
+    'বাংলাদেশের জরুরি চিকিৎসা লাইফলাইন পোর্টাল ও কেন্দ্রীয় ব্লাড রেসকিউ নেটওয়ার্ক। রিয়েল-টাইম লোকেশন-ভিত্তিক রক্তদাতা ব্রডকাস্ট, লাইভ ট্র্যাকার এবং ডিজিএইচএস অপারেশন কমান্ড।',
+  notFoundTitle: 'পেজটি পাওয়া যায়নি',
+  notFoundDesc: 'আপনি যে পেজটি খুঁজছেন সেটি নেই অথবা সরানো হয়েছে।',
+  backHome: 'জরুরি হাবে ফিরে যান',
   alertInactive: 'বর্তমানে কোনো কোড-রেড জরুরি সতর্কতা জারি নেই • সেন্ট্রাল ব্লাড ব্যাংক সক্রিয়',
   alertFallback: (hospital: string, bed: string, bloodGroup: string, bags: number) =>
     `${hospital}ে (${bed}) ${bloodGroup} রক্ত অতি জরুরি • ${bags} ব্যাগ প্রয়োজন`,
