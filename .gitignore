@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.playwright-mcp/
