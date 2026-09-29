@@ -16,6 +16,7 @@ import { hospitals } from './en/hospitals.ts';
 import { command } from './en/command.ts';
 import { deck } from './en/deck.ts';
 import { docs } from './en/docs.ts';
+import { access } from './en/access.ts';
 import { admin } from './en/admin.ts';
 
 export const en = {
@@ -37,6 +38,7 @@ export const en = {
   command,
   deck,
   admin,
+  access,
   docs,
 };
 

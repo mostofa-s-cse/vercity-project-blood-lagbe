@@ -3,12 +3,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createBrowserSupabase } from '../lib/supabase/client';
+import { canAccess } from '../lib/roles';
 
 export interface AuthUser {
   id: string;
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
+  /** Supabase app_metadata: only the service key or SQL can change it, never the person. */
+  appMetadata: Record<string, unknown>;
 }
 
 interface AuthContextType {
@@ -17,7 +20,10 @@ interface AuthContextType {
   /** True until the first session check finishes. */
   loading: boolean;
   user: AuthUser | null;
-  signInWithGoogle: () => Promise<void>;
+  /** Whether this person may see the admin area. Only used to hide links: the proxy is what enforces it. */
+  isAdmin: boolean;
+  /** `next` is the same-site path to return to after signing in (default: the current page). */
+  signInWithGoogle: (next?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -33,6 +39,7 @@ function toAuthUser(user: User | null | undefined): AuthUser | null {
     email: user.email ?? null,
     name: asText(meta.full_name) ?? asText(meta.name),
     avatarUrl: asText(meta.avatar_url) ?? asText(meta.picture),
+    appMetadata: user.app_metadata ?? {},
   };
 }
 
@@ -61,15 +68,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [supabase]);
 
-  const signInWithGoogle = useCallback(async () => {
-    if (!supabase) return;
-    // Come back to the page the person was on; the callback route checks this path is on our own site.
-    const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${next}` },
-    });
-  }, [supabase]);
+  const signInWithGoogle = useCallback(
+    async (next?: string) => {
+      if (!supabase) return;
+      // Come back to the page the person was on; the callback route checks this path is on our own site.
+      const target = encodeURIComponent(next ?? `${window.location.pathname}${window.location.search}`);
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=${target}` },
+      });
+    },
+    [supabase]
+  );
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
@@ -77,8 +87,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   }, [supabase]);
 
+  const configured = supabase !== null;
+  const isAdmin = canAccess('admin', {
+    adminOpen: process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true',
+    configured,
+    claims: user ? { sub: user.id, app_metadata: user.appMetadata } : null,
+  });
+
   return (
-    <AuthContext.Provider value={{ configured: supabase !== null, loading, user, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ configured, loading, user, isAdmin, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

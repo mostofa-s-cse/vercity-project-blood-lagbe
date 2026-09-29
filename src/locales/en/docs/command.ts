@@ -5,7 +5,7 @@ export const command: DocSection = {
   summary:
     'The National Emergency Blood Operations Hub, a DGHS-style control room for coordinators and admins. It brings blood reserves, the SOS queue, cold storage, fraud reports and SMS gateway health together in one place.',
   steps: {
-    s1: 'Open it from the Emergency Hub with the "Access Complete Dhaka Hospital Network Directory" button. The header shows Active National SOS, Donors On Standby and a "Trigger Red Alert" button.',
+    s1: 'Only administrators can open it, and it has no menu link: administrators go to its address, /bn/command or /en/command. The header shows Active National SOS, Donors On Standby and a "Trigger Red Alert" button.',
     s2: 'The "Overview & Matrix" tab shows key figures (Avg Response Time, Fulfillment Ratio, Cold-Chain Alarms, Syndicates Intercepted) and a matrix of all 8 blood groups with their bag counts and a status such as Optimal, Low Stock or CRITICAL.',
     s3: 'The "Emergency SOS Queue" tab lists open cases. Press "Inspect" to see the case\'s Official Clinical Requisition slip, "Mark Dispatched" to change its status (press again to set it back to Active), or "Telemetry" to open the Live Tracker. "Manual SOS Intake" opens the SOS request form.',
     s4: 'The "Hospitals & Cold-Chain Stocks" tab shows each chiller unit\'s temperature and how full it is, against a target of +2°C to +6°C. A unit marked TEMP RISING is highlighted in amber. Below are hospital cards with total bags, critical beds, triage lead and a Direct Hotline button.',

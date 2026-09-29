@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { useLanguage } from '../context/LanguageContext';
 import { sound } from '../utils/audio';
+import { useAuth } from '../context/AuthContext';
 
 type SectionId =
   | 'gettingStarted'
@@ -46,6 +47,7 @@ interface UserDocsScreenProps {
 
 export const UserDocsScreen: React.FC<UserDocsScreenProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const d = t.docs;
   const [activeId, setActiveId] = useState<string>(SECTIONS[0].id);
 
@@ -170,7 +172,7 @@ export const UserDocsScreen: React.FC<UserDocsScreenProps> = ({ onNavigate }) =>
                   </div>
                 )}
 
-                {s.screen && (
+                {s.screen && (isAdmin || (s.screen !== 'admin-panel' && s.screen !== 'ops-command')) && (
                   <div>
                     <button
                       onClick={() => onNavigate(s.screen as ScreenId)}

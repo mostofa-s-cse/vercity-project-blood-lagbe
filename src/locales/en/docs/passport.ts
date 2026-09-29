@@ -17,5 +17,6 @@ export const passport: DocSection = {
     t2: '"Export Certificate" and "View Certificate" only show a message on screen in this demo. No PDF is actually downloaded.',
     t3: 'The QR code, NID, health figures and donation history are sample data, not real medical records.',
     t4: 'Donors must wait 90 days between donations. While the cooldown is active, the button reads "Biological Cooldown Active" and is greyed out.',
+    t5: 'When the site has Google sign-in switched on, you must sign in to open the Donor Passport. Without sign-in it opens for everyone as a demo.',
   },
 };

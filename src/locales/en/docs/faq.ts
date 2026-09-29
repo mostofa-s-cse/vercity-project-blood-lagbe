@@ -29,7 +29,7 @@ export const faq: DocFaq = {
     },
     q7: {
       q: 'How are the header alert ticker and the radius message set, and who can change them?',
-      a: 'In the Admin Panel, open "Alerts & Radius Control". "Save & Broadcast Emergency Alert" sets the red ticker at the top of every public page. "Update Emergency Radius" sets the message in the Emergency Hub radar strip. The panel has no login, so anyone who opens it can change them. The settings are saved only in your own browser, so other people do not see your changes.',
+      a: 'In the Admin Panel, open "Alerts & Radius Control". "Save & Broadcast Emergency Alert" sets the red ticker at the top of every public page. "Update Emergency Radius" sets the message in the Emergency Hub radar strip. Only administrators can open the panel. The settings are saved only in your own browser, so other people do not see your changes.',
     },
     q8: {
       q: 'How do I show up in the Donor Directory?',
@@ -46,6 +46,10 @@ export const faq: DocFaq = {
     q11: {
       q: 'Do I need to sign in?',
       a: 'No. You can post an SOS and register as a donor without signing in, so nobody has to sign in during an emergency. If the site owner has switched on Google sign-in, a Sign in with Google button appears in the top bar. Signing in links what you save to your account. Without it, the site works as a demo.',
+    },
+    q12: {
+      q: 'Who can open the Admin Panel, Ops Command and Donor Passport?',
+      a: 'The Admin Panel and Ops Command are only for administrator accounts. If the site has no sign-in set up, they are closed unless the site owner opens them for a demo. The Donor Passport needs you to sign in once sign-in is switched on. Every other page is open to everyone, because nobody should need an account in an emergency.',
     },
   },
 };

@@ -11,7 +11,7 @@ export const hub: DocSection = {
     s4: 'In the Blood Group Compatibility Filter Bar, press a blood group (or ALL) to show only the requests for that group. O- is marked in red because it is in critical shortage.',
     s5: 'Scroll through Emergency Demands Near You. Each card shows the blood group and bags needed, the patient, the hospital and distance, a Window Remaining countdown and how many bags are already pledged.',
     s6: 'On a request card, press I Can Donate (Commit) to offer your blood and open the Live Tracker. Press Direct Call to phone the patient\'s attendant, the share icon to send the request to others, or the document icon to see the doctor\'s slip (Official Clinical Requisition).',
-    s7: 'On the right, see Dhaka Lifeline Impact numbers, Live Handshakes and 24/7 Verified Blood Banks with call buttons. At the bottom, View All Active Requests Across Dhaka Command Grid opens the Live Tracker, and Access Complete Dhaka Hospital Network Directory opens the National Emergency Blood Operations Hub.',
+    s7: 'On the right, see Dhaka Lifeline Impact numbers, Live Handshakes and 24/7 Verified Blood Banks with call buttons. At the bottom, View All Active Requests Across Dhaka Command Grid opens the Live Tracker, and Access Complete Dhaka Hospital Network Directory opens the Hospitals & Blood Banks screen.',
   },
   tips: {
     t1: 'Everything on this screen is sample data: patients, countdowns, stats and handshakes. The countdowns start again when you reload the page.',

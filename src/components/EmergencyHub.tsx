@@ -805,7 +805,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               </div>
 
               <button
-                onClick={() => onNavigate('ops-command')}
+                onClick={() => onNavigate('hospital-org')}
                 className="w-full mt-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors flex items-center justify-center gap-1"
               >
                 <span className="material-symbols-outlined text-base text-red-600">local_hospital</span>

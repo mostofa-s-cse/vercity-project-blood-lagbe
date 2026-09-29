@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { AuthButton } from './AuthButton';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
 
@@ -29,9 +30,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
   const { getActiveAlertText } = useAlert();
+  const { isAdmin } = useAuth();
   const activeAlertMessage = getActiveAlertText(language);
 
-  const navItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
+  const allNavItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
     { id: 'emergency-hub', label: t.header.nav.emergencyHub, icon: 'emergency_home' },
     { id: 'donor-directory', label: t.header.nav.donorDirectory, icon: 'person_search' },
     { id: 'create-sos', label: t.header.nav.createSos, icon: 'add_circle' },
@@ -44,6 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'pitch-deck', label: t.header.nav.pitchDeck, icon: 'co_present' },
     { id: 'user-docs', label: t.header.nav.userDocs, icon: 'menu_book' },
   ];
+  // The Admin Panel link is only for admins (the proxy also blocks the page itself).
+  const navItems = allNavItems.filter((item) => item.id !== 'admin-panel' || isAdmin);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl shadow-sm border-b border-slate-200">

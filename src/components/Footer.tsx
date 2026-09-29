@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScreenId } from '../types/blood';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 interface FooterProps {
   onNavigate: (screen: ScreenId) => void;
@@ -8,6 +9,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
 
   return (
     <footer className="w-full bg-slate-900 text-slate-300 mt-16 border-t border-slate-800">
@@ -76,9 +78,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <button onClick={() => onNavigate('hospital-org')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.hospitalOrg}
           </button>
-          <button onClick={() => onNavigate('admin-panel')} className="hover:text-white transition-colors cursor-pointer text-red-400 font-bold">
-            {t.header.nav.adminPanel}
-          </button>
+          {isAdmin && (
+            <button onClick={() => onNavigate('admin-panel')} className="hover:text-white transition-colors cursor-pointer text-red-400 font-bold">
+              {t.header.nav.adminPanel}
+            </button>
+          )}
           <button onClick={() => onNavigate('donor-passport')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.donorPassport}
           </button>
