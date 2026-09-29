@@ -4,13 +4,14 @@ import { INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS, INITIAL_BLOOD_REQUESTS, FRAUD_INC
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
+import { AdminRolesPanel } from './AdminRolesPanel';
 
 interface AdminPanelScreenProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenRequisition: (demand: any) => void;
 }
 
-type AdminTab = 'overview' | 'alerts' | 'donors' | 'requests' | 'hospitals' | 'fraud' | 'logs';
+type AdminTab = 'overview' | 'alerts' | 'donors' | 'requests' | 'hospitals' | 'fraud' | 'logs' | 'access';
 
 export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onNavigate,
@@ -235,6 +236,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       label: t.admin.tabs.logs, 
       icon: 'terminal',
       description: t.admin.tabs.logsDesc
+    },
+    { 
+      id: 'access', 
+      label: t.admin.tabs.access, 
+      icon: 'admin_panel_settings',
+      description: t.admin.tabs.accessDesc
     },
   ];
 
@@ -1880,6 +1887,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           </div>
         </div>
       )}
+
+      {/* TAB 7: ACCESS & ROLES */}
+      {activeTab === 'access' && <AdminRolesPanel />}
 
         </div>
       </div>

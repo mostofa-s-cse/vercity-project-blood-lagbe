@@ -150,3 +150,49 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
     },
   };
 }
+
+export interface RoleGrantInput {
+  email: string;
+  role: 'admin' | 'hospital';
+  /** Set for `hospital` grants only. */
+  hospitalId: string | null;
+}
+
+/** An admin gives someone a role by email. `hospitalIds` are the hospitals that exist. */
+export function parseRoleGrantInput(raw: unknown, hospitalIds: readonly string[]): ParseResult<RoleGrantInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+
+  const email = typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : '';
+  if (email.length === 0 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { value: null, error: 'email' };
+  }
+  if (raw.role !== 'admin' && raw.role !== 'hospital') return { value: null, error: 'role' };
+
+  if (raw.role === 'hospital') {
+    if (typeof raw.hospitalId !== 'string' || !hospitalIds.includes(raw.hospitalId)) {
+      return { value: null, error: 'hospitalId' };
+    }
+    return { error: null, value: { email, role: 'hospital', hospitalId: raw.hospitalId } };
+  }
+  if (raw.hospitalId !== undefined && raw.hospitalId !== null) return { value: null, error: 'hospitalId' };
+  return { error: null, value: { email, role: 'admin', hospitalId: null } };
+}
+
+export interface StockInput {
+  bloodGroup: BloodGroupValue;
+  units: number;
+}
+
+export function parseStockInput(raw: unknown): ParseResult<StockInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  if (!isBloodGroup(raw.bloodGroup)) return { value: null, error: 'bloodGroup' };
+  if (typeof raw.units !== 'number' || !Number.isInteger(raw.units) || raw.units < 0 || raw.units > 9999) {
+    return { value: null, error: 'units' };
+  }
+  return { error: null, value: { bloodGroup: raw.bloodGroup, units: raw.units } };
+}
+
+/** The reverse of DB_BLOOD_GROUP: database enum value to the blood group shown in the app. */
+export const BLOOD_GROUP_FROM_DB: Record<string, BloodGroupValue> = Object.fromEntries(
+  BLOOD_GROUPS.map((group) => [DB_BLOOD_GROUP[group], group])
+);

@@ -22,14 +22,20 @@ export async function createServerSupabase() {
   });
 }
 
-/** The signed-in user's id from the session cookie, or null. Never throws. */
-export async function getCurrentUserId(): Promise<string | null> {
+/** The verified claims of the signed-in person's login token (`sub`, `email`, `app_metadata`, ...), or null. Never throws. */
+export async function getClaims(): Promise<Record<string, unknown> | null> {
   try {
     const supabase = await createServerSupabase();
     if (!supabase) return null;
     const { data } = await supabase.auth.getClaims();
-    return data?.claims.sub ?? null;
+    return (data?.claims as Record<string, unknown> | undefined) ?? null;
   } catch {
     return null;
   }
+}
+
+/** The signed-in user's id from the session cookie, or null. Never throws. */
+export async function getCurrentUserId(): Promise<string | null> {
+  const claims = await getClaims();
+  return typeof claims?.sub === 'string' ? claims.sub : null;
 }

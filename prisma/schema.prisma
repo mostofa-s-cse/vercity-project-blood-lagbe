@@ -89,3 +89,39 @@ model SosRequest {
   @@index([userId])
   @@map("sos_requests")
 }
+
+enum AppRole {
+  ADMIN
+  HOSPITAL
+
+  @@map("app_role")
+}
+
+/// A role an admin gave to an email address. It is copied into the person's Supabase
+/// `app_metadata` when they sign in (or right away if they already have), see src/lib/grantService.ts.
+model RoleGrant {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  role       AppRole
+  /// For HOSPITAL grants: the id of the hospital they manage (e.g. "ORG-01").
+  hospitalId String?   @map("hospital_id")
+  grantedBy  String?   @map("granted_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  /// Set once the role has been copied into the person's login data.
+  appliedAt  DateTime? @map("applied_at")
+
+  @@map("role_grants")
+}
+
+/// Blood units a hospital has told us it holds. Missing rows fall back to the sample data.
+model HospitalStock {
+  hospitalId String     @map("hospital_id")
+  bloodGroup BloodGroup @map("blood_group")
+  units      Int
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+  /// The Supabase user id of whoever last changed it.
+  updatedBy  String?    @map("updated_by")
+
+  @@id([hospitalId, bloodGroup])
+  @@map("hospital_stock")
+}

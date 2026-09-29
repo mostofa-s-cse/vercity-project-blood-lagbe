@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createBrowserSupabase } from '../lib/supabase/client';
-import { canAccess } from '../lib/roles';
+import { canAccess, canManageHospital, roleOf, type AppRoleName } from '../lib/roles';
 
 export interface AuthUser {
   id: string;
@@ -22,6 +22,13 @@ interface AuthContextType {
   user: AuthUser | null;
   /** Whether this person may see the admin area. Only used to hide links: the proxy is what enforces it. */
   isAdmin: boolean;
+  /** The person's role from their login token (null for a normal user). */
+  role: AppRoleName | null;
+  /**
+   * Whether this person may change the stock of this hospital (admins: any, hospital accounts: their own).
+   * Without Supabase (demo mode) everyone may, because nothing is saved. The server checks again on every save.
+   */
+  canManageHospital: (hospitalId: string) => boolean;
   /** `next` is the same-site path to return to after signing in (default: the current page). */
   signInWithGoogle: (next?: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -94,8 +101,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     claims: user ? { sub: user.id, app_metadata: user.appMetadata } : null,
   });
 
+  const claims = user ? { sub: user.id, app_metadata: user.appMetadata } : null;
+  const role = roleOf(claims);
+  const canManage = (hospitalId: string) => !configured || canManageHospital(claims, hospitalId);
+
   return (
-    <AuthContext.Provider value={{ configured, loading, user, isAdmin, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{ configured, loading, user, isAdmin, role, canManageHospital: canManage, signInWithGoogle, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

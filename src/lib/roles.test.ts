@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canAccess, isAdminClaims, isSignedInClaims, requiredLevel } from './roles.ts';
+import { canAccess, canManageHospital, hospitalIdOf, isAdminClaims, isSignedInClaims, requiredLevel, roleOf } from './roles.ts';
 
 const admin = { sub: 'u1', app_metadata: { role: 'admin' } };
 const member = { sub: 'u2', app_metadata: {} };
@@ -53,4 +53,35 @@ test('signed-in area: open in demo mode, sign-in required once Supabase is set u
   assert.equal(canAccess('user', ctx({ claims: admin })), true);
   // The admin demo switch does not open the signed-in area.
   assert.equal(canAccess('user', ctx({ adminOpen: true, claims: null })), false);
+});
+
+const hospital = { sub: 'u3', app_metadata: { role: 'hospital', hospital_id: 'ORG-01' } };
+
+test('roleOf reads admin and hospital roles from app_metadata only', () => {
+  assert.equal(roleOf(admin), 'admin');
+  assert.equal(roleOf(hospital), 'hospital');
+  assert.equal(roleOf(member), null);
+  assert.equal(roleOf({ sub: 'u', app_metadata: { role: 'owner' } }), null);
+  assert.equal(roleOf({ sub: 'u', user_metadata: { role: 'hospital' } }), null);
+  for (const junk of [null, undefined, 'hospital', {}, { app_metadata: 'hospital' }]) assert.equal(roleOf(junk), null);
+});
+
+test('hospitalIdOf is set only for hospital accounts', () => {
+  assert.equal(hospitalIdOf(hospital), 'ORG-01');
+  assert.equal(hospitalIdOf(admin), null);
+  assert.equal(hospitalIdOf({ sub: 'u', app_metadata: { role: 'hospital' } }), null);
+  assert.equal(hospitalIdOf({ sub: 'u', app_metadata: { role: 'hospital', hospital_id: 7 } }), null);
+  assert.equal(hospitalIdOf({ sub: 'u', app_metadata: { role: 'hospital', hospital_id: '' } }), null);
+  assert.equal(hospitalIdOf({ sub: 'u', app_metadata: { role: 'user', hospital_id: 'ORG-01' } }), null);
+});
+
+test('admins manage every hospital, hospital accounts only their own', () => {
+  assert.equal(canManageHospital(admin, 'ORG-01'), true);
+  assert.equal(canManageHospital(admin, 'ORG-99'), true);
+  assert.equal(canManageHospital(hospital, 'ORG-01'), true);
+  assert.equal(canManageHospital(hospital, 'ORG-02'), false);
+  assert.equal(canManageHospital(hospital, ''), false);
+  assert.equal(canManageHospital(member, 'ORG-01'), false);
+  assert.equal(canManageHospital(null, 'ORG-01'), false);
+  assert.equal(canManageHospital({ sub: 'u', app_metadata: { role: 'hospital' } }, 'ORG-01'), false);
 });

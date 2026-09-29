@@ -5,6 +5,7 @@ export const hospitals: Hospitals = {
   toastStockDeducted: (group: string) => `${group} গ্রুপের মজুত -১ হ্রাস করা হয়েছে।`,
   toastCampRegistered: 'রক্তদান ক্যাম্পে আপনার স্বেচ্ছাসেবী হিসেবে রেজিস্ট্রেশন গৃহীত হয়েছে!',
   toastCampCreated: 'নতুন রক্তদান ক্যাম্প সফলভাবে তালিকাভুক্ত হয়েছে!',
+  toastStockSaveFailed: 'মজুতের পরিবর্তন সংরক্ষণ করা যায়নি, তাই আগের হিসাবে ফিরিয়ে নেওয়া হয়েছে। আবার চেষ্টা করুন।',
   toastSensorsRecalibrated: 'কোল্ড চেইন সেন্সর পুনরায় ক্যালিব্রেট করা হয়েছে।',
   defaultCampDate: 'আসন্ন সপ্তাহান্তে',
 
@@ -42,6 +43,11 @@ export const hospitals: Hospitals = {
   addUnitTitle: 'রক্তদাতার কাছ থেকে এক ব্যাগ যোগ করুন',
   minusOne: '-১',
   plusOne: '+১',
+
+  stockViewOnly: 'শুধু দেখা যাবে',
+  stockViewOnlyNotice:
+    'শুধু দেখার জন্য। এই হাসপাতালের নিজস্ব অ্যাকাউন্ট বা অ্যাডমিন ছাড়া কেউ এর মজুত পরিবর্তন করতে পারবেন না।',
+  stockSignInHint: 'মজুত হালনাগাদ করতে হাসপাতালের অ্যাকাউন্ট দিয়ে সাইন ইন করুন।',
 
   requisitionTitle: 'ক্লিনিক্যাল রক্ত রিকুইজিশন জারি',
   requisitionSubtitle:

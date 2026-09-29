@@ -1,8 +1,40 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScreenId, HospitalOrganization, DonationCamp, BloodGroup } from '../types/blood';
 import { SAMPLE_HOSPITAL_ORGS, SAMPLE_CAMPS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { fetchHospitalStock, saveHospitalStock, type HospitalStockMap } from '../lib/api';
+
+/** Total bags of a hospital: always the sum of its blood groups. */
+const sumStock = (stock: HospitalOrganization['bloodStock']): number =>
+  Object.values(stock).reduce((total, units) => total + (units || 0), 0);
+
+/** Puts saved stock over the sample data (only the groups a hospital has reported) and recomputes the totals. */
+const mergeSavedStock = (base: HospitalOrganization[], saved: HospitalStockMap): HospitalOrganization[] =>
+  base.map(h => {
+    const reported = saved[h.id];
+    if (!reported) return h;
+    const bloodStock = { ...h.bloodStock };
+    for (const group of Object.keys(bloodStock) as BloodGroup[]) {
+      const units = reported[group];
+      if (typeof units === 'number' && Number.isFinite(units)) bloodStock[group] = units;
+    }
+    return { ...h, bloodStock, availableBags: sumStock(bloodStock) };
+  });
+
+/** Sets one blood group of one hospital and keeps the hospital total equal to the sum of its groups. */
+const withGroupUnits = (
+  list: HospitalOrganization[],
+  hospitalId: string,
+  group: BloodGroup,
+  units: number
+): HospitalOrganization[] =>
+  list.map(h => {
+    if (h.id !== hospitalId) return h;
+    const bloodStock = { ...h.bloodStock, [group]: units };
+    return { ...h, bloodStock, availableBags: sumStock(bloodStock) };
+  });
 
 interface HospitalOrgScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -14,6 +46,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   onOpenRequisition
 }) => {
   const { t } = useLanguage();
+  const { configured, loading: authLoading, user, role, canManageHospital } = useAuth();
   const [selectedOrgId, setSelectedOrgId] = useState<string>(SAMPLE_HOSPITAL_ORGS[0].id);
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
   const [camps, setCamps] = useState<DonationCamp[]>(SAMPLE_CAMPS);
@@ -28,6 +61,21 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const selectedOrg = hospitals.find(h => h.id === selectedOrgId) || hospitals[0];
+  // Demo mode (no Supabase): everyone may try it locally. Otherwise admins, or this hospital's own account.
+  const canEdit = canManageHospital(selectedOrg.id);
+  // Camps are not saved yet, so only admin and hospital accounts may create them (everyone in demo mode).
+  const canCreateCamp = !configured || role !== null;
+
+  // Load the stock hospitals have saved; without a database this stays null and the sample data is kept.
+  useEffect(() => {
+    let active = true;
+    fetchHospitalStock().then(saved => {
+      if (active && saved) setHospitals(prev => mergeSavedStock(prev, saved));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -35,26 +83,30 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   };
 
   // Adjust stock
-  const handleUpdateStock = (group: BloodGroup, delta: number) => {
+  const handleUpdateStock = async (group: BloodGroup, delta: number) => {
+    if (!canEdit) return;
+    const hospitalId = selectedOrg.id;
+    const current = selectedOrg.bloodStock[group] || 0;
+    const next = Math.max(0, current + delta);
+    if (next === current) return;
+
     sound.playTap();
-    setHospitals(prev => prev.map(h => {
-      if (h.id === selectedOrgId) {
-        const currentCount = h.bloodStock[group] || 0;
-        const newCount = Math.max(0, currentCount + delta);
-        return {
-          ...h,
-          availableBags: h.availableBags + delta,
-          bloodStock: {
-            ...h.bloodStock,
-            [group]: newCount
-          }
-        };
-      }
-      return h;
-    }));
+    setHospitals(prev => withGroupUnits(prev, hospitalId, group, next));
     showToast(
       delta > 0 ? t.hospitals.toastStockAdded(group) : t.hospitals.toastStockDeducted(group)
     );
+
+    // Demo mode keeps changes local; with sign-in set up, save to the server (which checks the role again).
+    if (!configured) return;
+    const saved = await saveHospitalStock(hospitalId, group, next);
+    if (saved) return;
+    // Undo, unless a later change already replaced this value.
+    setHospitals(prev => {
+      const hospital = prev.find(h => h.id === hospitalId);
+      if (!hospital || (hospital.bloodStock[group] || 0) !== next) return prev;
+      return withGroupUnits(prev, hospitalId, group, current);
+    });
+    showToast(t.hospitals.toastStockSaveFailed);
   };
 
   const handleRegisterForCamp = (campId: string) => {
@@ -70,7 +122,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
 
   const handleCreateCampSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCampTitle || !newCampVenue) return;
+    if (!canCreateCamp || !newCampTitle || !newCampVenue) return;
     sound.playSuccessTone();
     const newCamp: DonationCamp = {
       id: `CAMP-${Date.now().toString().slice(-4)}`,
@@ -271,6 +323,15 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
                 <p className="text-xs text-slate-500 mt-0.5">
                   {t.hospitals.vaultSubtitle}
                 </p>
+                {!canEdit && (
+                  <p className="mt-2 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
+                    <span className="material-symbols-outlined text-sm">lock</span>
+                    <span>
+                      {t.hospitals.stockViewOnlyNotice}
+                      {configured && !authLoading && !user && <> {t.hospitals.stockSignInHint}</>}
+                    </span>
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -313,23 +374,30 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
                       {count} <span className="text-xs font-semibold text-slate-500">{t.hospitals.units}</span>
                     </div>
 
-                    {/* Quick Add / Deduct buttons */}
-                    <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200/60">
-                      <button
-                        onClick={() => handleUpdateStock(group, -1)}
-                        title={t.hospitals.deductUnitTitle}
-                        className="flex-1 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-black cursor-pointer shadow-xs active:scale-95"
-                      >
-                        {t.hospitals.minusOne}
-                      </button>
-                      <button
-                        onClick={() => handleUpdateStock(group, 1)}
-                        title={t.hospitals.addUnitTitle}
-                        className="flex-1 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-black cursor-pointer shadow-xs active:scale-95"
-                      >
-                        {t.hospitals.plusOne}
-                      </button>
-                    </div>
+                    {/* Quick Add / Deduct buttons (only for people who may change this hospital's stock) */}
+                    {canEdit ? (
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200/60">
+                        <button
+                          onClick={() => handleUpdateStock(group, -1)}
+                          title={t.hospitals.deductUnitTitle}
+                          className="flex-1 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-black cursor-pointer shadow-xs active:scale-95"
+                        >
+                          {t.hospitals.minusOne}
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStock(group, 1)}
+                          title={t.hospitals.addUnitTitle}
+                          className="flex-1 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-black cursor-pointer shadow-xs active:scale-95"
+                        >
+                          {t.hospitals.plusOne}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 pt-2 border-t border-slate-200/60 text-[11px] font-semibold text-slate-500">
+                        <span className="material-symbols-outlined text-sm">visibility</span>
+                        <span>{t.hospitals.stockViewOnly}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -388,13 +456,15 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
               </p>
             </div>
 
-            <button
-              onClick={() => setIsCampModalOpen(true)}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
-            >
-              <span className="material-symbols-outlined text-base">add_box</span>
-              <span>{t.hospitals.scheduleCamp}</span>
-            </button>
+            {canCreateCamp && (
+              <button
+                onClick={() => setIsCampModalOpen(true)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <span className="material-symbols-outlined text-base">add_box</span>
+                <span>{t.hospitals.scheduleCamp}</span>
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -512,7 +582,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
       )}
 
       {/* Schedule Camp Modal */}
-      {isCampModalOpen && (
+      {isCampModalOpen && canCreateCamp && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between mb-4">

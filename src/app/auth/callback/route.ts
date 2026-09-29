@@ -1,4 +1,6 @@
 import type { NextRequest } from 'next/server';
+import { getGrantService } from '@/lib/grants';
+import { isDatabaseConfigured } from '@/lib/prisma';
 import { syncProfile } from '@/lib/profile';
 import { safeNextPath } from '@/lib/safeRedirect';
 import { createServerSupabase } from '@/lib/supabase/server';
@@ -27,6 +29,21 @@ export async function GET(request: NextRequest) {
   } catch (profileError) {
     // Signing in still works when the database is down; the profile is retried at the next sign-in.
     console.error('Could not save profile', profileError);
+  }
+
+  // Copy a waiting role (hospital / admin) into the login data, then renew the token so it carries the role at once.
+  if (isDatabaseConfigured()) {
+    try {
+      const changed = await getGrantService().applyOnSignIn({
+        id: data.user.id,
+        email: data.user.email ?? null,
+        emailConfirmed: Boolean(data.user.email_confirmed_at),
+        appMetadata: data.user.app_metadata ?? {},
+      });
+      if (changed) await supabase.auth.refreshSession();
+    } catch (grantError) {
+      console.error('Could not apply role', grantError);
+    }
   }
   return redirectTo(next);
 }

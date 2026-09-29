@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BLOOD_GROUPS, DB_BLOOD_GROUP, parseDonorInput, parseSosInput } from './validation.ts';
+import { BLOOD_GROUPS, DB_BLOOD_GROUP, parseDonorInput, parseRoleGrantInput, parseSosInput, parseStockInput } from './validation.ts';
 
 const donor = { name: 'Tanvir Ahmed', phone: '017-5249 4315', bloodGroup: 'O+', area: 'Dhanmondi 27' };
 const sos = { bloodGroup: 'AB+', bags: 1, place: 'Chander Hashi Hospital', phones: ['01752494315'], postText: 'post' };
@@ -91,4 +91,49 @@ test('rejects bad SOS input with the failing field name', () => {
   assert.equal(bad({ language: 'fr' }), 'language');
   assert.equal(bad({ isCritical: 'yes' }), 'isCritical');
   assert.equal(bad({ area: 'x'.repeat(121) }), 'area');
+});
+
+const HOSPITALS = ['ORG-01', 'ORG-02'];
+
+test('accepts an admin grant and lower-cases the email', () => {
+  const result = parseRoleGrantInput({ email: '  Boss@Example.COM ', role: 'admin' }, HOSPITALS);
+  assert.equal(result.error, null);
+  if (!result.error) assert.deepEqual(result.value, { email: 'boss@example.com', role: 'admin', hospitalId: null });
+});
+
+test('accepts a hospital grant for a known hospital', () => {
+  const result = parseRoleGrantInput({ email: 'staff@dmch.gov.bd', role: 'hospital', hospitalId: 'ORG-02' }, HOSPITALS);
+  assert.equal(result.error, null);
+  if (!result.error) assert.deepEqual(result.value, { email: 'staff@dmch.gov.bd', role: 'hospital', hospitalId: 'ORG-02' });
+});
+
+test('rejects bad role grants with the failing field name', () => {
+  const bad = (patch: object) => parseRoleGrantInput({ email: 'a@b.co', role: 'hospital', hospitalId: 'ORG-01', ...patch }, HOSPITALS).error ?? 'ok';
+  assert.equal(bad({ email: 'nope' }), 'email');
+  assert.equal(bad({ email: 'a@b.co ' + 'x'.repeat(260) }), 'email');
+  assert.equal(bad({ email: 42 }), 'email');
+  assert.equal(bad({ role: 'owner' }), 'role');
+  assert.equal(bad({ role: 'user' }), 'role');
+  assert.equal(bad({ hospitalId: undefined }), 'hospitalId');
+  assert.equal(bad({ hospitalId: 'ORG-99' }), 'hospitalId');
+  assert.equal(bad({ hospitalId: 7 }), 'hospitalId');
+  assert.equal(bad({ role: 'admin', hospitalId: 'ORG-01' }), 'hospitalId');
+  assert.notEqual(parseRoleGrantInput(null, HOSPITALS).error, null);
+  assert.notEqual(parseRoleGrantInput('x', HOSPITALS).error, null);
+});
+
+test('stock updates take a known blood group and a whole number of units from 0 to 9999', () => {
+  const ok = parseStockInput({ bloodGroup: 'O-', units: 12 });
+  assert.equal(ok.error, null);
+  if (!ok.error) assert.deepEqual(ok.value, { bloodGroup: 'O-', units: 12 });
+  assert.equal(parseStockInput({ bloodGroup: 'O-', units: 0 }).error, null);
+  assert.equal(parseStockInput({ bloodGroup: 'O-', units: 9999 }).error, null);
+  const bad = (patch: object) => parseStockInput({ bloodGroup: 'A+', units: 5, ...patch }).error ?? 'ok';
+  assert.equal(bad({ bloodGroup: 'Q+' }), 'bloodGroup');
+  assert.equal(bad({ units: -1 }), 'units');
+  assert.equal(bad({ units: 10000 }), 'units');
+  assert.equal(bad({ units: 1.5 }), 'units');
+  assert.equal(bad({ units: '5' }), 'units');
+  assert.equal(bad({ units: Number.NaN }), 'units');
+  assert.notEqual(parseStockInput(undefined).error, null);
 });

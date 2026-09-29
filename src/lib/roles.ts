@@ -52,3 +52,26 @@ export function canAccess(level: AccessLevel, { adminOpen, configured, claims }:
   }
   return !configured || isSignedInClaims(claims);
 }
+
+export type AppRoleName = 'admin' | 'hospital';
+
+/** The person's role from the login token's `app_metadata.role`, or null (a normal user). */
+export function roleOf(claims: unknown): AppRoleName | null {
+  if (!isRecord(claims) || !isRecord(claims.app_metadata)) return null;
+  const role = claims.app_metadata.role;
+  return role === 'admin' || role === 'hospital' ? role : null;
+}
+
+/** The hospital a `hospital` account belongs to (`app_metadata.hospital_id`), or null. */
+export function hospitalIdOf(claims: unknown): string | null {
+  if (roleOf(claims) !== 'hospital') return null;
+  const id = (claims as { app_metadata: Record<string, unknown> }).app_metadata.hospital_id;
+  return typeof id === 'string' && id.length > 0 ? id : null;
+}
+
+/** Admins manage every hospital; a hospital account manages only its own. */
+export function canManageHospital(claims: unknown, hospitalId: string): boolean {
+  if (roleOf(claims) === 'admin') return true;
+  const own = hospitalIdOf(claims);
+  return own !== null && own === hospitalId;
+}

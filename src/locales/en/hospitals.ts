@@ -3,6 +3,7 @@ export const hospitals = {
   toastStockDeducted: (group: string) => `${group} stock -1 deducted.`,
   toastCampRegistered: 'Registered successfully as voluntary donor for this camp!',
   toastCampCreated: 'New blood donation drive scheduled and published!',
+  toastStockSaveFailed: 'Could not save the stock change, so it was undone. Please try again.',
   toastSensorsRecalibrated: 'Cold chain sensors re-calibrated.',
   defaultCampDate: 'Upcoming Weekend',
 
@@ -40,6 +41,11 @@ export const hospitals = {
   addUnitTitle: 'Add unit from donor',
   minusOne: '-1',
   plusOne: '+1',
+
+  stockViewOnly: 'View only',
+  stockViewOnlyNotice:
+    "View only. Only this hospital's own account or an administrator can change its stock.",
+  stockSignInHint: 'Sign in with a hospital account to update stock.',
 
   requisitionTitle: 'Doctor Requisition Desk',
   requisitionSubtitle:

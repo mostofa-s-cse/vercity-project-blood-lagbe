@@ -8,6 +8,7 @@ The app runs without any of this (as a demo with sample data). Each group of set
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | A "Sign in with Google" button in the header |
 | `DATABASE_URL` + `DIRECT_URL` | New donors and SOS requests are saved to your database |
+| `SUPABASE_SERVICE_ROLE_KEY` (+ the database) and `ADMIN_EMAILS` | The Admin Panel can give people the **admin** or **hospital** role by email (step 8) |
 | `NEXT_PUBLIC_ADMIN_OPEN="true"` | Opens the Admin Panel and Ops Command to everyone, for local demos only (see step 8) |
 
 Sign-in uses **Supabase Auth with its built-in Google provider**. Auth0 is not used and is not needed.
@@ -29,7 +30,7 @@ NEXT_PUBLIC_SUPABASE_URL="https://YOUR-PROJECT-REF.supabase.co"
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="the publishable key (older projects call it the anon key)"
 ```
 
-The publishable key is designed to be public. **Do not** put the `service_role` / secret key anywhere in this app: it is not needed, and it would bypass all security.
+The publishable key is designed to be public. The `service_role` (secret) key is a different thing: it is needed only for handing out roles (step 8), goes in `.env.local` as `SUPABASE_SERVICE_ROLE_KEY`, and must **never** be given a `NEXT_PUBLIC_` name, committed, or put anywhere the browser can reach, because it bypasses all security.
 
 ## 3. Copy the database connection strings
 
@@ -80,38 +81,64 @@ Open <http://localhost:3000>. The header now shows **Sign in with Google**. Afte
 
 To check the database: register a donor or post an SOS request, then look in **Table Editor > donors / sos_requests**.
 
-## 8. Choose who is an admin
+## 8. Choose who is an admin or a hospital account
 
-Only **admin accounts** can open the Admin Panel (`/bn/admin`) and Ops Command (`/bn/command`); the header and footer hide their links from everyone else. The role is stored in the person's Supabase **`app_metadata`** (`{"role": "admin"}`). Unlike a normal profile field, `app_metadata` cannot be edited by the person themselves, only with SQL or the service key, so nobody can make themselves an admin.
+There are three kinds of people:
 
-1. Sign in once with the Google account that should be the first admin, so Supabase creates the user.
-2. Supabase dashboard > **SQL Editor**, run (with that account's email):
+| Role | Who | Can |
+|---|---|---|
+| (none) | Everyone, signed in or not | Use every public screen: SOS, donors, tracking, hospitals (view), guide |
+| `hospital` | Staff of one hospital | Everything above, plus change **their own hospital's** blood stock and create donation camps |
+| `admin` | You and your team | Everything: Admin Panel, Ops Command, every hospital's stock, and giving roles to others |
 
-   ```sql
-   update auth.users
-   set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role": "admin"}'::jsonb
-   where email = 'you@example.com';
-   ```
+A role is stored in the person's Supabase **`app_metadata`** (`{"role": "hospital", "hospital_id": "ORG-01"}`). Unlike a normal profile field, `app_metadata` cannot be edited by the person themselves, only by the server with the service key, so nobody can make themselves an admin. The server checks it on every request, so hiding a button is never the protection.
 
-3. **Sign out and sign in again** in the app. The role travels inside the login token, which is only renewed at sign-in (and about hourly), so the old token does not have it yet.
-4. To remove an admin, run the same statement with `raw_app_meta_data - 'role'`.
+### The first admin
 
-Who can open what:
+Set your own email in `.env.local`, plus the service key and database from steps 3 and 2:
+
+```
+SUPABASE_SERVICE_ROLE_KEY="..."
+ADMIN_EMAILS="you@example.com"
+```
+
+Restart, then sign in with that Google account. You become an admin at first sign-in and the **Admin Panel** link appears in the header. `ADMIN_EMAILS` always wins, so you cannot lock yourself out by editing roles.
+
+If you would rather not use the service key for the first admin, run this SQL once in the Supabase **SQL Editor** and sign out and in again:
+
+```sql
+update auth.users
+set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role": "admin"}'::jsonb
+where email = 'you@example.com';
+```
+
+### Everyone else: Admin Panel > Access
+
+Open the **Admin Panel**, then the **Access** tab. Type the person's Google email, choose **Hospital** (and which hospital) or **Admin**, and press the button.
+
+- If the person has signed in before, the role is applied at once (**Active**). They must **sign out and sign in again** for their login to pick it up.
+- If they have never signed in, the grant waits (**Waiting for first sign-in**) and is applied automatically the first time they sign in with that email.
+- **Revoke** removes the role. You cannot revoke your own.
+- Only verified Google emails receive roles.
+
+### Who can open what
 
 | Page | Who |
 |---|---|
-| Emergency Hub, Donor Directory, Create SOS, Register, Track Requests, Live Tracker, Hospitals, Pitch Deck, User Guide | Everyone. Nobody should need an account in an emergency. |
+| Emergency Hub, Donor Directory, Create SOS, Register, Track Requests, Live Tracker, Hospitals (view), Pitch Deck, User Guide | Everyone. Nobody should need an account in an emergency. |
+| Hospital blood stock and donation camps (change) | The `hospital` account of that hospital, and admins. Everyone else: view only. |
 | Donor Passport | Everyone in demo mode; **signed-in people only** once Supabase is set up. |
 | Admin Panel, Ops Command | **Admins only.** Without Supabase they are closed to everyone. |
 
-**Demo without Supabase:** set `NEXT_PUBLIC_ADMIN_OPEN="true"` in `.env.local` to open the admin area to everyone on your machine. It is read when the app is built, so restart `npm run dev` (or rebuild) after changing it. **Never set it in production.**
+The admin and signed-in pages are checked on the server before the page is sent (`src/proxy.ts`), and stock changes are checked in the API (`src/app/api/hospitals/[id]/stock/route.ts`).
 
-The check runs on the server (`src/proxy.ts`), before the page is sent, so typing the URL does not get around it. Someone without access is sent to a "no access" page that offers sign-in (or sign-out, if they are signed in with a non-admin account).
+**Demo without Supabase:** set `NEXT_PUBLIC_ADMIN_OPEN="true"` in `.env.local` to open the admin pages to everyone on your machine (role management still needs real sign-in). It is read when the app is built, so restart `npm run dev` after changing it. **Never set it in production.**
 
 ## How it works
 
 - **Sign-in**: the button starts Google sign-in through Supabase. Google sends the person to Supabase, and Supabase sends them to `/auth/callback` on this app. That route swaps the one-time code for a session cookie, saves the person in `profiles`, and returns them to the page they came from (`src/app/auth/callback/route.ts`).
 - **Staying signed in and access control**: `src/proxy.ts` refreshes the session cookie on page requests and decides who may open the admin and signed-in pages (rules in `src/lib/roles.ts`).
+- **Roles**: the Access tab calls `/api/admin/roles`. `src/lib/grantService.ts` holds the rules; the role is copied into the person's `app_metadata` with the service key (`src/lib/supabase/admin.ts`, marked `server-only`) and read back from the login token by `src/lib/roles.ts`.
 - **Saving data**: the donor and SOS forms POST to `/api/donors` and `/api/sos`. Both work **signed out** (someone in an emergency should not have to sign in); when signed in, the record is linked to the person's profile.
 - **The screens still read sample data.** Saving works, but lists such as the donor directory and request tracking still come from `src/data/mockData.ts`. Reading them from the database is the next step.
 
@@ -129,5 +156,8 @@ The check runs on the server (`src/proxy.ts`), before the page is sent, so typin
 | Google says `redirect_uri_mismatch` | The **Authorized redirect URI** in Google Cloud is not exactly `https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback`. |
 | After signing in you land on the home page with `?auth_error=1` | The Redirect URL is not allowed in Supabase (step 6.2), or the Google Client ID / secret is wrong. |
 | `prisma migrate` fails with `P1000` or `P1001` | Wrong password or URL, an un-encoded special character in the password, or the direct host is not reachable from your network (use the pooler host as in step 3). |
-| The admin link never appears after I made myself admin | You must sign out and sign in again (step 8.3). Check that the SQL matched a row: the email must be exactly the Google account's email. |
+| The admin link never appears after I made myself admin | With `ADMIN_EMAILS`: the email must exactly match the Google account, `SUPABASE_SERVICE_ROLE_KEY` and `DATABASE_URL` must be set, and you must sign in again after restarting. With the SQL: sign out and in again, and check that the SQL matched a row. |
+| The Access tab says the service key is missing | Set `SUPABASE_SERVICE_ROLE_KEY` (server only) in `.env.local` and restart. |
+| I gave someone the hospital role but they still cannot change stock | They must sign out and sign in again so their login carries the role. Check the email is exactly their Google email. |
+| A hospital account can see the buttons but saving fails | The API answers `403` if the account's hospital is not the one being edited, `401` if the login expired, and `503` without a database. |
 | Saving a donor does nothing | The API answers `503` when `DATABASE_URL` is not set. Set it and restart. Errors are logged in the terminal running `npm run dev`. |
