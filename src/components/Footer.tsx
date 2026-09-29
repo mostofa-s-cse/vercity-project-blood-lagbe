@@ -20,13 +20,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-white text-base">{t.legalGuaranteeTitle}</h4>
+                <h4 className="font-bold text-white text-base">{t.footer.legalGuaranteeTitle}</h4>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold uppercase">
-                  Strict Non-Commercial
+                  {t.footer.nonCommercialBadge}
                 </span>
               </div>
               <p className="text-xs text-slate-400 max-w-2xl mt-1 leading-relaxed">
-                {t.legalGuaranteeDesc}
+                {t.footer.legalGuaranteeDesc}
               </p>
             </div>
           </div>
@@ -36,7 +36,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">support_agent</span>
-              <span>{t.legalHotlineBtn}</span>
+              <span>{t.footer.legalHotlineBtn}</span>
             </a>
           </div>
         </div>
@@ -49,46 +49,46 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             BL
           </div>
           <div>
-            <span className="font-bold text-white text-sm">Blood Lagbe? (রক্ত লাগবে?)</span>
-            <p className="text-[11px] text-slate-400">{t.brandSub}</p>
+            <span className="font-bold text-white text-sm">{t.footer.brandLine}</span>
+            <p className="text-[11px] text-slate-400">{t.common.brandSub}</p>
           </div>
         </div>
 
         <nav className="flex flex-wrap items-center gap-3 sm:gap-5 font-semibold text-xs">
           <button onClick={() => onNavigate('emergency-hub')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navEmergencyHub}
+            {t.header.nav.emergencyHub}
           </button>
           <button onClick={() => onNavigate('donor-directory')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navDonorDirectory}
+            {t.header.nav.donorDirectory}
           </button>
           <button onClick={() => onNavigate('create-sos')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navCreateSos}
+            {t.header.nav.createSos}
           </button>
           <button onClick={() => onNavigate('request-tracking')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navRequestTracking}
+            {t.header.nav.requestTracking}
           </button>
           <button onClick={() => onNavigate('donor-register')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navDonorRegister}
+            {t.header.nav.donorRegister}
           </button>
           <button onClick={() => onNavigate('live-tracker')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navLiveTracker}
+            {t.header.nav.liveTracker}
           </button>
           <button onClick={() => onNavigate('hospital-org')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navHospitalOrg}
+            {t.header.nav.hospitalOrg}
           </button>
           <button onClick={() => onNavigate('admin-panel')} className="hover:text-white transition-colors cursor-pointer text-red-400 font-bold">
-            {t.navAdminPanel}
+            {t.header.nav.adminPanel}
           </button>
           <button onClick={() => onNavigate('donor-passport')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navDonorPassport}
+            {t.header.nav.donorPassport}
           </button>
           <button onClick={() => onNavigate('pitch-deck')} className="hover:text-white transition-colors cursor-pointer">
-            {t.navPitchDeck}
+            {t.header.nav.pitchDeck}
           </button>
         </nav>
 
         <div className="text-[11px] text-slate-500">
-          © 2026 Blood Lagbe? • DGHS & BDRCS Affiliated
+          {t.footer.copyright}
         </div>
       </div>
     </footer>

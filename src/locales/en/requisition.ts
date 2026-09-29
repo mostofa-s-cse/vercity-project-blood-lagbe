@@ -1,2 +1,20 @@
-export const requisition = {};
+export const requisition = {
+  title: 'Official Clinical Requisition',
+  subtitle: 'DGHS Blood Safety Protocol v4.2 • Verified Slip',
+  govHeader: "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH",
+  department: 'Department of Blood Transfusion & Critical Care',
+  urgentOtOrder: 'URGENT OT ORDER',
+  slipNumber: 'SLIP #BD-DMCH-2025-98321',
+  patientNameLabel: 'PATIENT NAME',
+  bloodGroupLabel: 'BLOOD GROUP',
+  requiredUnitsLabel: 'REQUIRED UNITS',
+  unitsValue: (units: number) => `${units} Bags (PRBC)`,
+  crossMatchLabel: 'CROSS-MATCH STATUS',
+  crossMatchOk: 'Pre-Screened OK',
+  doctorReg: 'BMDC Reg #A-48190 • Biometric Stamped',
+  dghsValidated: 'DGHS VALIDATED',
+  sealVerified: 'SEAL 24/7 VERIFIED',
+  signedNotice: 'Cryptographically signed and matched with hospital admissions database',
+  acknowledgeClose: 'Acknowledge & Close',
+};
 export type Requisition = typeof requisition;

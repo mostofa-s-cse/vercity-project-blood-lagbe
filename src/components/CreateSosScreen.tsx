@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BloodGroup, EmergencyDemand, ScreenId, UrgencyTier } from '../types/blood';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CreateSosScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -11,6 +12,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
   onNavigate,
   onSosCreated,
 }) => {
+  const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Form State
@@ -99,16 +101,16 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-wider">
-              Emergency Broadcast Center
+              {t.sos.badge}
             </span>
-            <span className="text-xs text-slate-400">• Multi-Carrier SMS Dispatch</span>
+            <span className="text-xs text-slate-400">{t.sos.badgeSub}</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <span className="material-symbols-outlined text-red-600 text-2xl">emergency</span>
-            Create Emergency SOS Request
+            {t.sos.title}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Geofenced alert broadcast to verified voluntary donors within minutes across Dhaka & nationwide.
+            {t.sos.subtitle}
           </p>
         </div>
 
@@ -117,17 +119,17 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
           className="self-start sm:self-center px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1"
         >
           <span className="material-symbols-outlined text-sm">arrow_back</span>
-          <span>Back to Hub</span>
+          <span>{t.sos.backToHub}</span>
         </button>
       </div>
 
       {/* Stepper Wizard Progress */}
       <div className="grid grid-cols-4 gap-2">
         {[
-          { num: 1, label: 'Patient Info', icon: 'person' },
-          { num: 2, label: 'Blood & Urgency', icon: 'water_drop' },
-          { num: 3, label: 'Doctor Slip', icon: 'description' },
-          { num: 4, label: 'Broadcast SOS', icon: 'cell_tower' },
+          { num: 1, label: t.sos.steps.patient, icon: 'person' },
+          { num: 2, label: t.sos.steps.blood, icon: 'water_drop' },
+          { num: 3, label: t.sos.steps.doctor, icon: 'description' },
+          { num: 4, label: t.sos.steps.broadcast, icon: 'cell_tower' },
         ].map((s) => {
           const isActive = step === s.num;
           const isDone = step > s.num;
@@ -174,17 +176,17 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
           <div className="flex flex-col gap-5 animate-in fade-in">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-red-600">patient_list</span>
-              Step 1: Patient & Hospital Location
+              {t.sos.step1Title}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Patient Full Name <span className="text-red-500">*</span>
+                  {t.sos.patientName} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Nahidul Islam / 8-yr-old Child"
+                  placeholder={t.sos.patientNamePlaceholder}
                   value={patientName}
                   onChange={(e) => setPatientName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
@@ -193,25 +195,25 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Age</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">{t.sos.age}</label>
                   <input
                     type="number"
-                    placeholder="e.g. 28"
+                    placeholder={t.sos.agePlaceholder}
                     value={patientAge}
                     onChange={(e) => setPatientAge(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Gender</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">{t.sos.gender}</label>
                   <select
                     value={patientGender}
                     onChange={(e) => setPatientGender(e.target.value as any)}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
                   >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
+                    <option value="Male">{t.sos.genderMale}</option>
+                    <option value="Female">{t.sos.genderFemale}</option>
+                    <option value="Other">{t.sos.genderOther}</option>
                   </select>
                 </div>
               </div>
@@ -219,7 +221,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Hospital / Medical Center <span className="text-red-500">*</span>
+                {t.sos.hospital} <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedHospital}
@@ -237,11 +239,11 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Ward / Cabin / Bed No. <span className="text-red-500">*</span>
+                  {t.sos.wardBed} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Trauma ICU Bed 04 / OT Complex"
+                  placeholder={t.sos.wardBedPlaceholder}
                   value={wardBed}
                   onChange={(e) => setWardBed(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
@@ -250,11 +252,11 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Attendant Contact Mobile <span className="text-red-500">*</span>
+                  {t.sos.attendantPhone} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
-                  placeholder="e.g. 01712-489021"
+                  placeholder={t.sos.attendantPhonePlaceholder}
                   value={attendantPhone}
                   onChange={(e) => setAttendantPhone(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
@@ -269,13 +271,13 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
           <div className="flex flex-col gap-6 animate-in fade-in">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-red-600">bloodtype</span>
-              Step 2: Blood Group & Emergency Urgency
+              {t.sos.step2Title}
             </h2>
 
             {/* Blood Group Selector */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-2">
-                Select Required Blood Group <span className="text-red-500">*</span>
+                {t.sos.selectBloodGroup} <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                 {(['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'] as BloodGroup[]).map((grp) => {
@@ -304,8 +306,8 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
             {/* Number of Bags Required */}
             <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
               <div>
-                <span className="text-xs font-bold text-slate-800 block">Number of Bags / Units Needed</span>
-                <span className="text-[11px] text-slate-500">Standard 450 mL whole blood bag</span>
+                <span className="text-xs font-bold text-slate-800 block">{t.sos.bagsNeeded}</span>
+                <span className="text-[11px] text-slate-500">{t.sos.bagsHint}</span>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -335,26 +337,26 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
             {/* Urgency Tier */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-2">
-                Emergency Urgency Level
+                {t.sos.urgencyLevel}
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   {
                     tier: 'critical' as UrgencyTier,
-                    title: 'Immediate (Code Red)',
-                    desc: 'Under 1-2 hours (Massive trauma, maternal hemorrhage)',
+                    title: t.sos.urgency.criticalTitle,
+                    desc: t.sos.urgency.criticalDesc,
                     color: 'border-red-500 bg-red-50/50 text-red-900',
                   },
                   {
                     tier: 'semi-urgent' as UrgencyTier,
-                    title: 'Urgent (Under 6h)',
-                    desc: 'Scheduled surgery today / Severe anemia',
+                    title: t.sos.urgency.semiUrgentTitle,
+                    desc: t.sos.urgency.semiUrgentDesc,
                     color: 'border-amber-500 bg-amber-50/50 text-amber-900',
                   },
                   {
                     tier: 'scheduled' as UrgencyTier,
-                    title: 'Scheduled (Next 24h)',
-                    desc: 'Thalassemia transfusion / Routine elective',
+                    title: t.sos.urgency.scheduledTitle,
+                    desc: t.sos.urgency.scheduledDesc,
                     color: 'border-blue-500 bg-blue-50/50 text-blue-900',
                   },
                 ].map((u) => {
@@ -384,11 +386,11 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Clinical Indication / Diagnosis
+                {t.sos.clinicalReason}
               </label>
               <input
                 type="text"
-                placeholder="e.g. Ruptured Ectopic Pregnancy, Open Heart Surgery"
+                placeholder={t.sos.clinicalReasonPlaceholder}
                 value={clinicalReason}
                 onChange={(e) => setClinicalReason(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
@@ -402,7 +404,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
           <div className="flex flex-col gap-6 animate-in fade-in">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-red-600">verified</span>
-              Step 3: Doctor Requisition & Anti-Fraud Verification
+              {t.sos.step3Title}
             </h2>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
@@ -410,18 +412,18 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
                 shield
               </span>
               <p className="text-xs text-amber-900 leading-relaxed">
-                To prevent black-market hoarding and syndicate exploitation, all requests broadcasted through Blood Lagbe are cross-checked with attending hospital doctor credentials. Fake slips will result in permanent NID and mobile blacklisting.
+                {t.sos.antiFraudNotice}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Attending Doctor's Name <span className="text-red-500">*</span>
+                  {t.sos.doctorName} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Dr. Farhana Yasmin, FCPS"
+                  placeholder={t.sos.doctorNamePlaceholder}
                   value={doctorName}
                   onChange={(e) => setDoctorName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
@@ -430,11 +432,11 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  BMDC Registration Number
+                  {t.sos.bmdcReg}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. BMDC-A-49210"
+                  placeholder={t.sos.bmdcRegPlaceholder}
                   value={bmdcReg}
                   onChange={(e) => setBmdcReg(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
@@ -451,10 +453,10 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
                   </div>
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">
-                      Hospital Requisition Slip Attached (Verified Seal)
+                      {t.sos.slipAttached}
                     </span>
                     <span className="text-[11px] text-slate-500">
-                      DMCH-BLOOD-REQ-9842.PDF • 1.4 MB • Tamper-Resistant Timestamped
+                      {t.sos.slipFileMeta}
                     </span>
                   </div>
                   <button
@@ -465,14 +467,14 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
                     }}
                     className="text-xs text-red-600 hover:underline font-semibold"
                   >
-                    Change / Re-upload File
+                    {t.sos.slipChange}
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
                   <span className="material-symbols-outlined text-slate-400 text-3xl">upload_file</span>
-                  <span className="text-xs font-bold text-slate-700">Click to upload doctor signed requisition slip</span>
-                  <span className="text-[10px] text-slate-400">JPG, PNG, PDF up to 5MB</span>
+                  <span className="text-xs font-bold text-slate-700">{t.sos.slipUploadPrompt}</span>
+                  <span className="text-[10px] text-slate-400">{t.sos.slipUploadHint}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -481,7 +483,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
                     }}
                     className="mt-2 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold"
                   >
-                    Select Hospital Prescription
+                    {t.sos.slipSelect}
                   </button>
                 </div>
               )}
@@ -494,14 +496,14 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
           <div className="flex flex-col gap-6 animate-in fade-in">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-red-600">cell_tower</span>
-              Step 4: Geofence Dispatch & Multi-Carrier Gateway
+              {t.sos.step4Title}
             </h2>
 
             {/* Geofence Range */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-3">
               <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-800">Geofence Broadcast Radius:</span>
-                <span className="font-black text-red-600 text-sm">{radiusKm} km Radius</span>
+                <span className="font-bold text-slate-800">{t.sos.radiusLabel}</span>
+                <span className="font-black text-red-600 text-sm">{t.sos.radiusValue(radiusKm)}</span>
               </div>
               <input
                 type="range"
@@ -512,33 +514,33 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-600"
               />
               <div className="flex justify-between text-[11px] text-slate-500">
-                <span>2 km (Walking / Rickshaw)</span>
-                <span>5 km (Motorcycle / Fast transit)</span>
-                <span>20 km (Greater Dhaka Met)</span>
+                <span>{t.sos.radius2}</span>
+                <span>{t.sos.radius5}</span>
+                <span>{t.sos.radius20}</span>
               </div>
             </div>
 
             {/* Carrier Gateways */}
             <div className="p-4 rounded-xl bg-white border border-slate-200">
               <span className="text-xs font-bold text-slate-700 block mb-2">
-                Multi-Carrier SMS Dispatcher Gateways:
+                {t.sos.gatewaysLabel}
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
                 <div className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
                   <span className="font-bold block">Grameenphone</span>
-                  <span className="text-[10px] text-emerald-600 font-semibold">Active • 99.8%</span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">{t.sos.gatewayActive('99.8%')}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
                   <span className="font-bold block">Robi / Airtel</span>
-                  <span className="text-[10px] text-emerald-600 font-semibold">Active • 99.7%</span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">{t.sos.gatewayActive('99.7%')}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
                   <span className="font-bold block">Banglalink</span>
-                  <span className="text-[10px] text-emerald-600 font-semibold">Active • 99.9%</span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">{t.sos.gatewayActive('99.9%')}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  <span className="font-bold block">Teletalk (Govt)</span>
-                  <span className="text-[10px] text-emerald-600 font-semibold">Active • Priority</span>
+                  <span className="font-bold block">{t.sos.teletalkGovt}</span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">{t.sos.gatewayActivePriority}</span>
                 </div>
               </div>
             </div>
@@ -548,14 +550,22 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
               <div className="flex items-center justify-between text-slate-400 mb-2 border-b border-slate-800 pb-2">
                 <span className="flex items-center gap-1 font-sans font-bold">
                   <span className="material-symbols-outlined text-sm text-red-500">sms</span>
-                  SMS Alert Payload Preview (Automated SMS to ~450 Donors)
+                  {t.sos.smsPreviewTitle}
                 </span>
                 <span className="text-[10px] bg-red-600/30 text-red-400 px-2 py-0.5 rounded">
-                  URGENT
+                  {t.sos.urgentTag}
                 </span>
               </div>
               <p className="leading-relaxed">
-                [BLOOD LAGBE? SOS ALERT] Urgent {bloodGroup} blood required for {patientName || 'Patient'} at {selectedHospital}, {wardBed}. {bagsRequired} Bag(s) needed. Requisition verified by {doctorName}. Please call {attendantPhone} immediately if you can donate. Non-commercial/free service.
+                {t.sos.smsPreview(
+                  bagsRequired,
+                  bloodGroup,
+                  patientName || t.sos.smsPatientFallback,
+                  selectedHospital,
+                  wardBed,
+                  doctorName,
+                  attendantPhone,
+                )}
               </p>
             </div>
           </div>
@@ -570,7 +580,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
               className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-base">arrow_back</span>
-              <span>Previous Step</span>
+              <span>{t.sos.previousStep}</span>
             </button>
           ) : (
             <div />
@@ -582,7 +592,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
               onClick={handleNext}
               className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm"
             >
-              <span>Continue</span>
+              <span>{t.sos.continue}</span>
               <span className="material-symbols-outlined text-base">arrow_forward</span>
             </button>
           ) : (
@@ -593,7 +603,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({
               className="px-8 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-red-600/30 hover:scale-105"
             >
               <span className="material-symbols-outlined text-lg animate-pulse">crisis_alert</span>
-              <span>{isSubmitting ? 'Broadcasting Emergency...' : 'Launch Geofence SOS Broadcast'}</span>
+              <span>{isSubmitting ? t.sos.broadcasting : t.sos.launchBroadcast}</span>
             </button>
           )}
         </div>

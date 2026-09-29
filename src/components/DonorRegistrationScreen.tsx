@@ -3,6 +3,21 @@ import { ScreenId, Donor, BloodGroup } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 
+const DIVISIONS = [
+  { value: 'Dhaka Central', id: 'dhakaCentral' },
+  { value: 'Dhaka North', id: 'dhakaNorth' },
+  { value: 'Chattogram Port', id: 'chattogram' },
+  { value: 'Sylhet Sadar', id: 'sylhet' },
+  { value: 'Rajshahi Division', id: 'rajshahi' },
+] as const;
+
+const VEHICLES = [
+  { value: 'Personal Motorcycle', id: 'motorcycle' },
+  { value: 'Personal Ride / Car', id: 'car' },
+  { value: 'Bicycle / On Foot', id: 'bicycle' },
+  { value: 'Uber / Public Transit', id: 'publicTransit' },
+] as const;
+
 interface DonorRegistrationScreenProps {
   onNavigate: (screen: ScreenId) => void;
   onRegisterDonor: (newDonor: Donor) => void;
@@ -12,7 +27,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   onNavigate,
   onRegisterDonor
 }) => {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
 
   // Form states
   const [name, setName] = useState('');
@@ -37,11 +52,16 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
 
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const divisionId = DIVISIONS.find((d) => d.value === division)?.id;
+  const divisionLabel = divisionId ? t.register.divisionNames[divisionId] : division;
+  const vehicleId = VEHICLES.find((v) => v.value === vehicle)?.id;
+  const vehicleLabel = vehicleId ? t.register.vehicleNames[vehicleId] : vehicle;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone || !location) return;
     if (!voluntaryPledge) {
-      alert(language === 'bn' ? 'দয়া করে স্বেচ্ছাসেবী ও অবৈতনিক রক্তদানের অঙ্গীকার গ্রহণ করুন।' : 'Please accept the 100% voluntary donation pledge.');
+      alert(t.register.pledgeAlert);
       return;
     }
 
@@ -92,20 +112,18 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider">
-                {language === 'bn' ? 'স্বেচ্ছাসেবী রক্তদাতা নিবন্ধন' : 'DONOR REGISTRATION'}
+                {t.register.badge}
               </span>
               <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">verified</span>
-                {language === 'bn' ? '১০০% অবৈতনিক রক্তদান নেটওয়ার্ক' : '100% Voluntary Life Network'}
+                {t.register.networkTag}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white">
-              {language === 'bn' ? 'ব্লাড লাগবে? রক্তদাতা হিসেবে নিবন্ধন করুন' : 'Join the Life-Saving Donor Network'}
+              {t.register.title}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              {language === 'bn'
-                ? 'আপনার রক্তদানের মাধ্যমে যেকোনো মুমূর্ষু রোগী, থ্যালাসেমিয়া আক্রান্ত শিশু বা প্রসূতি মায়ের জীবন বাঁচতে পারে।'
-                : 'Register as an on-call voluntary blood donor. Get geofenced alerts when critical patients nearby match your blood group.'}
+              {t.register.subtitle}
             </p>
           </div>
 
@@ -113,7 +131,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
             onClick={() => onNavigate('donor-directory')}
             className="px-4 py-2 bg-slate-800/80 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 self-start md:self-auto cursor-pointer"
           >
-            {language === 'bn' ? 'বর্তমান ডোনারদের দেখুন' : 'Browse Existing Donors'}
+            {t.register.browseDonors}
           </button>
         </div>
       </div>
@@ -125,12 +143,10 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
             <span className="material-symbols-outlined text-3xl">verified</span>
           </div>
           <h2 className="text-2xl font-black text-slate-900">
-            {language === 'bn' ? 'অভিনন্দন! আপনার ডোনার প্রোফাইল সফলভাবে তৈরি হয়েছে' : 'Congratulations! You are now a Registered Donor'}
+            {t.register.successTitle}
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 max-w-lg leading-relaxed">
-            {language === 'bn'
-              ? `${name}, আপনার ${bloodGroup} গ্রুপের রক্তদাতা প্রোফাইল সক্রিয় করা হয়েছে। নিকটবর্তী হাসপাতালে রক্তের প্রয়োজন হলে আপনার ফোনে জরুরি বিজ্ঞপ্তি পৌঁছাবে।`
-              : `${name}, your ${bloodGroup} profile is now active on the national registry. Nearby hospitals and families can now reach out for verified emergencies.`}
+            {t.register.successDesc(name, bloodGroup)}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
@@ -138,13 +154,13 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
               onClick={() => onNavigate('donor-passport')}
               className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-red-600/30 cursor-pointer transition-all"
             >
-              {language === 'bn' ? 'ডোনার পাসপোর্ট দেখুন' : 'View Donor Passport'}
+              {t.register.viewPassport}
             </button>
             <button
               onClick={() => onNavigate('donor-directory')}
               className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer transition-all"
             >
-              {language === 'bn' ? 'ডোনার ডিরেক্টরি খুলুন' : 'Open Donor Directory'}
+              {t.register.openDirectory}
             </button>
           </div>
         </div>
@@ -156,22 +172,22 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
             <div>
               <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2 mb-1">
                 <span className="material-symbols-outlined text-red-600">person</span>
-                <span>{language === 'bn' ? '১. ব্যক্তিগত তথ্য ও রক্তের গ্রুপ' : '1. Personal Info & Blood Group'}</span>
+                <span>{t.register.section1Title}</span>
               </h3>
               <p className="text-xs text-slate-500">
-                {language === 'bn' ? 'জরুরি পরিস্থিতিতে দ্রুত যোগাযোগের জন্য সঠিক তথ্য দিন।' : 'Provide accurate contact details for emergency cross-matching.'}
+                {t.register.section1Desc}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {language === 'bn' ? 'পূর্ণ নাম *' : 'Full Name *'}
+                  {t.register.fullName}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Tanvir Ahmed"
+                  placeholder={t.register.fullNamePlaceholder}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500 transition-colors"
@@ -180,7 +196,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {language === 'bn' ? 'মোবাইল নম্বর (সক্রিয়) *' : 'Mobile Number *'}
+                  {t.register.mobile}
                 </label>
                 <input
                   type="tel"
@@ -194,7 +210,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {language === 'bn' ? 'রক্তের গ্রুপ *' : 'Blood Group *'}
+                  {t.register.bloodGroup}
                 </label>
                 <select
                   value={bloodGroup}
@@ -202,14 +218,14 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-black text-red-600 outline-none cursor-pointer"
                 >
                   {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map((bg) => (
-                    <option key={bg} value={bg}>{bg} ({bg.includes('-') ? 'Rare Rh-Neg' : 'Rh-Pos'})</option>
+                    <option key={bg} value={bg}>{bg} ({bg.includes('-') ? t.register.rhNeg : t.register.rhPos})</option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {language === 'bn' ? 'বয়স ও লিঙ্গ' : 'Age & Gender'}
+                  {t.register.ageGender}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -219,15 +235,15 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none"
-                    placeholder="Age"
+                    placeholder={t.register.agePlaceholder}
                   />
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as any)}
                     className="w-full px-2 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none"
                   >
-                    <option value="Male">{language === 'bn' ? 'পুরুষ' : 'Male'}</option>
-                    <option value="Female">{language === 'bn' ? 'মহিলা' : 'Female'}</option>
+                    <option value="Male">{t.register.male}</option>
+                    <option value="Female">{t.register.female}</option>
                   </select>
                 </div>
               </div>
@@ -236,38 +252,36 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
             <div className="pt-2 border-t border-slate-100">
               <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2 mb-1">
                 <span className="material-symbols-outlined text-red-600">location_on</span>
-                <span>{language === 'bn' ? '২. ঠিকানা ও এলাকা' : '2. Location & Hospital Radius'}</span>
+                <span>{t.register.section2Title}</span>
               </h3>
               <p className="text-xs text-slate-500 mb-4">
-                {language === 'bn' ? 'নিকটবর্তী হাসপাতালের সাথে জিওফেন্সিংয়ের জন্য আপনার এলাকা নির্ধারণ করুন।' : 'Geo-tagging ensures you are summoned only for realistic hospital transit times.'}
+                {t.register.section2Desc}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {language === 'bn' ? 'বিভাগ / জোন' : 'Division / Hub'}
+                    {t.register.division}
                   </label>
                   <select
                     value={division}
                     onChange={(e) => setDivision(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
                   >
-                    <option value="Dhaka Central">Dhaka Central (DMCH, BSMMU, Mitford)</option>
-                    <option value="Dhaka North">Dhaka North (Uttara, Kurmitola, Mirpur)</option>
-                    <option value="Chattogram Port">Chattogram (CMCH Hub)</option>
-                    <option value="Sylhet Sadar">Sylhet (Osmani Medical Zone)</option>
-                    <option value="Rajshahi Division">Rajshahi (RMCH Zone)</option>
+                    {DIVISIONS.map((d) => (
+                      <option key={d.value} value={d.value}>{t.register.divisionOptions[d.id]}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {language === 'bn' ? 'নির্দিষ্ট এলাকা / থানা *' : 'Specific Area / Thana *'}
+                    {t.register.area}
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Dhanmondi 27 / Shahbagh / Mirpur 10"
+                    placeholder={t.register.areaPlaceholder}
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
@@ -276,7 +290,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {language === 'bn' ? 'নিকটবর্তী হাসপাতাল' : 'Nearest Preferred Hospital'}
+                    {t.register.nearestHospital}
                   </label>
                   <input
                     type="text"
@@ -288,17 +302,16 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {language === 'bn' ? 'যাতায়াত মাধ্যম' : 'Transit Vehicle'}
+                    {t.register.vehicle}
                   </label>
                   <select
                     value={vehicle}
                     onChange={(e) => setVehicle(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium outline-none cursor-pointer"
                   >
-                    <option value="Personal Motorcycle">Personal Motorcycle (Fast Transit)</option>
-                    <option value="Personal Ride / Car">Personal Ride / Car</option>
-                    <option value="Bicycle / On Foot">Bicycle / On Foot</option>
-                    <option value="Uber / Public Transit">Uber / Public Transit</option>
+                    {VEHICLES.map((v) => (
+                      <option key={v.value} value={v.value}>{t.register.vehicleOptions[v.id]}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -308,10 +321,10 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
             <div className="pt-2 border-t border-slate-100">
               <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2 mb-1">
                 <span className="material-symbols-outlined text-red-600">health_and_safety</span>
-                <span>{language === 'bn' ? '৩. স্বাস্থ্য ও রক্তদানের যোগ্যতা' : '3. Medical Eligibility Checklist'}</span>
+                <span>{t.register.section3Title}</span>
               </h3>
               <p className="text-xs text-slate-500 mb-4">
-                {language === 'bn' ? 'নিরাপদ রক্তদানের জন্য নিচের শর্তাবলী নিশ্চিত করুন।' : 'Confirm strict safety protocols to ensure patient and donor wellbeing.'}
+                {t.register.section3Desc}
               </p>
 
               <div className="space-y-3">
@@ -324,10 +337,10 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                   />
                   <div className="text-xs">
                     <span className="font-bold text-slate-900 block">
-                      {language === 'bn' ? 'ওজন ৪৫ কেজির বেশি এবং বয়স ১৮-৬৫ এর মধ্যে' : 'Weight is at least 45kg and age 18-65'}
+                      {t.register.weightTitle}
                     </span>
                     <span className="text-slate-500">
-                      {language === 'bn' ? 'শারীরিক সুস্থতা রক্তদানের জন্য অপরিহার্য।' : 'Minimum physiological threshold for safe whole blood extraction.'}
+                      {t.register.weightDesc}
                     </span>
                   </div>
                 </label>
@@ -341,10 +354,10 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                   />
                   <div className="text-xs">
                     <span className="font-bold text-slate-900 block">
-                      {language === 'bn' ? 'গত ৩ মাসে কোনো বড় অসুখ বা অ্যান্টিবায়োটিক সেবন করেননি' : 'No major illness or antibiotics in the last 3 months'}
+                      {t.register.illnessTitle}
                     </span>
                     <span className="text-slate-500">
-                      {language === 'bn' ? 'হেপাটাইটিস, এইডস বা ম্যালেরিয়া মুক্ত।' : 'Serology clear with normal hemoglobin.'}
+                      {t.register.illnessDesc}
                     </span>
                   </div>
                 </label>
@@ -359,12 +372,10 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                   />
                   <div className="text-xs text-red-900">
                     <span className="font-extrabold block">
-                      {language === 'bn' ? '১০০% অবৈতনিক স্বেচ্ছাসেবী রক্তদানের অঙ্গীকার *' : '100% Voluntary Non-Commercial Pledge *'}
+                      {t.register.pledgeTitle}
                     </span>
                     <span>
-                      {language === 'bn'
-                        ? 'আমি স্বেচ্ছায় ও কোনো আর্থিক বিনিময় ছাড়া শুধুমাত্র মানবসেবায় রক্ত দিতে অঙ্গীকারবদ্ধ।'
-                        : 'I solemnly pledge to donate blood purely on a voluntary, non-commercial basis under DGHS safety laws.'}
+                      {t.register.pledgeDesc}
                     </span>
                   </div>
                 </label>
@@ -376,7 +387,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
               className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm uppercase tracking-wider shadow-lg shadow-red-600/30 cursor-pointer transition-all active:scale-[0.99] flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined">how_to_reg</span>
-              <span>{language === 'bn' ? 'রক্তদাতা হিসেবে নিবন্ধন সম্পন্ন করুন' : 'Complete Registration'}</span>
+              <span>{t.register.submit}</span>
             </button>
           </div>
 
@@ -384,7 +395,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
           <div className="flex flex-col gap-4">
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs sticky top-28">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-3">
-                {language === 'bn' ? 'লাইভ প্রিভিউ কার্ড' : 'LIVE PASSPORT PREVIEW'}
+                {t.register.previewLabel}
               </span>
 
               {/* Donor Card Preview */}
@@ -394,41 +405,39 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                     {bloodGroup}
                   </div>
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
-                    {language === 'bn' ? 'প্রস্তুত ডোনার' : 'ACTIVE'}
+                    {t.register.previewActive}
                   </span>
                 </div>
 
-                <h4 className="font-black text-slate-900 text-base">{name || (language === 'bn' ? 'আপনার নাম' : 'Your Name')}</h4>
+                <h4 className="font-black text-slate-900 text-base">{name || t.register.yourName}</h4>
                 <p className="text-xs text-slate-500 font-medium">
-                  {location || (language === 'bn' ? 'আপনার এলাকা' : 'Your Area')}, {division}
+                  {location || t.register.yourArea}, {divisionLabel}
                 </p>
 
                 <div className="mt-4 pt-3 border-t border-red-100 space-y-1.5 text-xs text-slate-700">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">{language === 'bn' ? 'ফোন:' : 'Phone:'}</span>
+                    <span className="text-slate-500">{t.register.phoneLabel}</span>
                     <span className="font-mono font-bold">{phone}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">{language === 'bn' ? 'যানবাহন:' : 'Transit:'}</span>
-                    <span className="font-semibold">{vehicle}</span>
+                    <span className="text-slate-500">{t.register.transitLabel}</span>
+                    <span className="font-semibold">{vehicleLabel}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">{language === 'bn' ? 'হাসপাতাল:' : 'Hospital:'}</span>
+                    <span className="text-slate-500">{t.register.hospitalLabel}</span>
                     <span className="font-semibold truncate max-w-[140px]">{nearestHospital}</span>
                   </div>
                 </div>
 
                 <div className="mt-4 p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-2 text-[11px] text-emerald-800 font-semibold">
                   <span className="material-symbols-outlined text-sm">verified</span>
-                  <span>BDRCS Verified Safe Donor</span>
+                  <span>{t.register.verifiedSafeDonor}</span>
                 </div>
               </div>
 
               <div className="mt-4 p-3 bg-slate-50 rounded-xl text-xs text-slate-500 leading-relaxed">
-                <span className="font-bold text-slate-700 block mb-0.5">{language === 'bn' ? 'গোপনীয়তা গ্যারান্টি:' : 'Privacy Assurance:'}</span>
-                {language === 'bn'
-                  ? 'আপনার ফোন নম্বর শুধুমাত্র ডিজিএইচএস ভেরিফাইড রোগী বা হাসপাতালের জরুরি প্রয়োজনে দেখানো হবে।'
-                  : 'Your phone number is shared only during active verified emergencies under strict anti-spam guidelines.'}
+                <span className="font-bold text-slate-700 block mb-0.5">{t.register.privacyTitle}</span>
+                {t.register.privacyDesc}
               </div>
             </div>
           </div>

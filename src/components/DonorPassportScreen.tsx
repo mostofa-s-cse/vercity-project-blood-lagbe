@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DonorPassportScreenProps {
   onNavigate: (screen: ScreenId) => void;
 }
 
 export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavigate }) => {
+  const { t } = useLanguage();
   const [daysElapsed, setDaysElapsed] = useState<number>(94);
   const [isRestingDemo, setIsRestingDemo] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
 
   const handleDownloadCertificate = () => {
     sound.playSuccessChime();
-    setToastMessage('Verified BDRCS / DGHS Donor Certificate generated & downloading (PDF)...');
+    setToastMessage(t.passport.toastCertificate);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -45,16 +47,16 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-wider">
-              Official Lifesaver Credential
+              {t.passport.badgeOfficial}
             </span>
-            <span className="text-xs text-slate-500">• BDRCS & DGHS Recognized</span>
+            <span className="text-xs text-slate-500">{t.passport.recognized}</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <span className="material-symbols-outlined text-red-600 text-2xl">badge</span>
-            Digital Donor Smart Passport & Vitals
+            {t.passport.title}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Tamper-proof medical identity, biological rest cooldown counter, and authenticated donation ledger.
+            {t.passport.subtitle}
           </p>
         </div>
 
@@ -63,14 +65,14 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
             onClick={handleToggleEligibilityDemo}
             className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors"
           >
-            {isRestingDemo ? 'Show "Ready to Donate"' : 'Simulate "Resting Cooldown"'}
+            {isRestingDemo ? t.passport.showReady : t.passport.simulateResting}
           </button>
           <button
             onClick={handleDownloadCertificate}
             className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
           >
             <span className="material-symbols-outlined text-sm">download</span>
-            <span>Export Certificate</span>
+            <span>{t.passport.exportCertificate}</span>
           </button>
         </div>
       </div>
@@ -89,17 +91,17 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
               </div>
               <div>
                 <span className="font-extrabold text-sm tracking-tight text-white block">
-                  PEOPLE'S REPUBLIC OF BANGLADESH
+                  {t.passport.countryName}
                 </span>
                 <span className="text-[10px] text-red-300 uppercase font-semibold">
-                  Directorate General of Health Services (DGHS) • BDRCS
+                  {t.passport.dghsLine}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase border border-amber-500/30">
               <span className="material-symbols-outlined text-xs">military_tech</span>
-              <span>Gold Donor</span>
+              <span>{t.passport.goldDonor}</span>
             </div>
           </div>
 
@@ -109,20 +111,20 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
               <div className="relative">
                 <img
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI"
-                  alt="Tanvir Ahmed"
+                  alt={t.passport.donorName}
                   className="w-20 h-20 rounded-2xl object-cover border-2 border-red-500 shadow-xl"
                 />
-                <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs border-2 border-slate-900" title="Verified NID Identity">
+                <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs border-2 border-slate-900" title={t.passport.verifiedNid}>
                   ✓
                 </span>
               </div>
 
               <div>
-                <h2 className="text-xl font-extrabold text-white">Tanvir Ahmed</h2>
+                <h2 className="text-xl font-extrabold text-white">{t.passport.donorName}</h2>
                 <p className="text-xs text-slate-300 font-mono mt-0.5">NID: 1996269120000492</p>
                 <p className="text-[11px] text-red-300 mt-1 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">location_on</span>
-                  Dhanmondi, Dhaka Central • Lifeline ID: #BL-8902
+                  {t.passport.locationLine}
                 </p>
               </div>
             </div>
@@ -132,7 +134,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
               <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-center min-w-[90px]">
                 <span className="text-3xl font-black text-red-500">O+</span>
                 <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-300">
-                  RH POSITIVE
+                  {t.passport.rhPositive}
                 </span>
               </div>
 
@@ -148,16 +150,16 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
           {/* Card Footer Details */}
           <div className="relative z-10 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
             <div>
-              <span className="text-[10px] text-slate-500 block">PRIMARY TRANSFUSION BASE</span>
-              <span className="font-semibold text-slate-200">BSMMU / DMCH Central Blood Bank</span>
+              <span className="text-[10px] text-slate-500 block">{t.passport.primaryBaseLabel}</span>
+              <span className="font-semibold text-slate-200">{t.passport.primaryBaseValue}</span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-500 block">TOTAL RECORDED DONATIONS</span>
-              <span className="font-bold text-emerald-400">8 Units (Honorary Voluntary)</span>
+              <span className="text-[10px] text-slate-500 block">{t.passport.totalDonationsLabel}</span>
+              <span className="font-bold text-emerald-400">{t.passport.totalDonationsValue}</span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-500 block">LAST DONATION DATE</span>
-              <span className="font-semibold text-slate-200">14 Nov 2023 (DMCH)</span>
+              <span className="text-[10px] text-slate-500 block">{t.passport.lastDonationLabel}</span>
+              <span className="font-semibold text-slate-200">{t.passport.lastDonationValue}</span>
             </div>
           </div>
         </div>
@@ -168,7 +170,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-red-600 text-base">vital_signs</span>
-                Biological Rest Cooldown
+                {t.passport.cooldownTitle}
               </h3>
               <span
                 className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
@@ -177,7 +179,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                     : 'bg-amber-100 text-amber-800'
                 }`}
               >
-                {isEligible ? 'Eligible Now' : 'Resting Period'}
+                {isEligible ? t.passport.eligibleNow : t.passport.restingPeriod}
               </span>
             </div>
 
@@ -209,7 +211,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                 <div className="absolute flex flex-col items-center">
                   <span className="text-3xl font-black text-slate-900">{currentElapsed}</span>
                   <span className="text-[10px] uppercase font-bold text-slate-400">
-                    of 90 Days
+                    {t.passport.ofDays}
                   </span>
                 </div>
               </div>
@@ -218,16 +220,16 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                 {isEligible ? (
                   <p className="text-xs text-emerald-700 font-bold flex items-center justify-center gap-1">
                     <span className="material-symbols-outlined text-sm">check_circle</span>
-                    Your hemoglobin & red blood cells are 100% regenerated.
+                    {t.passport.regenerated}
                   </p>
                 ) : (
                   <p className="text-xs text-amber-700 font-bold flex items-center justify-center gap-1">
                     <span className="material-symbols-outlined text-sm">hourglass_top</span>
-                    {cooldownRequiredDays - currentElapsed} days remaining before safe donation.
+                    {t.passport.daysRemaining(cooldownRequiredDays - currentElapsed)}
                   </p>
                 )}
                 <span className="text-[11px] text-slate-400 mt-1 block">
-                  DGHS mandatory 90-day biological replenishment interval.
+                  {t.passport.mandatoryInterval}
                 </span>
               </div>
             </div>
@@ -245,7 +247,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
             }`}
           >
             <span className="material-symbols-outlined text-base">emergency</span>
-            <span>{isEligible ? 'View Nearby Emergency Requests' : 'Biological Cooldown Active'}</span>
+            <span>{isEligible ? t.passport.viewNearby : t.passport.cooldownActive}</span>
           </button>
         </div>
       </div>
@@ -254,32 +256,32 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
         <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
           <span className="material-symbols-outlined text-red-600 text-base">health_and_safety</span>
-          Certified Clinical Screenings & Biomarkers
+          {t.passport.screeningsTitle}
         </h3>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-            <span className="text-[11px] text-slate-600 block">Hemoglobin (Hb)</span>
+            <span className="text-[11px] text-slate-600 block">{t.passport.hemoglobin}</span>
             <span className="text-xl font-black text-slate-900 mt-0.5 block">14.8 g/dL</span>
-            <span className="text-[10px] text-emerald-600 font-bold">Optimal (Male Normal: 13.5-17.5)</span>
+            <span className="text-[10px] text-emerald-600 font-bold">{t.passport.hbOptimal}</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-            <span className="text-[11px] text-slate-600 block">Resting Blood Pressure</span>
+            <span className="text-[11px] text-slate-600 block">{t.passport.bloodPressure}</span>
             <span className="text-xl font-black text-slate-900 mt-0.5 block">120/80</span>
-            <span className="text-[10px] text-emerald-600 font-bold">Normotensive</span>
+            <span className="text-[10px] text-emerald-600 font-bold">{t.passport.normotensive}</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-            <span className="text-[11px] text-slate-600 block">Body Mass (Weight)</span>
-            <span className="text-xl font-black text-slate-900 mt-0.5 block">71 kg</span>
-            <span className="text-[10px] text-emerald-600 font-bold">Above 50 kg Threshold</span>
+            <span className="text-[11px] text-slate-600 block">{t.passport.bodyMass}</span>
+            <span className="text-xl font-black text-slate-900 mt-0.5 block">{t.passport.weightValue}</span>
+            <span className="text-[10px] text-emerald-600 font-bold">{t.passport.aboveThreshold}</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-            <span className="text-[11px] text-slate-600 block">TTI Infectious Screen</span>
-            <span className="text-xl font-black text-emerald-600 mt-0.5 block">ALL NEGATIVE</span>
-            <span className="text-[10px] text-slate-600">HIV, HBV, HCV, Syphilis, MP</span>
+            <span className="text-[11px] text-slate-600 block">{t.passport.ttiScreen}</span>
+            <span className="text-xl font-black text-emerald-600 mt-0.5 block">{t.passport.allNegative}</span>
+            <span className="text-[10px] text-slate-600">{t.passport.ttiList}</span>
           </div>
         </div>
       </div>
@@ -288,30 +290,30 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
         <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
           <span className="material-symbols-outlined text-red-600 text-base">history_edu</span>
-          Past Transfusion Ledger & Certificates
+          {t.passport.ledgerTitle}
         </h3>
 
         <div className="space-y-3">
           {[
             {
-              date: '14 Nov 2023',
-              hospital: 'Dhaka Medical College Hospital (DMCH)',
-              patient: 'Pediatric Thalassemia Ward Bed 18',
-              volume: '1 Bag (450 mL)',
+              date: t.passport.history.h1.date,
+              hospital: t.passport.history.h1.hospital,
+              patient: t.passport.history.h1.patient,
+              volume: t.passport.bagVolume,
               certNo: 'CERT-DMCH-8812',
             },
             {
-              date: '22 Jul 2023',
-              hospital: 'BSMMU (PG Hospital)',
-              patient: 'Open Heart Surgery OT Block C',
-              volume: '1 Bag (450 mL)',
+              date: t.passport.history.h2.date,
+              hospital: t.passport.history.h2.hospital,
+              patient: t.passport.history.h2.patient,
+              volume: t.passport.bagVolume,
               certNo: 'CERT-BSMMU-6401',
             },
             {
-              date: '03 Feb 2023',
-              hospital: 'National Heart Foundation (Mirpur)',
-              patient: 'Coronary Bypass Emergency',
-              volume: '1 Bag (450 mL)',
+              date: t.passport.history.h3.date,
+              hospital: t.passport.history.h3.hospital,
+              patient: t.passport.history.h3.patient,
+              volume: t.passport.bagVolume,
               certNo: 'CERT-NHF-4919',
             },
           ].map((item, idx) => (
@@ -339,7 +341,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                 className="self-start sm:self-center px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <span className="material-symbols-outlined text-sm text-red-600">verified</span>
-                <span>View Certificate</span>
+                <span>{t.passport.viewCertificate}</span>
               </button>
             </div>
           ))}

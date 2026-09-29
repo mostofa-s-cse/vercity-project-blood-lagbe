@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ActiveMission, ScreenId } from '../types/blood';
 import { ACTIVE_MISSION_DEFAULT } from '../data/mockData';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface LiveTrackerScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -14,6 +15,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
   onOpenRequisition,
   onOpenOtpModal,
 }) => {
+  const { t } = useLanguage();
   const [mission, setMission] = useState<ActiveMission>(ACTIVE_MISSION_DEFAULT);
   const [elapsedSec, setElapsedSec] = useState<number>(ACTIVE_MISSION_DEFAULT.elapsedSeconds);
   const [gpsProgress, setGpsProgress] = useState<number>(68); // percentage along route
@@ -52,11 +54,11 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
   };
 
   const stages = [
-    { num: 1, title: 'SOS Broadcast', time: '10:05 AM', desc: 'Dispatched to 24 local donors' },
-    { num: 2, title: 'Donor Accepted', time: '10:14 AM', desc: 'Tanvir Ahmed committed' },
-    { num: 3, title: 'En Route', time: '10:20 AM', desc: 'Transit via Bakshibazar' },
-    { num: 4, title: 'Lab Cross-Match', time: '10:32 AM', desc: 'Room 104 compatibility test' },
-    { num: 5, title: 'Handshake Complete', time: 'Pending OTP', desc: 'Recipient nurse handover' },
+    { num: 1, title: t.tracker.stages.s1.title, time: t.tracker.stages.s1.time, desc: t.tracker.stages.s1.desc },
+    { num: 2, title: t.tracker.stages.s2.title, time: t.tracker.stages.s2.time, desc: t.tracker.stages.s2.desc },
+    { num: 3, title: t.tracker.stages.s3.title, time: t.tracker.stages.s3.time, desc: t.tracker.stages.s3.desc },
+    { num: 4, title: t.tracker.stages.s4.title, time: t.tracker.stages.s4.time, desc: t.tracker.stages.s4.desc },
+    { num: 5, title: t.tracker.stages.s5.title, time: t.tracker.stages.s5.time, desc: t.tracker.stages.s5.desc },
   ];
 
   return (
@@ -81,10 +83,10 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                LIVE RESCUE TELEMETRY
+                {t.tracker.liveBadge}
               </span>
-              <span className="text-xs text-red-200 font-mono">Case #{mission.id}</span>
-              <span className="text-xs text-slate-400">• Ref: {mission.referenceNo}</span>
+              <span className="text-xs text-red-200 font-mono">{t.tracker.caseLabel(mission.id)}</span>
+              <span className="text-xs text-slate-400">{t.tracker.refLabel(mission.referenceNo)}</span>
             </div>
 
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white flex items-center gap-3">
@@ -104,7 +106,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
             <div className="bg-black/40 backdrop-blur-md px-5 py-3 rounded-xl border border-white/10 text-center min-w-[130px]">
               <span className="text-[10px] uppercase font-bold text-red-400 block tracking-wider">
-                Mission Elapsed
+                {t.tracker.missionElapsed}
               </span>
               <span className="text-2xl font-mono font-black text-white">{formatTimer(elapsedSec)}</span>
             </div>
@@ -123,7 +125,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
               className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-2 transition-colors"
             >
               <span className="material-symbols-outlined text-base">description</span>
-              <span>Inspect Slip</span>
+              <span>{t.tracker.inspectSlip}</span>
             </button>
 
             <button
@@ -134,7 +136,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
               className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-red-600/30 transition-transform hover:scale-105"
             >
               <span className="material-symbols-outlined text-base">verified</span>
-              <span>Recipient Handshake Sign-Off</span>
+              <span>{t.tracker.handshakeSignOff}</span>
             </button>
           </div>
         </div>
@@ -144,7 +146,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5 flex items-center gap-2">
           <span className="material-symbols-outlined text-red-600 text-base">timeline</span>
-          5-Stage Emergency Protocol Progress
+          {t.tracker.protocolProgress}
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -195,10 +197,10 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Live Donor GPS Telemetry (Dhaka Central Cluster)
+                {t.tracker.gpsTitle}
               </h3>
             </div>
-            <span className="text-[11px] text-slate-500 font-mono">Simulated GPS Live</span>
+            <span className="text-[11px] text-slate-500 font-mono">{t.tracker.simulatedGps}</span>
           </div>
 
           {/* Interactive Map Visual */}
@@ -251,7 +253,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
                 <span className="material-symbols-outlined text-sm">local_hospital</span>
               </div>
               <span className="text-[10px] font-bold text-white bg-slate-900/90 px-2 py-0.5 rounded shadow mt-1 whitespace-nowrap border border-red-500/50">
-                DMCH ICU (Destination)
+                {t.tracker.destinationPin}
               </span>
             </div>
 
@@ -260,7 +262,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
               <div className="w-6 h-6 rounded-full bg-blue-500/80 text-white flex items-center justify-center text-[10px] font-bold border border-white">
                 B
               </div>
-              <span className="text-[9px] font-semibold text-slate-300 mt-0.5">BSMMU / Shahbagh</span>
+              <span className="text-[9px] font-semibold text-slate-300 mt-0.5">{t.tracker.bsmmuPin}</span>
             </div>
 
             {/* Donor Position along route */}
@@ -276,23 +278,23 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
               </div>
               <div className="bg-emerald-950/95 text-emerald-300 text-[10px] font-mono px-2 py-0.5 rounded-full mt-1 border border-emerald-500/50 whitespace-nowrap shadow-lg flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                <span>Tanvir (Motorcycle) • ETA 8m</span>
+                <span>{t.tracker.donorPinLabel}</span>
               </div>
             </div>
 
             {/* Telemetry HUD overlay in bottom corner */}
             <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md border border-slate-700 p-2.5 rounded-xl text-slate-300 text-[11px] font-mono flex items-center gap-4">
               <div>
-                <span className="text-slate-500 text-[9px] block">CURRENT SPEED</span>
-                <span className="font-bold text-white">22 km/h</span>
+                <span className="text-slate-500 text-[9px] block">{t.tracker.currentSpeed}</span>
+                <span className="font-bold text-white">{t.tracker.speedValue}</span>
               </div>
               <div className="border-l border-slate-700 pl-3">
-                <span className="text-slate-500 text-[9px] block">REMAINING DISTANCE</span>
-                <span className="font-bold text-white">1.2 km</span>
+                <span className="text-slate-500 text-[9px] block">{t.tracker.remainingDistance}</span>
+                <span className="font-bold text-white">{t.tracker.distanceValue}</span>
               </div>
               <div className="border-l border-slate-700 pl-3">
-                <span className="text-slate-500 text-[9px] block">TRAFFIC INDEX</span>
-                <span className="font-bold text-amber-400">Moderate (Chankharpul)</span>
+                <span className="text-slate-500 text-[9px] block">{t.tracker.trafficIndex}</span>
+                <span className="font-bold text-amber-400">{t.tracker.trafficValue}</span>
               </div>
             </div>
           </div>
@@ -304,7 +306,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col gap-3">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <span className="material-symbols-outlined text-emerald-600 text-base">group</span>
-              Assigned Donors (2 Bags Committed)
+              {t.tracker.assignedDonors}
             </h3>
 
             {mission.donors.map((d) => (
@@ -350,7 +352,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
                   <span className="text-slate-600 font-semibold flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm text-slate-400">schedule</span>
-                    ETA: {d.etaMinutes} mins ({d.distanceKm} km)
+                    {t.tracker.etaLine(d.etaMinutes, d.distanceKm)}
                   </span>
                   <a
                     href={`tel:${d.phone.replace(/[^0-9+]/g, '')}`}
@@ -358,7 +360,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
                     className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
                   >
                     <span className="material-symbols-outlined text-sm">call</span>
-                    <span>Call Donor</span>
+                    <span>{t.tracker.callDonor}</span>
                   </a>
                 </div>
               </div>
@@ -369,7 +371,7 @@ export const LiveTrackerScreen: React.FC<LiveTrackerScreenProps> = ({
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col gap-3 flex-1">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <span className="material-symbols-outlined text-red-500 text-base">rss_feed</span>
-              Broadcast Pulse Events
+              {t.tracker.pulseTitle}
             </h3>
 
             <div className="space-y-3 overflow-y-auto max-h-56 pr-1">

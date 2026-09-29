@@ -41,7 +41,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${String(hrs).padStart(2, '0')}h : ${String(mins).padStart(2, '0')}m : ${String(secs).padStart(2, '0')}s`;
+    return t.hub.countdown(String(hrs).padStart(2, '0'), String(mins).padStart(2, '0'), String(secs).padStart(2, '0'));
   };
 
   const handleToggleAvailability = () => {
@@ -49,9 +49,9 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
     setIsAvailableOnDuty(nextState);
     sound.playTap();
     if (nextState) {
-      setToastMessage('Live Beacon Active: Nearby hospital ICU desks can now alert you for emergency transfusions.');
+      setToastMessage(t.hub.toastBeaconActive);
     } else {
-      setToastMessage('Live Beacon Paused: You will not receive siren sound emergency alerts while resting.');
+      setToastMessage(t.hub.toastBeaconPaused);
     }
     setTimeout(() => setToastMessage(null), 4000);
   };
@@ -65,15 +65,15 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
     sound.playTap();
     if (navigator.share) {
       navigator.share({
-        title: `URGENT BLOOD NEEDED: ${demand.bloodGroup}`,
-        text: `Urgent ${demand.bloodGroup} blood required for ${demand.patientName} at ${demand.hospital}. Call: ${demand.attendantPhone}`,
+        title: t.hub.shareTitle(demand.bloodGroup),
+        text: t.hub.shareText(demand.bloodGroup, demand.patientName, demand.hospital, demand.attendantPhone),
         url: window.location.href,
       }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(
-        `URGENT ${demand.bloodGroup} BLOOD NEEDED: ${demand.patientName} at ${demand.hospital}. Contact: ${demand.attendantPhone}`
+        t.hub.clipboardText(demand.bloodGroup, demand.patientName, demand.hospital, demand.attendantPhone)
       );
-      setToastMessage('Emergency request copied to clipboard for WhatsApp sharing.');
+      setToastMessage(t.hub.toastCopied);
       setTimeout(() => setToastMessage(null), 3500);
     }
   };
@@ -102,7 +102,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             </span>
             <span className="font-extrabold uppercase tracking-wider flex items-center gap-1 shrink-0 text-xs md:text-sm bg-red-700/80 px-2 py-0.5 rounded shadow-xs">
               <span className="material-symbols-outlined text-base animate-spin text-amber-300" style={{ animationDuration: '4s' }}>radar</span>
-              {t.criticalRadius}
+              {t.hub.criticalRadius}
             </span>
           </div>
 
@@ -141,11 +141,11 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
           {/* Right GPS & Sync Badge */}
           <div className="flex items-center gap-2 md:gap-3 text-xs opacity-90 shrink-0">
             <span className="bg-white/20 px-2 py-0.5 rounded-full font-bold text-[11px] md:text-xs">
-              {t.liveGpsActive}
+              {t.hub.liveGpsActive}
             </span>
             <span className="hidden lg:inline-flex items-center gap-1 font-mono text-[11px]">
               <span className="material-symbols-outlined text-sm">schedule</span>
-              {t.autoRefreshed}
+              {t.hub.autoRefreshed}
             </span>
           </div>
         </div>
@@ -163,20 +163,20 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider">
                   <span className="material-symbols-outlined text-sm">emergency_home</span>
-                  {language === 'bn' ? 'ঢাকা লাইফলাইন এসওএস রিলে' : 'Dhaka Lifeline SOS Relay'}
+                  {t.hub.sosRelayBadge}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-white/90 font-semibold">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                  {language === 'bn' ? '১,২৪৮ জন ডোনার কাছাকাছি প্রস্তুত' : '1,248 Donors On-Call Nearby'}
+                  {t.hub.donorsOnCall}
                 </span>
               </div>
 
               <div className="mt-2">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                  {t.needBloodTitle}
+                  {t.hub.needBloodTitle}
                 </h1>
                 <p className="text-sm md:text-base text-white/90 max-w-xl mt-2 leading-relaxed">
-                  {t.needBloodDesc}
+                  {t.hub.needBloodDesc}
                 </p>
               </div>
             </div>
@@ -190,11 +190,11 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                 className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-red-600 font-extrabold text-sm md:text-base shadow-lg hover:bg-slate-50 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-xl">campaign</span>
-                <span>{t.broadcastSosBtn} →</span>
+                <span>{t.hub.broadcastSosBtn} →</span>
               </button>
               <div className="flex items-center gap-1 text-white/90 text-xs font-semibold">
                 <span className="material-symbols-outlined text-emerald-400 text-lg">verified_user</span>
-                <span>{language === 'bn' ? 'হাসপাতাল প্রত্যয়িত প্রেরণ' : 'Hospital Verified Dispatch'}</span>
+                <span>{t.hub.hospitalVerifiedDispatch}</span>
               </div>
             </div>
           </div>
@@ -207,7 +207,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                   <div className="relative">
                     <img
                       src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI"
-                      alt="Tanvir Ahmed"
+                      alt={t.hub.donorName}
                       className="w-14 h-14 rounded-full object-cover shadow-sm ring-2 ring-slate-100"
                     />
                     <span
@@ -218,12 +218,12 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                   </div>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-900 text-base">Tanvir Ahmed</span>
+                      <span className="font-bold text-slate-900 text-base">{t.hub.donorName}</span>
                       <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
-                        Hero (8x)
+                        {t.hub.heroBadge}
                       </span>
                     </div>
-                    <span className="text-xs text-slate-500 mt-0.5">Dhanmondi, Dhaka • 8 Donations</span>
+                    <span className="text-xs text-slate-500 mt-0.5">{t.hub.donorMeta}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-600 text-white font-extrabold text-xl shadow-md">
@@ -234,16 +234,16 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               {/* Eligibility & Readiness */}
               <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Eligibility</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">{t.hub.eligibility}</span>
                   <span className="font-bold text-emerald-700 text-sm flex items-center gap-1 mt-0.5">
-                    <span className="material-symbols-outlined text-base">check_circle</span> Cleared
+                    <span className="material-symbols-outlined text-base">check_circle</span> {t.hub.cleared}
                   </span>
-                  <span className="text-[11px] text-slate-500">Last gave 94 days ago</span>
+                  <span className="text-[11px] text-slate-500">{t.hub.lastGave}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Readiness</span>
-                  <span className="font-bold text-slate-900 text-sm mt-0.5">Immediate</span>
-                  <span className="text-[11px] text-emerald-700 font-medium">Ready for Whole Blood</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">{t.hub.readiness}</span>
+                  <span className="font-bold text-slate-900 text-sm mt-0.5">{t.hub.immediate}</span>
+                  <span className="text-[11px] text-emerald-700 font-medium">{t.hub.readyWholeBlood}</span>
                 </div>
               </div>
 
@@ -251,7 +251,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-100/80 border border-slate-200">
                 <div className="flex flex-col max-w-[240px]">
                   <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    {t.volunteerTitle}
+                    {t.hub.volunteerTitle}
                     <span
                       className={`w-2 h-2 rounded-full ${
                         isAvailableOnDuty ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
@@ -259,7 +259,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                     ></span>
                   </span>
                   <span className="text-[11px] text-slate-600 leading-tight mt-0.5">
-                    {t.volunteerDesc}
+                    {t.hub.volunteerDesc}
                   </span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer select-none">
@@ -277,13 +277,13 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
               <span className="flex items-center gap-1 text-slate-600">
                 <span className="material-symbols-outlined text-sm text-emerald-600">shield</span>
-                {language === 'bn' ? 'গোপনীয়তা সংরক্ষিত এনক্রিপ্টেড সিস্টেম' : 'Privacy Protected Anonymized IVR'}
+                {t.hub.privacyProtected}
               </span>
               <button
                 onClick={() => onNavigate('donor-passport')}
                 className="text-red-600 hover:text-red-700 font-bold transition-colors cursor-pointer"
               >
-                {language === 'bn' ? 'ডোনার পাসপোর্ট দেখুন →' : 'View Donor Passport →'}
+                {t.hub.viewDonorPassport}
               </button>
             </div>
           </div>
@@ -294,14 +294,14 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-red-600 text-xl">bloodtype</span>
-              <h2 className="font-bold text-base text-slate-900">{t.bloodCompatibilityTitle}</h2>
+              <h2 className="font-bold text-base text-slate-900">{t.hub.bloodCompatibilityTitle}</h2>
               <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full hidden md:inline">
-                {language === 'bn' ? 'জরুরি ডোনার তালিকা দেখতে রক্তের গ্রুপ নির্বাচন করুন' : 'Select blood group to filter emergency roster'}
+                {t.hub.selectBloodGroupHint}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600"></span>
-              <span>{language === 'bn' ? 'তীব্র সংকট (১০ ইউনিটের কম)' : 'Critical Shortage (<10 Units in Cluster)'}</span>
+              <span>{t.hub.criticalShortageLegend}</span>
             </div>
           </div>
 
@@ -318,9 +318,9 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-800'
               }`}
             >
-              <span>ALL</span>
+              <span>{t.hub.filterAll}</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'ALL' ? 'text-slate-300' : 'text-slate-500'}`}>
-                178 online
+                {t.hub.onlineCount(178)}
               </span>
             </button>
 
@@ -338,7 +338,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             >
               <span className={selectedBlood === 'O+' ? 'text-white' : 'text-red-600'}>O+</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'O+' ? 'text-white/80' : 'text-slate-500'}`}>
-                38 available
+                {t.hub.availableCount(38)}
               </span>
             </button>
 
@@ -356,7 +356,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             >
               <span className={selectedBlood === 'B+' ? 'text-white' : 'text-red-600'}>B+</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'B+' ? 'text-white/80' : 'text-slate-500'}`}>
-                52 available
+                {t.hub.availableCount(52)}
               </span>
             </button>
 
@@ -374,7 +374,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             >
               <span className={selectedBlood === 'A+' ? 'text-white' : 'text-red-600'}>A+</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'A+' ? 'text-white/80' : 'text-slate-500'}`}>
-                27 available
+                {t.hub.availableCount(27)}
               </span>
             </button>
 
@@ -392,7 +392,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             >
               <span className={selectedBlood === 'AB+' ? 'text-white' : 'text-red-600'}>AB+</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'AB+' ? 'text-white/80' : 'text-slate-500'}`}>
-                12 available
+                {t.hub.availableCount(12)}
               </span>
             </button>
 
@@ -412,7 +412,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                 O-
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
               </span>
-              <span className="text-[10px] font-extrabold uppercase">8 CRITICAL</span>
+              <span className="text-[10px] font-extrabold uppercase">{t.hub.criticalCount(8)}</span>
             </button>
 
             {/* B- */}
@@ -429,7 +429,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             >
               <span className={selectedBlood === 'B-' ? 'text-white' : 'text-red-600'}>B-</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'B-' ? 'text-white/80' : 'text-slate-500'}`}>
-                6 available
+                {t.hub.availableCount(6)}
               </span>
             </button>
 
@@ -447,7 +447,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             >
               <span className={selectedBlood === 'A-' ? 'text-white' : 'text-red-600'}>A-</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'A-' ? 'text-white/80' : 'text-slate-500'}`}>
-                4 available
+                {t.hub.availableCount(4)}
               </span>
             </button>
 
@@ -465,7 +465,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             >
               <span className={selectedBlood === 'AB-' ? 'text-white' : 'text-red-600'}>AB-</span>
               <span className={`text-[10px] font-normal ${selectedBlood === 'AB-' ? 'text-white/80' : 'text-slate-500'}`}>
-                2 available
+                {t.hub.availableCount(2)}
               </span>
             </button>
           </div>
@@ -482,18 +482,18 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
                 </span>
                 <h3 className="font-extrabold text-base text-slate-900">
-                  Emergency Demands Near You
+                  {t.hub.demandsNearYou}
                 </h3>
                 <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded-full">
-                  LIVE FEED
+                  {t.hub.liveFeed}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <button className="flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">
-                  <span className="material-symbols-outlined text-sm">tune</span> Filter Priority
+                  <span className="material-symbols-outlined text-sm">tune</span> {t.hub.filterPriority}
                 </button>
                 <button className="flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">
-                  <span className="material-symbols-outlined text-sm">near_me</span> Sort: Distance
+                  <span className="material-symbols-outlined text-sm">near_me</span> {t.hub.sortDistance}
                 </button>
               </div>
             </div>
@@ -512,7 +512,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                       <div className="w-16 h-16 rounded-2xl bg-red-600 text-white flex flex-col items-center justify-center shrink-0 shadow-md">
                         <span className="text-2xl font-black leading-none">{demand.bloodGroup}</span>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-red-100 mt-1">
-                          {demand.bagsRequired} Bags
+                          {t.hub.bagsCount(demand.bagsRequired)}
                         </span>
                       </div>
 
@@ -536,7 +536,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                           <span>•</span>
                           <span>{demand.hospitalLocation}</span>
                           <span>•</span>
-                          <span className="font-semibold text-slate-700">{demand.distanceKm} km away</span>
+                          <span className="font-semibold text-slate-700">{t.hub.kmAway(demand.distanceKm)}</span>
                         </p>
                       </div>
                     </div>
@@ -544,7 +544,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                     {/* Countdown Box */}
                     <div className="sm:text-right shrink-0 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
                       <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">
-                        Window Remaining
+                        {t.hub.windowRemaining}
                       </span>
                       <span className="text-sm md:text-base font-extrabold text-red-600 font-mono">
                         {formatCountdown(demand.windowRemainingSec)}
@@ -556,10 +556,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                   <div className="flex flex-col gap-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-600 font-medium">
-                        Bags Pledged: <strong className="text-slate-900">{demand.bagsPledged} of {demand.bagsRequired} Bags</strong>
+                        {t.hub.bagsPledgedLabel} <strong className="text-slate-900">{t.hub.pledgedOf(demand.bagsPledged, demand.bagsRequired)}</strong>
                       </span>
                       <span className="text-red-600 font-bold">
-                        {fulfilledPct}% Fulfilled • {demand.bagsRequired - demand.bagsPledged} Bag Urgent
+                        {t.hub.fulfilledStatus(fulfilledPct, demand.bagsRequired - demand.bagsPledged)}
                       </span>
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
@@ -581,14 +581,14 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                         className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs md:text-sm shadow-md transition-all flex items-center gap-1.5"
                       >
                         <span className="material-symbols-outlined text-base">volunteer_activism</span>
-                        <span>I Can Donate (Commit)</span>
+                        <span>{t.hub.iCanDonate}</span>
                       </button>
                       <a
                         href={`tel:${demand.attendantPhone}`}
                         className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-base">call</span>
-                        <span>{t.callAttendant} ({demand.attendantPhone})</span>
+                        <span>{t.hub.callAttendant} ({demand.attendantPhone})</span>
                       </a>
                     </div>
 
@@ -596,14 +596,14 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                       <button
                         onClick={() => handleShare(demand)}
                         className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                        title={t.shareWhatsApp}
+                        title={t.hub.shareWhatsApp}
                       >
                         <span className="material-symbols-outlined text-lg text-emerald-600">share</span>
                       </button>
                       <button
                         onClick={() => onOpenRequisition(demand)}
                         className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                        title={t.inspectDoctorSlip}
+                        title={t.hub.inspectDoctorSlip}
                       >
                         <span className="material-symbols-outlined text-lg">description</span>
                       </button>
@@ -620,7 +620,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-800 hover:bg-slate-200 font-bold text-xs md:text-sm transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-lg">format_list_bulleted</span>
-                <span>{language === 'bn' ? 'সকল সক্রিয় রক্তের জরুরি রিকোয়েস্ট দেখুন' : 'View All Active Requests Across Dhaka Command Grid'}</span>
+                <span>{t.hub.viewAllRequests}</span>
               </button>
             </div>
           </div>
@@ -632,10 +632,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex items-center justify-between">
                 <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-red-600">insights</span>
-                  {language === 'bn' ? 'লাইফলাইন প্রভাব ও পরিসংখ্যান' : 'Dhaka Lifeline Impact'}
+                  {t.hub.impactTitle}
                 </span>
                 <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
-                  {language === 'bn' ? 'যাচাইকৃত ২৪/৭' : 'Verified 24/7'}
+                  {t.hub.verified247}
                 </span>
               </div>
 
@@ -647,8 +647,8 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                       <span className="material-symbols-outlined text-xl">favorite</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold">{language === 'bn' ? 'জীবন বাঁচানো হয়েছে' : 'Lives Saved'}</span>
-                      <span className="text-xs text-slate-600">{language === 'bn' ? 'অ্যাপ অ্যালার্টের মাধ্যমে' : 'Through app alerts'}</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.hub.livesSaved}</span>
+                      <span className="text-xs text-slate-600">{t.hub.throughAppAlerts}</span>
                     </div>
                   </div>
                   <span className="font-mono text-lg font-black text-slate-900">4,820+</span>
@@ -661,8 +661,8 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                       <span className="material-symbols-outlined text-xl">group</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold">Active Donors</span>
-                      <span className="text-xs text-slate-600">Available on call</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.hub.activeDonors}</span>
+                      <span className="text-xs text-slate-600">{t.hub.availableOnCall}</span>
                     </div>
                   </div>
                   <span className="font-mono text-lg font-black text-emerald-700">12,450</span>
@@ -675,19 +675,19 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                       <span className="material-symbols-outlined text-xl">speed</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold">Avg Response</span>
-                      <span className="text-xs text-slate-600">From SOS to match</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.hub.avgResponse}</span>
+                      <span className="text-xs text-slate-600">{t.hub.sosToMatch}</span>
                     </div>
                   </div>
-                  <span className="font-mono text-lg font-black text-red-600">8.4 min</span>
+                  <span className="font-mono text-lg font-black text-red-600">{t.hub.avgResponseValue}</span>
                 </div>
               </div>
 
               {/* Sparkline Chart SVG */}
               <div className="pt-1 flex flex-col gap-1">
                 <div className="flex justify-between items-center text-xs text-slate-500">
-                  <span>Hourly Transfusion Requests (Today)</span>
-                  <span className="text-red-600 font-bold">+18% vs yesterday</span>
+                  <span>{t.hub.hourlyRequests}</span>
+                  <span className="text-red-600 font-bold">{t.hub.vsYesterday}</span>
                 </div>
                 <div className="h-16 w-full flex items-end pt-2">
                   <svg className="w-full h-full text-red-600" preserveAspectRatio="none" viewBox="0 0 300 60">
@@ -709,7 +709,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
               <div className="flex items-center justify-between">
                 <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-emerald-600">handshake</span>
-                  Live Handshakes
+                  {t.hub.liveHandshakes}
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
               </div>
@@ -720,10 +720,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                     O+
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <p className="text-xs text-slate-900 font-bold truncate">Rahim K. donated Whole Blood</p>
+                    <p className="text-xs text-slate-900 font-bold truncate">{t.hub.handshake1}</p>
                     <span className="text-[11px] text-slate-500 flex items-center gap-0.5">
                       <span className="material-symbols-outlined text-xs text-slate-400">location_on</span>
-                      BSMMU Hospital • 15m ago
+                      {t.hub.handshake1Meta}
                     </span>
                   </div>
                 </div>
@@ -733,10 +733,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                     A+
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <p className="text-xs text-slate-900 font-bold truncate">Nazmul H. pledged 1 Bag Platelets</p>
+                    <p className="text-xs text-slate-900 font-bold truncate">{t.hub.handshake2}</p>
                     <span className="text-[11px] text-slate-500 flex items-center gap-0.5">
                       <span className="material-symbols-outlined text-xs text-slate-400">location_on</span>
-                      Evercare Hospital • 32m ago
+                      {t.hub.handshake2Meta}
                     </span>
                   </div>
                 </div>
@@ -746,10 +746,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                     B+
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <p className="text-xs text-slate-900 font-bold truncate">Farhana Y. verified match for ICU Bed 6</p>
+                    <p className="text-xs text-slate-900 font-bold truncate">{t.hub.handshake3}</p>
                     <span className="text-[11px] text-slate-500 flex items-center gap-0.5">
                       <span className="material-symbols-outlined text-xs text-slate-400">location_on</span>
-                      Square Hospital • 54m ago
+                      {t.hub.handshake3Meta}
                     </span>
                   </div>
                 </div>
@@ -760,14 +760,14 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-600 text-xl">ring_volume</span>
-                <h3 className="font-bold text-sm text-slate-900">24/7 Verified Blood Banks</h3>
+                <h3 className="font-bold text-sm text-slate-900">{t.hub.bloodBanksTitle}</h3>
               </div>
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-900">Bangladesh Red Crescent</span>
-                    <span className="text-[10px] text-slate-500">National Blood Center, Dhaka</span>
+                    <span className="text-xs font-bold text-slate-900">{t.hub.bank1Name}</span>
+                    <span className="text-[10px] text-slate-500">{t.hub.bank1Desc}</span>
                   </div>
                   <a
                     href="tel:029330188"
@@ -779,8 +779,8 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
 
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-900">DMCH Central Transfusion Dept</span>
-                    <span className="text-[10px] text-slate-500">Govt Emergency Blood Bank</span>
+                    <span className="text-xs font-bold text-slate-900">{t.hub.bank2Name}</span>
+                    <span className="text-[10px] text-slate-500">{t.hub.bank2Desc}</span>
                   </div>
                   <a
                     href="tel:10655"
@@ -792,8 +792,8 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
 
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-900">Quantum Blood Lab Kakrail</span>
-                    <span className="text-[10px] text-slate-500">Non-profit 24/7 Testing & Bags</span>
+                    <span className="text-xs font-bold text-slate-900">{t.hub.bank3Name}</span>
+                    <span className="text-[10px] text-slate-500">{t.hub.bank3Desc}</span>
                   </div>
                   <a
                     href="tel:01714010869"
@@ -809,7 +809,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({
                 className="w-full mt-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors flex items-center justify-center gap-1"
               >
                 <span className="material-symbols-outlined text-base text-red-600">local_hospital</span>
-                <span>Access Complete Dhaka Hospital Network Directory →</span>
+                <span>{t.hub.hospitalDirectory}</span>
               </button>
             </div>
           </div>

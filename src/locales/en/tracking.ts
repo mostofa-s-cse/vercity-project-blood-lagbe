@@ -1,2 +1,41 @@
-export const tracking = {};
+export const tracking = {
+  statusChangedToast: (id: string, status: string) => `Request #${id} status changed to ${status}.`,
+  badge: 'REQUEST TRACKING & LIFECYCLE',
+  liveBadge: '4-Stage Live Tracking',
+  title: 'Blood Request Status & Tracking',
+  subtitle:
+    'Monitor patient requisitions across 4 standardized proposal stages: Pending, Donor Found, Donation Completed, and Cancelled.',
+  postRequest: 'Post Blood Request',
+  tabs: {
+    all: 'All Requests',
+    pending: '⏳ Pending',
+    donorFound: '🤝 Donor Found',
+    completed: '✅ Completed',
+    cancelled: '❌ Cancelled',
+  },
+  searchPlaceholder: 'Search by patient name, hospital, or request token...',
+  bags: 'Bags',
+  status: {
+    pending: 'Pending',
+    donorFound: 'Donor Found',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  },
+  stages: {
+    issued: '1. Request Issued',
+    matching: '2. Donor Matching',
+    otp: '3. OTP Confirmation',
+    success: '4. Donation Successful',
+  },
+  attendant: 'Attendant:',
+  doctor: 'Doctor:',
+  assignedDonor: 'Assigned Donor (En Route to Hospital):',
+  eta: (minutes: number) => `ETA: ~${minutes} min`,
+  doctorSlip: 'Doctor Slip',
+  linkCopied: 'Request link copied to clipboard.',
+  share: 'Share',
+  acceptDonor: 'Accept Donor',
+  confirmCompleted: 'Confirm Handshake Completed',
+  cancelRequest: 'Cancel Request',
+};
 export type Tracking = typeof tracking;

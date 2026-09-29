@@ -15,7 +15,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
   onInitiateEmergencyForDonor,
   donors: propDonors,
 }) => {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const [internalDonors, setInternalDonors] = useState<Donor[]>(INITIAL_DONORS);
   const donors = propDonors || internalDonors;
   const setDonors = setInternalDonors;
@@ -58,7 +58,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
   const handleCallDonor = (donor: Donor, e: React.MouseEvent) => {
     e.stopPropagation();
     sound.playTap();
-    setToastMessage(`Initiating secure direct call to ${donor.name} (${donor.phone}). Please state patient hospital & bed number.`);
+    setToastMessage(t.donors.callToast(donor.name, donor.phone));
     setTimeout(() => setToastMessage(null), 4500);
     window.location.href = `tel:${donor.phone.replace(/[^0-9+]/g, '')}`;
   };
@@ -66,7 +66,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
   const handleSendUrgentNudge = (donor: Donor, e: React.MouseEvent) => {
     e.stopPropagation();
     sound.playAlertPing();
-    setToastMessage(`Urgent Priority SMS dispatched to ${donor.name} with nearby hospital beacon.`);
+    setToastMessage(t.donors.nudgeToast(donor.name));
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -90,18 +90,18 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[11px] font-bold tracking-wide uppercase border border-red-500/30">
-                {t.verifiedRosterBadge}
+                {t.donors.verifiedRosterBadge}
               </span>
               <span className="text-xs text-slate-300 font-medium flex items-center gap-1">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                {t.activeDonorsCount}
+                {t.donors.activeDonorsCount}
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              {t.donorRegistryTitle}
+              {t.donors.donorRegistryTitle}
             </h1>
             <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-              {t.donorRegistryDesc}
+              {t.donors.donorRegistryDesc}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
@@ -113,7 +113,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
               className="w-full sm:w-auto px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 hover:scale-[1.02] transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">emergency_share</span>
-              <span>{t.broadcastSosBtn}</span>
+              <span>{t.donors.broadcastSosBtn}</span>
             </button>
             <button
               onClick={() => {
@@ -123,7 +123,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
               className="w-full sm:w-auto px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 border border-white/20 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">badge</span>
-              <span>{t.navDonorPassport}</span>
+              <span>{t.donors.navDonorPassport}</span>
             </button>
           </div>
         </div>
@@ -134,7 +134,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
         {/* Blood Group Pills */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            {language === 'bn' ? 'রক্তের গ্রুপ ফিল্টার:' : 'Filter Blood Group:'}
+            {t.donors.filterBloodGroup}
           </span>
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             {bloodGroups.map((grp) => {
@@ -152,7 +152,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
-                  {grp === 'ALL' && language === 'bn' ? 'সব' : grp}
+                  {grp === 'ALL' ? t.donors.allGroups : grp}
                 </button>
               );
             })}
@@ -168,7 +168,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             </span>
             <input
               type="text"
-              placeholder={t.searchDonorPlaceholder}
+              placeholder={t.donors.searchDonorPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -188,8 +188,8 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             <span className="material-symbols-outlined text-slate-500 text-lg">distance</span>
             <div className="flex-1 flex flex-col">
               <div className="flex justify-between text-[11px] font-semibold text-slate-600">
-                <span>{t.maxRadiusLabel}</span>
-                <span className="text-red-600 font-bold">{maxDistance} km</span>
+                <span>{t.donors.maxRadiusLabel}</span>
+                <span className="text-red-600 font-bold">{t.donors.km(maxDistance)}</span>
               </div>
               <input
                 type="range"
@@ -211,7 +211,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 onChange={(e) => setOnlyAvailable(e.target.checked)}
                 className="w-4 h-4 rounded text-red-600 focus:ring-red-500 accent-red-600"
               />
-              <span>{t.availableNowOnly}</span>
+              <span>{t.donors.availableNowOnly}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -220,7 +220,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 onChange={(e) => setOnlyVerified(e.target.checked)}
                 className="w-4 h-4 rounded text-red-600 focus:ring-red-500 accent-red-600"
               />
-              <span>{t.bdrcsVerifiedOnly}</span>
+              <span>{t.donors.bdrcsVerifiedOnly}</span>
             </label>
           </div>
         </div>
@@ -229,15 +229,11 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
       {/* Results Count & Status */}
       <div className="flex items-center justify-between text-xs text-slate-500 px-1">
         <span>
-          {language === 'bn' ? (
-            <>তালিকাভুক্ত <strong className="text-slate-900">{filteredDonors.length}</strong> জন ভেরিফাইড রক্তদাতা পাওয়া গেছে</>
-          ) : (
-            <>Showing <strong className="text-slate-900">{filteredDonors.length}</strong> verified voluntary donors matching criteria</>
-          )}
+          <>{t.donors.resultsPrefix}<strong className="text-slate-900">{filteredDonors.length}</strong>{t.donors.resultsSuffix}</>
         </span>
         <span className="flex items-center gap-1 text-emerald-600 font-semibold">
           <span className="material-symbols-outlined text-base">verified_user</span>
-          {t.freeDonationGuarantee}
+          {t.donors.freeDonationGuarantee}
         </span>
       </div>
 
@@ -275,7 +271,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                         </div>
                       )}
                       {donor.isAvailable && (
-                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" title="Active on duty" />
+                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" title={t.donors.activeOnDutyTitle} />
                       )}
                     </div>
 
@@ -285,14 +281,14 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                           {donor.name}
                         </h3>
                         {donor.isBdrcsVerified && (
-                          <span className="material-symbols-outlined text-sky-500 text-base" title="BDRCS Verified Donor">
+                          <span className="material-symbols-outlined text-sky-500 text-base" title={t.donors.bdrcsVerifiedDonorTitle}>
                             verified
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                         <span className="material-symbols-outlined text-xs">location_on</span>
-                        {donor.location} • {donor.distanceKm} km
+                        {donor.location} • {t.donors.km(donor.distanceKm)}
                       </p>
                     </div>
                   </div>
@@ -310,11 +306,11 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">military_tech</span>
-                    {donor.badge} ({donor.donationCount} {language === 'bn' ? 'বার রক্তদান' : 'donations'})
+                    {donor.badge} ({t.donors.donationCount(donor.donationCount)})
                   </span>
                   {donor.bmdcReg && (
                     <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
-                      {t.doctorVolunteer}
+                      {t.donors.doctorVolunteer}
                     </span>
                   )}
                   <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium flex items-center gap-1">
@@ -326,22 +322,22 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 {/* Vitals & Cooldown Row */}
                 <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-xl p-2.5 text-center mb-4 border border-slate-100">
                   <div>
-                    <span className="text-[10px] text-slate-600 block">{t.hemoglobinLabel}</span>
+                    <span className="text-[10px] text-slate-600 block">{t.donors.hemoglobinLabel}</span>
                     <span className="text-xs font-bold text-slate-800">{donor.hbLevel} g/dL</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-600 block">{t.restPeriodLabel}</span>
+                    <span className="text-[10px] text-slate-600 block">{t.donors.restPeriodLabel}</span>
                     <span
                       className={`text-xs font-bold ${
                         isEligible ? 'text-emerald-700' : 'text-amber-700'
                       }`}
                     >
-                      {donor.daysElapsedSinceDonation}{language === 'bn' ? ' দিন আগে' : 'd ago'}
+                      {t.donors.daysAgo(donor.daysElapsedSinceDonation)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-600 block">{t.transitEtaLabel}</span>
-                    <span className="text-xs font-bold text-slate-800">~{donor.commuteEtaMin} {language === 'bn' ? 'মিনিট' : 'min'}</span>
+                    <span className="text-[10px] text-slate-600 block">{t.donors.transitEtaLabel}</span>
+                    <span className="text-xs font-bold text-slate-800">~{t.donors.minutes(donor.commuteEtaMin)}</span>
                   </div>
                 </div>
               </div>
@@ -353,15 +349,15 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                   className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-base">call</span>
-                  <span>{t.directCallBtn}</span>
+                  <span>{t.donors.directCallBtn}</span>
                 </button>
                 <button
                   onClick={(e) => handleSendUrgentNudge(donor, e)}
-                  title="Dispatch High-Priority SOS SMS"
+                  title={t.donors.sosPingTitle}
                   className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-base text-red-500">notifications_active</span>
-                  <span className="hidden sm:inline">{t.sosPingBtn}</span>
+                  <span className="hidden sm:inline">{t.donors.sosPingBtn}</span>
                 </button>
               </div>
             </div>
@@ -374,9 +370,9 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
           <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-3xl">person_off</span>
           </div>
-          <h3 className="text-base font-bold text-slate-900">No Donors Matched Filter</h3>
+          <h3 className="text-base font-bold text-slate-900">{t.donors.noMatchTitle}</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm">
-            Try expanding the search radius or toggling off "Available Now" to see more volunteers registered in the network.
+            {t.donors.noMatchDesc}
           </p>
           <button
             onClick={() => {
@@ -387,7 +383,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             }}
             className="mt-4 px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-bold"
           >
-            Reset All Filters
+            {t.donors.resetFilters}
           </button>
         </div>
       )}
@@ -424,11 +420,11 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {selectedDonor.age} yrs • {selectedDonor.gender} • {selectedDonor.location}
+                  {t.donors.ageYears(selectedDonor.age)} • {t.donors.gender[selectedDonor.gender]} • {selectedDonor.location}
                 </p>
                 <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold mt-1">
                   <span className="material-symbols-outlined text-sm">check_circle</span>
-                  <span>BDRCS Verified & NID Authenticated</span>
+                  <span>{t.donors.verifiedNid}</span>
                 </div>
               </div>
             </div>
@@ -437,24 +433,24 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-sm text-red-500">ecg_heart</span>
-                Clinical Fitness & Lab Screen
+                {t.donors.clinicalFitness}
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
                 <div className="bg-white p-2 rounded-lg border border-slate-100">
-                  <span className="text-[10px] text-slate-600 block">Hemoglobin</span>
+                  <span className="text-[10px] text-slate-600 block">{t.donors.hemoglobin}</span>
                   <span className="font-bold text-slate-800">{selectedDonor.hbLevel} g/dL</span>
                 </div>
                 <div className="bg-white p-2 rounded-lg border border-slate-100">
-                  <span className="text-[10px] text-slate-600 block">Body Weight</span>
-                  <span className="font-bold text-slate-800">{selectedDonor.weightKg} kg</span>
+                  <span className="text-[10px] text-slate-600 block">{t.donors.bodyWeight}</span>
+                  <span className="font-bold text-slate-800">{t.donors.kg(selectedDonor.weightKg)}</span>
                 </div>
                 <div className="bg-white p-2 rounded-lg border border-slate-100">
-                  <span className="text-[10px] text-slate-600 block">Blood Pressure</span>
+                  <span className="text-[10px] text-slate-600 block">{t.donors.bloodPressure}</span>
                   <span className="font-bold text-slate-800">{selectedDonor.bloodPressure}</span>
                 </div>
                 <div className="bg-white p-2 rounded-lg border border-slate-100">
-                  <span className="text-[10px] text-slate-600 block">Serology Tests</span>
-                  <span className="font-bold text-emerald-600">All Clear</span>
+                  <span className="text-[10px] text-slate-600 block">{t.donors.serologyTests}</span>
+                  <span className="font-bold text-emerald-600">{t.donors.allClear}</span>
                 </div>
               </div>
             </div>
@@ -462,24 +458,24 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             {/* Details Table */}
             <div className="space-y-2 text-xs text-slate-600">
               <div className="flex justify-between py-1.5 border-b border-slate-100">
-                <span className="text-slate-600 font-medium">Nearest Hospital Base</span>
+                <span className="text-slate-600 font-medium">{t.donors.nearestHospitalBase}</span>
                 <span className="font-semibold text-slate-800">{selectedDonor.nearestHospital}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
-                <span className="text-slate-600 font-medium">Rapid Transit Mode</span>
+                <span className="text-slate-600 font-medium">{t.donors.rapidTransitMode}</span>
                 <span className="font-semibold text-slate-800">{selectedDonor.vehicle}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
-                <span className="text-slate-600 font-medium">Lifetime Donations</span>
-                <span className="font-semibold text-slate-800">{selectedDonor.donationCount} Units (Honorary)</span>
+                <span className="text-slate-600 font-medium">{t.donors.lifetimeDonations}</span>
+                <span className="font-semibold text-slate-800">{t.donors.unitsHonorary(selectedDonor.donationCount)}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
-                <span className="text-slate-600 font-medium">Languages</span>
+                <span className="text-slate-600 font-medium">{t.donors.languages}</span>
                 <span className="font-semibold text-slate-800">{selectedDonor.languages.join(', ')}</span>
               </div>
               {selectedDonor.bmdcReg && (
                 <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600 font-medium">BMDC Practitioner ID</span>
+                  <span className="text-slate-600 font-medium">{t.donors.bmdcPractitionerId}</span>
                   <span className="font-semibold text-blue-600">{selectedDonor.bmdcReg}</span>
                 </div>
               )}
@@ -488,7 +484,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
             {/* Direct Dial Banner */}
             <div className="bg-red-50 rounded-xl p-3 border border-red-200 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-red-600 font-bold uppercase block">Verified Contact Phone</span>
+                <span className="text-[10px] text-red-600 font-bold uppercase block">{t.donors.verifiedContactPhone}</span>
                 <span className="text-sm font-extrabold text-slate-900">{selectedDonor.phone}</span>
               </div>
               <button
@@ -496,7 +492,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm"
               >
                 <span className="material-symbols-outlined text-sm">call</span>
-                <span>Call Now</span>
+                <span>{t.donors.callNow}</span>
               </button>
             </div>
           </div>

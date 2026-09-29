@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface OtpVerificationModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
   patientName = 'Nahidul Islam',
   onSuccess
 }) => {
+  const { t } = useLanguage();
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
@@ -43,7 +45,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
   const handleVerify = () => {
     const entered = digits.join('');
     if (entered.length < 4) {
-      setErrorMsg('Please enter all 4 digits of the handshake code.');
+      setErrorMsg(t.otp.errorIncomplete);
       return;
     }
 
@@ -57,7 +59,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         onClose();
       }, 1500);
     } else {
-      setErrorMsg(`Incorrect code. For demo, the secret OTP is ${expectedOtp}.`);
+      setErrorMsg(t.otp.errorIncorrect(expectedOtp));
     }
   };
 
@@ -72,8 +74,8 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-emerald-600 text-2xl">verified_user</span>
             <div>
-              <h3 className="font-bold text-lg text-slate-900 leading-tight">Recipient Handshake OTP</h3>
-              <p className="text-xs text-slate-500">Secure Anti-Broker Closure Token</p>
+              <h3 className="font-bold text-lg text-slate-900 leading-tight">{t.otp.title}</h3>
+              <p className="text-xs text-slate-500">{t.otp.subtitle}</p>
             </div>
           </div>
           <button 
@@ -89,20 +91,20 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl font-bold animate-bounce">
               ✓
             </div>
-            <h4 className="font-extrabold text-xl text-slate-900">Handshake Verified!</h4>
+            <h4 className="font-extrabold text-xl text-slate-900">{t.otp.successTitle}</h4>
             <p className="text-sm text-slate-600 max-w-xs">
-              Blood donation officially credited to {donorName}. 1 unit securely received for {patientName}.
+              {t.otp.successDesc(donorName, patientName)}
             </p>
           </div>
         ) : (
           <>
             <p className="text-xs text-slate-600 leading-relaxed">
-              To eliminate financial extortion and black market blood selling, the patient attendant provides their confidential OTP to the volunteer donor upon bedside bag verification.
+              {t.otp.explainer}
             </p>
 
             <div className="bg-slate-50 p-4 rounded-xl flex flex-col items-center gap-3 border border-slate-100">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Enter 4-Digit Handshake Code
+                {t.otp.enterCode}
               </span>
               <div className="flex items-center gap-3">
                 {digits.map((digit, idx) => (
@@ -123,7 +125,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 type="button"
                 className="text-xs text-red-600 hover:underline font-semibold"
               >
-                Auto-fill Attendant's OTP ({expectedOtp})
+                {t.otp.autoFill(expectedOtp)}
               </button>
             </div>
 
@@ -140,14 +142,14 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 onClick={onClose}
                 className="px-4 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleVerify}
                 className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all"
               >
-                Confirm Blood Handover
+                {t.otp.confirmHandover}
               </button>
             </div>
           </>

@@ -1,3 +1,46 @@
 import type { Header } from '../en/header.ts';
 
-export const header: Header = {};
+export const header: Header = {
+  criticalAlertPrefix: 'জরুরি সতর্কতা:',
+  helplineText: 'হটলাইন ২৪/৭: ১০৬৫৫ / ৯৯৯',
+  audioOn: 'শব্দ চালু',
+  audioMuted: 'নিঃশব্দ',
+  unmuteChimes: 'লাইভ অ্যালার্টের শব্দ চালু করুন',
+  muteChimes: 'লাইভ অ্যালার্টের শব্দ বন্ধ করুন',
+  divisionLabel: 'বিভাগ / জোন:',
+  sosTriggerBtn: 'SOS জারি করুন',
+  langToggle: 'English',
+  langToggleTitle: 'Switch to English',
+  notificationsTitle: 'জরুরি রক্ত বিজ্ঞপ্তি',
+  viewPassportTitle: 'লাইফলাইন ডোনার পাসপোর্ট দেখুন',
+  profileAlt: 'প্রোফাইল',
+  toggleMenu: 'মেনু খুলুন / বন্ধ করুন',
+  badgeNew: 'নতুন',
+  badgeLive: 'লাইভ',
+  nav: {
+    emergencyHub: 'জরুরি হাব',
+    donorDirectory: 'ডোনার খুঁজুন',
+    createSos: 'SOS রিকোয়েস্ট তৈরি',
+    requestTracking: 'রিকোয়েস্ট ট্র্যাকিং',
+    donorRegister: 'ডোনার রেজিস্ট্রেশন',
+    liveTracker: 'লাইভ ট্র্যাকার',
+    hospitalOrg: 'হাসপাতাল ও ব্লাড ব্যাংক',
+    adminPanel: 'অ্যাডমিন প্যানেল',
+    donorPassport: 'ডোনার পাসপোর্ট',
+    pitchDeck: 'পিচ ডেক',
+  },
+  divisions: {
+    dhakaCentral: 'ঢাকা সেন্ট্রাল (DMCH / BSMMU)',
+    dhakaNorth: 'ঢাকা উত্তর (উত্তরা / কুর্মিটোলা)',
+    chattogram: 'চট্টগ্রাম পোর্ট হাব',
+    sylhet: 'সিলেট ওসমানী জোন',
+    rajshahi: 'রাজশাহী সদর',
+  },
+  divisionsShort: {
+    dhakaCentral: 'ঢাকা সেন্ট্রাল',
+    dhakaNorth: 'ঢাকা উত্তর',
+    chattogram: 'চট্টগ্রাম',
+    sylhet: 'সিলেট',
+    rajshahi: 'রাজশাহী',
+  },
+};

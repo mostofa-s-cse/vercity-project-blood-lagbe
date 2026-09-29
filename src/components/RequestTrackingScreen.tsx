@@ -15,7 +15,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
   onOpenRequisition,
   onOpenOtpModal
 }) => {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const [requests, setRequests] = useState<BloodRequest[]>(INITIAL_BLOOD_REQUESTS);
   const [activeStatusTab, setActiveStatusTab] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,9 +31,13 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
     sound.playTap();
     setRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
     showToast(
-      language === 'bn'
-        ? `রিকোয়েস্ট #${id} এর অবস্থা '${newStatus}' হিসেবে আপডেট হয়েছে।`
-        : `Request #${id} status changed to ${newStatus.toUpperCase()}.`
+      t.tracking.statusChangedToast(
+        id,
+        newStatus === 'pending' ? t.tracking.status.pending :
+        newStatus === 'donor_found' ? t.tracking.status.donorFound :
+        newStatus === 'completed' ? t.tracking.status.completed :
+        t.tracking.status.cancelled
+      )
     );
   };
 
@@ -67,22 +71,20 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider">
-                {language === 'bn' ? 'রিকোয়েস্ট ট্র্যাকিং ড্যাশবোর্ড' : 'REQUEST TRACKING & LIFECYCLE'}
+                {t.tracking.badge}
               </span>
               <span className="text-xs text-slate-300 flex items-center gap-1 font-semibold">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                {language === 'bn' ? '৪-ধাপের রিয়েল-টাইম ট্র্যাকিং' : '4-Stage Live Tracking'}
+                {t.tracking.liveBadge}
               </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
               <span className="material-symbols-outlined text-red-500 text-3xl">track_changes</span>
-              <span>{language === 'bn' ? 'রক্তের রিকোয়েস্ট স্ট্যাটাস ও ট্র্যাকিং' : 'Blood Request Status & Tracking'}</span>
+              <span>{t.tracking.title}</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              {language === 'bn'
-                ? 'রক্তের প্রতিটি আবেদন ৪টি নির্দিষ্ট ধাপে ট্র্যাক করা যায়: অপেক্ষারত (Pending) ➜ ডোনার পাওয়া গেছে (Donor Found) ➜ সম্পন্ন (Completed) ➜ বাতিল (Cancelled)।'
-                : 'Monitor patient requisitions across 4 standardized proposal stages: Pending, Donor Found, Donation Completed, and Cancelled.'}
+              {t.tracking.subtitle}
             </p>
           </div>
 
@@ -91,18 +93,18 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-red-600/30 flex items-center gap-2 cursor-pointer transition-all self-start md:self-auto hover:scale-105"
           >
             <span className="material-symbols-outlined text-base">add_circle</span>
-            <span>{language === 'bn' ? 'নতুন রিকোয়েস্ট পোস্ট' : 'Post Blood Request'}</span>
+            <span>{t.tracking.postRequest}</span>
           </button>
         </div>
 
         {/* Status Filter Tabs */}
         <div className="mt-6 pt-5 border-t border-slate-700/80 flex items-center gap-2 overflow-x-auto scrollbar-none">
           {[
-            { id: 'ALL', label: language === 'bn' ? 'সকল রিকোয়েস্ট' : 'All Requests', count: requests.length },
-            { id: 'pending', label: language === 'bn' ? '⏳ অপেক্ষারত (Pending)' : '⏳ Pending', count: requests.filter(r => r.status === 'pending').length },
-            { id: 'donor_found', label: language === 'bn' ? '🤝 ডোনার পাওয়া গেছে (Donor Found)' : '🤝 Donor Found', count: requests.filter(r => r.status === 'donor_found').length },
-            { id: 'completed', label: language === 'bn' ? '✅ সম্পন্ন (Completed)' : '✅ Completed', count: requests.filter(r => r.status === 'completed').length },
-            { id: 'cancelled', label: language === 'bn' ? '❌ বাতিল (Cancelled)' : '❌ Cancelled', count: requests.filter(r => r.status === 'cancelled').length },
+            { id: 'ALL', label: t.tracking.tabs.all, count: requests.length },
+            { id: 'pending', label: t.tracking.tabs.pending, count: requests.filter(r => r.status === 'pending').length },
+            { id: 'donor_found', label: t.tracking.tabs.donorFound, count: requests.filter(r => r.status === 'donor_found').length },
+            { id: 'completed', label: t.tracking.tabs.completed, count: requests.filter(r => r.status === 'completed').length },
+            { id: 'cancelled', label: t.tracking.tabs.cancelled, count: requests.filter(r => r.status === 'cancelled').length },
           ].map((tab) => {
             const isActive = activeStatusTab === tab.id;
             return (
@@ -137,7 +139,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={language === 'bn' ? 'রোগীর নাম, হাসপাতাল বা রিকোয়েস্ট আইডি দিয়ে খুঁজুন...' : 'Search by patient name, hospital, or request token...'}
+          placeholder={t.tracking.searchPlaceholder}
           className="flex-1 text-xs font-medium outline-none bg-transparent"
         />
         {searchQuery && (
@@ -160,7 +162,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                 <div className="flex items-start gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex flex-col items-center justify-center font-black shadow-md shadow-red-600/25 shrink-0">
                     <span className="text-lg leading-none">{req.bloodGroup}</span>
-                    <span className="text-[10px] text-red-100 font-bold mt-0.5">{req.bagsRequired} {language === 'bn' ? 'ব্যাগ' : 'Bags'}</span>
+                    <span className="text-[10px] text-red-100 font-bold mt-0.5">{req.bagsRequired} {t.tracking.bags}</span>
                   </div>
 
                   <div>
@@ -187,10 +189,10 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                   }`}>
                     <span className="w-2 h-2 rounded-full bg-current" />
                     <span>
-                      {req.status === 'pending' ? (language === 'bn' ? 'অপেক্ষারত (Pending)' : 'Pending') :
-                       req.status === 'donor_found' ? (language === 'bn' ? 'ডোনার পাওয়া গেছে (Donor Found)' : 'Donor Found') :
-                       req.status === 'completed' ? (language === 'bn' ? 'রক্তদান সম্পন্ন (Completed)' : 'Completed') :
-                       (language === 'bn' ? 'বাতিলকৃত (Cancelled)' : 'Cancelled')}
+                      {req.status === 'pending' ? t.tracking.status.pending :
+                       req.status === 'donor_found' ? t.tracking.status.donorFound :
+                       req.status === 'completed' ? t.tracking.status.completed :
+                       t.tracking.status.cancelled}
                     </span>
                   </span>
                 </div>
@@ -200,16 +202,16 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
                 <div className="flex items-center justify-between text-xs font-extrabold mb-2">
                   <span className={req.status === 'pending' || req.status === 'donor_found' || req.status === 'completed' ? 'text-red-600' : 'text-slate-400'}>
-                    ১. রিকোয়েস্ট জারি
+                    {t.tracking.stages.issued}
                   </span>
                   <span className={req.status === 'donor_found' || req.status === 'completed' ? 'text-blue-600' : 'text-slate-400'}>
-                    ২. ডোনার ম্যাচিং
+                    {t.tracking.stages.matching}
                   </span>
                   <span className={req.status === 'completed' ? 'text-emerald-600' : 'text-slate-400'}>
-                    ৩. ওটিপি নিশ্চিতকরণ
+                    {t.tracking.stages.otp}
                   </span>
                   <span className={req.status === 'completed' ? 'text-emerald-700' : 'text-slate-400'}>
-                    ৪. রক্তদান সফল
+                    {t.tracking.stages.success}
                   </span>
                 </div>
 
@@ -241,7 +243,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-slate-400 text-base">person</span>
-                      <span>{language === 'bn' ? 'রোগীর স্বজন:' : 'Attendant:'} <strong>{req.attendantName}</strong></span>
+                      <span>{t.tracking.attendant} <strong>{req.attendantName}</strong></span>
                     </div>
                     <a
                       href={`tel:${req.attendantPhone}`}
@@ -253,7 +255,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                   </div>
                   {req.doctorName && (
                     <div className="text-slate-500 pl-6 text-[11px]">
-                      {language === 'bn' ? 'চিকিৎসক:' : 'Doctor:'} {req.doctorName} ({req.bmdcReg})
+                      {t.tracking.doctor} {req.doctorName} ({req.bmdcReg})
                     </div>
                   )}
                 </div>
@@ -264,7 +266,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                 <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200">
                   <h4 className="text-xs font-black uppercase text-blue-900 tracking-wider mb-2 flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-sm">sports_motorsports</span>
-                    <span>{language === 'bn' ? 'নিযুক্ত রক্তদাতা (সরাসরি হাসপাতালে আসছেন):' : 'Assigned Donor (En Route to Hospital):'}</span>
+                    <span>{t.tracking.assignedDonor}</span>
                   </h4>
                   <div className="space-y-2">
                     {req.assignedDonors.map(donor => (
@@ -275,7 +277,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">
-                            ETA: ~{donor.etaMinutes} min
+                            {t.tracking.eta(donor.etaMinutes)}
                           </span>
                           <a
                             href={`tel:${donor.phone}`}
@@ -299,18 +301,18 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                     className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">prescriptions</span>
-                    <span>{language === 'bn' ? 'ডাক্তারের স্লিপ' : 'Doctor Slip'}</span>
+                    <span>{t.tracking.doctorSlip}</span>
                   </button>
 
                   <button
                     onClick={() => {
                       sound.playTap();
-                      showToast(language === 'bn' ? 'রিকোয়েস্টের লিংক কপি করা হয়েছে।' : 'Request link copied to clipboard.');
+                      showToast(t.tracking.linkCopied);
                     }}
                     className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">share</span>
-                    <span>{language === 'bn' ? 'শেয়ার' : 'Share'}</span>
+                    <span>{t.tracking.share}</span>
                   </button>
                 </div>
 
@@ -321,7 +323,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                       onClick={() => handleUpdateStatus(req.id, 'donor_found')}
                       className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
                     >
-                      {language === 'bn' ? 'ডোনার গ্রহণ করুন' : 'Accept Donor'}
+                      {t.tracking.acceptDonor}
                     </button>
                   )}
 
@@ -334,7 +336,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                       className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-sm">verified</span>
-                      <span>{language === 'bn' ? 'রক্তদান সম্পন্ন নিশ্চিত করুন' : 'Confirm Handshake Completed'}</span>
+                      <span>{t.tracking.confirmCompleted}</span>
                     </button>
                   )}
 
@@ -343,7 +345,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({
                       onClick={() => handleUpdateStatus(req.id, 'cancelled')}
                       className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-rose-700 text-xs font-bold cursor-pointer transition-all"
                     >
-                      {language === 'bn' ? 'রিকোয়েস্ট বাতিল' : 'Cancel Request'}
+                      {t.tracking.cancelRequest}
                     </button>
                   )}
                 </div>

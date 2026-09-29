@@ -57,7 +57,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const router = useRouter();
   const pathname = usePathname();
   const currentScreen = pathToScreen(pathname);
-  const { language } = useLanguage();
+  const { t } = useLanguage();
 
   const [selectedDivision, setSelectedDivision] = useState<string>('Dhaka Central');
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
@@ -120,20 +120,12 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
     setNotifications((prev) => [newNotif, ...prev]);
 
-    showToast(
-      language === 'bn'
-        ? `জরুরি ব্রডকাস্ট চালু: ${newDemand.hospital}-এর কাছাকাছি ৪৫০+ রক্তদাতার কাছে ${newDemand.bloodGroup} রক্তের এসওএস পাঠানো হয়েছে।`
-        : `Broadcast Active: ${newDemand.bloodGroup} SOS dispatched to 450+ donors near ${newDemand.hospital}.`
-    );
+    showToast(t.toast.sosBroadcast(newDemand.bloodGroup, newDemand.hospital));
   };
 
   const handleRegisterDonor = (newDonor: Donor) => {
     setDonors((prev) => [newDonor, ...prev]);
-    showToast(
-      language === 'bn'
-        ? `স্বাগতম ${newDonor.name}! আপনার ${newDonor.bloodGroup} রক্তদাতা প্রোফাইল সক্রিয় করা হয়েছে।`
-        : `Welcome ${newDonor.name}! Your ${newDonor.bloodGroup} profile is now active on the donor roster.`
-    );
+    showToast(t.toast.donorRegistered(newDonor.name, newDonor.bloodGroup));
   };
 
   const openOtpModal = (mission: ActiveMission) => {
@@ -141,11 +133,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const handleOtpSuccess = () => {
-    showToast(
-      language === 'bn'
-        ? 'রক্তদান সম্পন্ন ও নিশ্চিত করা হয়েছে! ডিজিটাল সনদ ও রসিদ রেকর্ড করা হলো।'
-        : 'Transfusion Handshake Confirmed! Official digital blood exchange receipt recorded.'
-    );
+    showToast(t.toast.otpSuccess);
   };
 
   const markNotificationRead = (id: string) => {
