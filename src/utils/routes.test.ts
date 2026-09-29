@@ -15,10 +15,11 @@ import {
 
 test('SCREEN_PATHS covers every screen with a unique path', () => {
   const paths = Object.values(SCREEN_PATHS);
-  assert.equal(paths.length, 11);
-  assert.equal(new Set(paths).size, 11);
+  assert.equal(paths.length, 12);
+  assert.equal(new Set(paths).size, 12);
   assert.equal(SCREEN_PATHS['emergency-hub'], '/');
   assert.equal(SCREEN_PATHS['admin-panel'], '/admin');
+  assert.equal(SCREEN_PATHS['user-docs'], '/docs');
 });
 
 test('pathToScreen round-trips every screen', () => {
@@ -63,6 +64,10 @@ test('resolveLegacyRedirect maps every old alias from root', () => {
     'pitch-deck': '/deck',
     emergency: '/',
     'emergency-hub': '/',
+    docs: '/docs',
+    guide: '/docs',
+    help: '/docs',
+    'user-docs': '/docs',
   };
   for (const [alias, target] of Object.entries(cases)) {
     assert.equal(resolveLegacyRedirect('/', `#${alias}`), target, alias);

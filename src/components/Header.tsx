@@ -41,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'admin-panel', label: t.header.nav.adminPanel, icon: 'admin_panel_settings' },
     { id: 'donor-passport', label: t.header.nav.donorPassport, icon: 'badge' },
     { id: 'pitch-deck', label: t.header.nav.pitchDeck, icon: 'co_present' },
+    { id: 'user-docs', label: t.header.nav.userDocs, icon: 'menu_book' },
   ];
 
   return (

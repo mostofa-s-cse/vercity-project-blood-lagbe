@@ -15,6 +15,7 @@ import { passport } from './en/passport.ts';
 import { hospitals } from './en/hospitals.ts';
 import { command } from './en/command.ts';
 import { deck } from './en/deck.ts';
+import { docs } from './en/docs.ts';
 import { admin } from './en/admin.ts';
 
 export const en = {
@@ -36,6 +37,7 @@ export const en = {
   command,
   deck,
   admin,
+  docs,
 };
 
 export type Translations = typeof en;

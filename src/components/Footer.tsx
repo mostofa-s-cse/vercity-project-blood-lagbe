@@ -85,6 +85,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <button onClick={() => onNavigate('pitch-deck')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.pitchDeck}
           </button>
+          <button onClick={() => onNavigate('user-docs')} className="hover:text-white transition-colors cursor-pointer">
+            {t.header.nav.userDocs}
+          </button>
         </nav>
 
         <div className="text-[11px] text-slate-500">

@@ -16,6 +16,7 @@ import { passport } from './bn/passport.ts';
 import { hospitals } from './bn/hospitals.ts';
 import { command } from './bn/command.ts';
 import { deck } from './bn/deck.ts';
+import { docs } from './bn/docs.ts';
 import { admin } from './bn/admin.ts';
 
 export const bn: Translations = {
@@ -37,4 +38,5 @@ export const bn: Translations = {
   command,
   deck,
   admin,
+  docs,
 };

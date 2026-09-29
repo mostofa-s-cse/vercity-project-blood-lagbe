@@ -12,6 +12,7 @@ export const SCREEN_PATHS: Record<ScreenId, string> = {
   'ops-command': '/command',
   'pitch-deck': '/deck',
   'admin-panel': '/admin',
+  'user-docs': '/docs',
 };
 
 export const LANGUAGES = ['bn', 'en'] as const;
@@ -85,6 +86,10 @@ const LEGACY_HASH_ALIASES: Record<string, ScreenId> = {
   'pitch-deck': 'pitch-deck',
   emergency: 'emergency-hub',
   'emergency-hub': 'emergency-hub',
+  docs: 'user-docs',
+  guide: 'user-docs',
+  help: 'user-docs',
+  'user-docs': 'user-docs',
 };
 
 /** Unprefixed path to redirect an old `/#alias` URL to, or null when no redirect applies. */

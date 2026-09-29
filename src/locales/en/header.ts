@@ -26,6 +26,7 @@ export const header = {
     adminPanel: 'Admin Panel',
     donorPassport: 'Donor Passport',
     pitchDeck: 'Pitch Deck',
+    userDocs: 'User Guide',
   },
   divisions: {
     dhakaCentral: 'Dhaka Central (DMCH / BSMMU)',

@@ -28,6 +28,7 @@ export const header: Header = {
     adminPanel: 'অ্যাডমিন প্যানেল',
     donorPassport: 'ডোনার পাসপোর্ট',
     pitchDeck: 'পিচ ডেক',
+    userDocs: 'ব্যবহার নির্দেশিকা',
   },
   divisions: {
     dhakaCentral: 'ঢাকা সেন্ট্রাল (DMCH / BSMMU)',
