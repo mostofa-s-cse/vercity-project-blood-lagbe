@@ -60,29 +60,24 @@ const DEFAULT_RADIUS: EmergencyRadiusConfig = {
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [criticalAlert, setCriticalAlert] = useState<CriticalAlertConfig>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('blood_lagbe_critical_alert');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error loading critical alert', e);
-      }
-    }
-    return DEFAULT_ALERT;
-  });
+  const [criticalAlert, setCriticalAlert] = useState<CriticalAlertConfig>(DEFAULT_ALERT);
+  const [emergencyRadius, setEmergencyRadius] = useState<EmergencyRadiusConfig>(DEFAULT_RADIUS);
 
-  const [emergencyRadius, setEmergencyRadius] = useState<EmergencyRadiusConfig>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('blood_lagbe_emergency_radius');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error loading emergency radius', e);
-      }
+  // Load saved config after mount so server and first client render match.
+  useEffect(() => {
+    try {
+      const savedAlert = localStorage.getItem('blood_lagbe_critical_alert');
+      if (savedAlert) setCriticalAlert(JSON.parse(savedAlert));
+    } catch (e) {
+      console.error('Error loading critical alert', e);
     }
-    return DEFAULT_RADIUS;
-  });
+    try {
+      const savedRadius = localStorage.getItem('blood_lagbe_emergency_radius');
+      if (savedRadius) setEmergencyRadius(JSON.parse(savedRadius));
+    } catch (e) {
+      console.error('Error loading emergency radius', e);
+    }
+  }, []);
 
   const updateCriticalAlert = (updates: Partial<CriticalAlertConfig>) => {
     setCriticalAlert(prev => {

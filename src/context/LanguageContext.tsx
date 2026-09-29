@@ -11,19 +11,21 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
+  // Default to Bengali. Saved choice loads after mount so server and first client render match.
+  const [language, setLanguageState] = useState<Language>('bn');
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem('blood_lagbe_lang');
-      if (saved === 'en' || saved === 'bn') return saved;
-    }
-    return 'bn'; // default to Bengali as requested by Bangladeshi users
-  });
+      if (saved === 'en' || saved === 'bn') setLanguageState(saved);
+    } catch (e) {}
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    if (typeof window !== 'undefined') {
+    try {
       localStorage.setItem('blood_lagbe_lang', lang);
-    }
+    } catch (e) {}
   };
 
   const toggleLanguage = () => {
