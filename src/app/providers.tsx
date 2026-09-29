@@ -6,12 +6,11 @@ import { AlertProvider } from '../context/AlertContext';
 import { AppStateProvider } from '../context/AppStateContext';
 import { AppShell } from '../components/AppShell';
 import { LegacyHashRedirect } from '../components/LegacyHashRedirect';
-import { DocumentLocale } from './document-locale';
+import type { Language } from '../locales';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ language, children }: { language: Language; children: React.ReactNode }) {
   return (
-    <LanguageProvider>
-      <DocumentLocale />
+    <LanguageProvider language={language}>
       <AlertProvider>
         <AppStateProvider>
           <LegacyHashRedirect />

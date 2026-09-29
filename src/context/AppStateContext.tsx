@@ -5,7 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ScreenId, EmergencyDemand, ActiveMission, Donor, DonorNotification } from '../types/blood';
 import { INITIAL_DEMANDS, ACTIVE_MISSION_DEFAULT, INITIAL_DONORS, INITIAL_NOTIFICATIONS } from '../data/mockData';
 import { sound } from '../utils/audio';
-import { SCREEN_PATHS, pathToScreen } from '../utils/routes';
+import { pathToScreen, screenPath } from '../utils/routes';
+import { usePersistentState } from '../utils/persistentState';
 import { useLanguage } from './LanguageContext';
 
 interface RequisitionModalState {
@@ -57,13 +58,14 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const router = useRouter();
   const pathname = usePathname();
   const currentScreen = pathToScreen(pathname);
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
-  const [selectedDivision, setSelectedDivision] = useState<string>('Dhaka Central');
-  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
-  const [demands, setDemands] = useState<EmergencyDemand[]>(INITIAL_DEMANDS);
-  const [donors, setDonors] = useState<Donor[]>(INITIAL_DONORS);
-  const [notifications, setNotifications] = useState<DonorNotification[]>(INITIAL_NOTIFICATIONS);
+  // Kept across the remount a language switch causes, so switching language keeps the session's data.
+  const [selectedDivision, setSelectedDivision] = usePersistentState<string>('selectedDivision', 'Dhaka Central');
+  const [isAudioMuted, setIsAudioMuted] = usePersistentState<boolean>('isAudioMuted', false);
+  const [demands, setDemands] = usePersistentState<EmergencyDemand[]>('demands', INITIAL_DEMANDS);
+  const [donors, setDonors] = usePersistentState<Donor[]>('donors', INITIAL_DONORS);
+  const [notifications, setNotifications] = usePersistentState<DonorNotification[]>('notifications', INITIAL_NOTIFICATIONS);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [requisitionModal, setRequisitionModal] = useState<RequisitionModalState>({ isOpen: false });
   const [otpModal, setOtpModal] = useState<OtpModalState>({
@@ -74,10 +76,10 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const navigate = useCallback(
     (screen: ScreenId) => {
-      router.push(SCREEN_PATHS[screen]);
+      router.push(screenPath(screen, language));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
-    [router]
+    [router, language]
   );
 
   const showToast = (message: string) => {

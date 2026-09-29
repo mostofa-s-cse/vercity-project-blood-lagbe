@@ -1,7 +1,7 @@
 'use client';
 
-import { useAppState } from '../context/AppStateContext';
-import { useLanguage } from '../context/LanguageContext';
+import { useAppState } from '@/context/AppStateContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function NotFound() {
   const { t } = useLanguage();

@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+'use client';
+
+import React, { createContext, useCallback, useContext, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Language, TRANSLATIONS } from '../locales';
+import { LANGUAGE_COOKIE, switchLanguagePath } from '../utils/routes';
 
 interface LanguageContextType {
   language: Language;
@@ -10,28 +14,28 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Default to Bengali. Saved choice loads after mount so server and first client render match.
-  const [language, setLanguageState] = useState<Language>('bn');
+/** The language comes from the URL (`/bn/...`, `/en/...`); switching it navigates to the same page in the other one. */
+export const LanguageProvider: React.FC<{ language: Language; children: React.ReactNode }> = ({
+  language,
+  children,
+}) => {
+  const router = useRouter();
+  const pathname = usePathname();
 
+  // Remember the language so the proxy can send prefix-less URLs to it.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('blood_lagbe_lang');
-      if (saved === 'en' || saved === 'bn') setLanguageState(saved);
-    } catch (e) {}
-  }, []);
+    document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=31536000; samesite=lax`;
+  }, [language]);
 
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    try {
-      localStorage.setItem('blood_lagbe_lang', lang);
-    } catch (e) {}
-  };
+  const setLanguage = useCallback(
+    (next: Language) => {
+      if (next === language) return;
+      router.push(`${switchLanguagePath(pathname, next)}${window.location.search}`, { scroll: false });
+    },
+    [language, pathname, router]
+  );
 
-  const toggleLanguage = () => {
-    const next = language === 'bn' ? 'en' : 'bn';
-    setLanguage(next);
-  };
+  const toggleLanguage = () => setLanguage(language === 'bn' ? 'en' : 'bn');
 
   const t = TRANSLATIONS[language];
 
