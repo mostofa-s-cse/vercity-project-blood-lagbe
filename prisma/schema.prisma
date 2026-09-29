@@ -1,0 +1,91 @@
+// Blood Lagbe? database schema (PostgreSQL on Supabase).
+// The connection URL lives in prisma.config.ts, not here (Prisma 7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BloodGroup {
+  A_POS  @map("A+")
+  A_NEG  @map("A-")
+  B_POS  @map("B+")
+  B_NEG  @map("B-")
+  AB_POS @map("AB+")
+  AB_NEG @map("AB-")
+  O_POS  @map("O+")
+  O_NEG  @map("O-")
+
+  @@map("blood_group")
+}
+
+enum SosStatus {
+  ACTIVE
+  FULFILLED
+  CANCELLED
+
+  @@map("sos_status")
+}
+
+/// One row per signed-in person. `id` is the Supabase Auth user id (auth.users.id).
+model Profile {
+  id          String       @id @db.Uuid
+  email       String?
+  name        String?
+  avatarUrl   String?      @map("avatar_url")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  donors      Donor[]
+  sosRequests SosRequest[]
+
+  @@map("profiles")
+}
+
+model Donor {
+  id                 String     @id @default(cuid())
+  userId             String?    @map("user_id") @db.Uuid
+  user               Profile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name               String
+  phone              String
+  bloodGroup         BloodGroup @map("blood_group")
+  area               String
+  age                Int?
+  gender             String?
+  division           String?
+  email              String?
+  weightKg           Int?       @map("weight_kg")
+  lastDonationMonths Int?       @map("last_donation_months")
+  vehicle            String?
+  nearestHospital    String?    @map("nearest_hospital")
+  isAvailable        Boolean    @default(true) @map("is_available")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  @@index([bloodGroup, area])
+  @@index([userId])
+  @@map("donors")
+}
+
+model SosRequest {
+  id         String     @id @default(cuid())
+  userId     String?    @map("user_id") @db.Uuid
+  user       Profile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  area       String?
+  problem    String?
+  bloodGroup BloodGroup @map("blood_group")
+  bags       Int        @default(1)
+  place      String
+  phones     String[]
+  isCritical Boolean    @default(true) @map("is_critical")
+  language   String     @default("bn")
+  postText   String     @map("post_text")
+  status     SosStatus  @default(ACTIVE)
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("sos_requests")
+}

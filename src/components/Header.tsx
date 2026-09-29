@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
+import { AuthButton } from './AuthButton';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
 
@@ -220,6 +221,9 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="material-symbols-outlined text-base sm:text-lg">emergency_share</span>
             <span className="tracking-wide uppercase">{t.header.sosTriggerBtn}</span>
           </button>
+
+          {/* Sign in with Google (only when Supabase is configured) */}
+          <AuthButton />
 
           {/* User Profile Avatar Pill */}
           <button

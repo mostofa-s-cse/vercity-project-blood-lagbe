@@ -30,6 +30,8 @@ export const header: Header = {
     pitchDeck: 'পিচ ডেক',
     userDocs: 'ব্যবহার নির্দেশিকা',
   },
+  signIn: 'Google দিয়ে সাইন ইন',
+  signOut: 'সাইন আউট',
   divisions: {
     dhakaCentral: 'ঢাকা সেন্ট্রাল (DMCH / BSMMU)',
     dhakaNorth: 'ঢাকা উত্তর (উত্তরা / কুর্মিটোলা)',

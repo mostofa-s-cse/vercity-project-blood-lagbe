@@ -28,6 +28,8 @@ export const header = {
     pitchDeck: 'Pitch Deck',
     userDocs: 'User Guide',
   },
+  signIn: 'Sign in with Google',
+  signOut: 'Sign out',
   divisions: {
     dhakaCentral: 'Dhaka Central (DMCH / BSMMU)',
     dhakaNorth: 'Dhaka North (Uttara / Kurmitola)',
