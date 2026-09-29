@@ -1,11 +1,26 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { DonorListResponse } from '../lib/dtoTypes.ts';
+import type { DonorPayload, SosPayload } from '../lib/api.ts';
+import type { DonorListResponse, RequestDetailResponse, RequestDto, RequestListResponse, ResponseDto } from '../lib/dtoTypes.ts';
+import { browserStorage, tokenFor } from '../lib/myRequests.ts';
+import type { RequestStatusValue } from '../lib/requestStatus.ts';
 
 export interface DonorQuery {
   bloodGroup?: string;
   /** Text searched in the donor's name and area. */
   q?: string;
   available?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface RequestsQuery {
+  status?: string;
+  emergency?: boolean;
+  bloodGroup?: string;
+  /** Show only these requests, for "my requests" from this browser. */
+  ids?: string[];
+  /** Only the signed-in person's own requests. */
+  mine?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -21,16 +36,30 @@ function queryString(params: Array<[string, string | number | boolean | undefine
   return text ? `?${text}` : '';
 }
 
+const MANAGE_TOKEN_HEADER = 'X-Manage-Token';
+
 interface ApiOptions {
   baseUrl?: string;
   /** Swapped in by tests. */
   fetchFn?: typeof fetch;
   /** Seconds an unused result stays cached. Tests use 0 so no timer keeps the process alive. */
   keepUnusedDataFor?: number;
+  /** The manage token this browser holds for a request, if any. Defaults to the browser's own list. */
+  getToken?: (requestId: string) => string | undefined;
 }
 
 /** The client data layer: one RTK Query slice for every server call the screens make. */
-export function createApiSlice({ baseUrl = '/api', fetchFn, keepUnusedDataFor = 60 }: ApiOptions = {}) {
+export function createApiSlice({
+  baseUrl = '/api',
+  fetchFn,
+  keepUnusedDataFor = 60,
+  getToken = (id) => tokenFor(browserStorage(), id),
+}: ApiOptions = {}) {
+  const tokenHeaders = (id: string, explicit?: string) => {
+    const token = explicit ?? getToken(id);
+    return token ? { [MANAGE_TOKEN_HEADER]: token } : undefined;
+  };
+
   return createApi({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
@@ -50,9 +79,73 @@ export function createApiSlice({ baseUrl = '/api', fetchFn, keepUnusedDataFor = 
         },
         providesTags: ['Donor'],
       }),
+
+      /** The full phone number of one donor, fetched only when someone presses "call". */
+      getDonorContact: build.query<{ phone: string }, string>({
+        query: (id) => `donors/${encodeURIComponent(id)}/contact`,
+      }),
+
+      registerDonor: build.mutation<{ id: string }, DonorPayload>({
+        query: (body) => ({ url: 'donors', method: 'POST', body }),
+        invalidatesTags: ['Donor'],
+      }),
+
+      getRequests: build.query<RequestListResponse, RequestsQuery | void>({
+        query: (args) => {
+          const a = (args ?? {}) as RequestsQuery;
+          return `requests${queryString([
+            ['status', a.status],
+            ['emergency', a.emergency],
+            ['bloodGroup', a.bloodGroup],
+            ['ids', a.ids?.length ? a.ids.join(',') : undefined],
+            ['mine', a.mine],
+            ['page', a.page],
+            ['pageSize', a.pageSize],
+          ])}`;
+        },
+        providesTags: ['Request'],
+      }),
+
+      /** One request with its answers. Sends this browser's manage token for it, so `canManage` is right. */
+      getRequest: build.query<RequestDetailResponse, string>({
+        query: (id) => ({ url: `requests/${encodeURIComponent(id)}`, headers: tokenHeaders(id) }),
+        providesTags: ['Request'],
+      }),
+
+      /** Posts an SOS. The answer holds the one-time manage token: the caller must remember it (see myRequests.ts). */
+      createSos: build.mutation<{ id: string; manageToken: string }, SosPayload>({
+        query: (body) => ({ url: 'sos', method: 'POST', body }),
+        invalidatesTags: ['Request'],
+      }),
+
+      /** "I can donate". */
+      respondToRequest: build.mutation<{ response: ResponseDto; status: RequestStatusValue }, { id: string; name: string; phone: string }>({
+        query: ({ id, name, phone }) => ({ url: `requests/${encodeURIComponent(id)}/respond`, method: 'POST', body: { name, phone } }),
+        invalidatesTags: ['Request'],
+      }),
+
+      updateRequestStatus: build.mutation<{ request: RequestDto }, { id: string; status: RequestStatusValue; token?: string }>({
+        query: ({ id, status, token }) => ({
+          url: `requests/${encodeURIComponent(id)}`,
+          method: 'PATCH',
+          body: { status },
+          headers: tokenHeaders(id, token),
+        }),
+        invalidatesTags: ['Request'],
+      }),
     }),
   });
 }
 
 export const api = createApiSlice();
-export const { useGetDonorsQuery } = api;
+export const {
+  useGetDonorsQuery,
+  useGetDonorContactQuery,
+  useLazyGetDonorContactQuery,
+  useRegisterDonorMutation,
+  useGetRequestsQuery,
+  useGetRequestQuery,
+  useCreateSosMutation,
+  useRespondToRequestMutation,
+  useUpdateRequestStatusMutation,
+} = api;

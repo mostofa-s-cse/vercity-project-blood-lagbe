@@ -82,3 +82,4 @@ Newest last. One line per finished task: date, what, commit.
 - 2026-09-29: M1 Task 3 done: pure rules with tests: status transitions + time left, phone masking, manage token hashing, validation for respond/status/queries/patient fields.
 - 2026-09-29: M1 Task 4 done: read APIs (donors list, donor contact, requests list, request detail) verified against a seeded real Postgres: filters, paging, ordering, masked phones, error answers.
 - 2026-09-29: M1 Task 5 done: mutation APIs (SOS returns one-time manage token, PATCH status with token/owner/permission, respond) with 34 real-database checks incl. two racing updates and four simultaneous identical answers. Checks kept in scripts/verify/.
+- 2026-09-29: M1 Task 6 done: RTK Query endpoints (donor contact, requests list/detail, create SOS, respond, update status, register donor) with tag invalidation, and the browser 'my requests' token list, all tested.

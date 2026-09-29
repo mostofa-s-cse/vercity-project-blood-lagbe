@@ -68,3 +68,10 @@ export interface DonorListResponse extends Paged {
 export interface RequestListResponse extends Paged {
   requests: RequestDto[];
 }
+
+/** One request with its answers. `canManage` is true for whoever may change it (see the API notes). */
+export interface RequestDetailResponse {
+  request: RequestDto;
+  responses: ResponseDto[];
+  canManage: boolean;
+}
