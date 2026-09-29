@@ -46,6 +46,7 @@ DIRECT_URL=postgresql://postgres:test@127.0.0.1:54329/postgres npx prisma migrat
 DATABASE_URL=postgresql://postgres:test@127.0.0.1:54329/postgres npm run start   # after npm run build
 docker rm -f bloodlagbe-test-pg                                                    # when done
 ```
+Ready-made API checks against that database and a running server: `python3 scripts/verify/check_reads.py` (needs a fresh `npm run db:seed`) and `python3 scripts/verify/check_writes.py` (34 checks: manage token, transitions, duplicates, races). Extend them when the API changes.
 To check the UI for screens that need an admin session, serve stand-in API responses from the browser (Playwright `page.route`); the server rules are covered by unit tests and database scripts.
 Machine notes for the owner's computer: port 3000 is used by another project (use `--port 3100`); a Supabase stack from another project runs in Docker on ports 5432/6543 and must not be touched; the shell is zsh (an unquoted `$LIST` is not split, run loops with `bash`).
 
@@ -80,3 +81,4 @@ Newest last. One line per finished task: date, what, commit.
 - 2026-09-29: M1 Task 2 done: schema (RequestStatus, RequestResponse, manage token hash, patient fields), migration 0005 verified on real Postgres (status conversion, default, unique, cascade, no drift), idempotent `npm run db:seed`.
 - 2026-09-29: M1 Task 3 done: pure rules with tests: status transitions + time left, phone masking, manage token hashing, validation for respond/status/queries/patient fields.
 - 2026-09-29: M1 Task 4 done: read APIs (donors list, donor contact, requests list, request detail) verified against a seeded real Postgres: filters, paging, ordering, masked phones, error answers.
+- 2026-09-29: M1 Task 5 done: mutation APIs (SOS returns one-time manage token, PATCH status with token/owner/permission, respond) with 34 real-database checks incl. two racing updates and four simultaneous identical answers. Checks kept in scripts/verify/.
