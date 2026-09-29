@@ -37,11 +37,15 @@ export const faq: DocFaq = {
     },
     q9: {
       q: 'Why does my new SOS not appear in the Emergency Hub list?',
-      a: 'The Emergency Hub list always shows the same sample requests. When you submit an SOS, the app shows a confirmation message, adds an alert to the notification bell and takes you to the Live Tracker. The new request is not added to the hub list.',
+      a: 'The Emergency Hub list always shows the same sample requests. When you post an SOS, the app shows a confirmation page with your shareable post (copy it or send it on WhatsApp or Facebook) and adds an alert to the notification bell. The new request is not added to the hub list. If the site owner has connected a database, the request is also saved there, but the screens still show sample data.',
     },
     q10: {
       q: 'What do the blood groups and urgency levels mean?',
-      a: 'There are eight blood groups: A+, A-, B+, B-, AB+, AB-, O+ and O-. A minus sign means Rh negative, which is rarer, so those groups often show low stock. A doctor decides which blood a patient can receive. When you create an SOS you pick Immediate (Code Red), Urgent (Under 6h) or Scheduled (Next 24h). The admin alert has its own levels (Code-Red, Critical, Urgent), which are saved with the alert but not shown in the ticker text.',
+      a: 'There are eight blood groups: A+, A-, B+, B-, AB+, AB-, O+ and O-. A minus sign means Rh negative, which is rarer, so those groups often show low stock. A doctor decides which blood a patient can receive. When you post an SOS you can tick Needed within 1 hour for the most urgent cases (top priority, P1); leave it unticked and the request gets the next priority (P2, about 4 hours). The admin alert has its own levels (Code-Red, Critical, Urgent), which are saved with the alert but not shown in the ticker text.',
+    },
+    q11: {
+      q: 'Do I need to sign in?',
+      a: 'No. You can post an SOS and register as a donor without signing in, so nobody has to sign in during an emergency. If the site owner has switched on Google sign-in, a Sign in with Google button appears in the top bar. Signing in links what you save to your account. Without it, the site works as a demo.',
     },
   },
 };
