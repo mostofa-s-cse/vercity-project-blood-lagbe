@@ -1,14 +1,16 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { BloodGroup, EmergencyDemand, ScreenId } from '../types/blood';
+import { BloodGroup, ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { buildSosPost } from '../utils/sosPost';
 import { isValidBdPhone } from '../utils/phone';
-import { saveSos } from '../lib/api';
+import { useCreateSosMutation } from '../store/api';
+import { browserStorage, rememberRequest } from '../lib/myRequests';
+import type { SosCreatedInfo } from '../context/AppStateContext';
 
 interface CreateSosScreenProps {
   onNavigate: (screen: ScreenId) => void;
-  onSosCreated: (newDemand: EmergencyDemand) => void;
+  onSosCreated: (info: SosCreatedInfo) => void;
 }
 
 const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -36,6 +38,7 @@ const labelClass = 'block text-sm font-bold text-slate-800 mb-1.5';
 export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, onSosCreated }) => {
   const { language, t } = useLanguage();
   const ids = useId();
+  const [createSos] = useCreateSosMutation();
 
   // Form
   const [area, setArea] = useState('');
@@ -104,8 +107,15 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
 
     const finalPost = postText;
 
-    // Save to the database when one is configured. Fire and forget: the demo works the same without it.
-    void saveSos({
+    const info: SosCreatedInfo = {
+      bloodGroup,
+      place: place.trim(),
+      bags,
+      patientName: t.sos.defaultPatient,
+    };
+
+    // Without a database the demo still shows the success page; the request is just not saved.
+    void createSos({
       area: area.trim() || undefined,
       problem: problem.trim() || undefined,
       bloodGroup,
@@ -115,27 +125,13 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
       isCritical: within1Hour,
       language,
       postText: finalPost,
-    });
-    const newDemand: EmergencyDemand = {
-      id: `DEM-${Math.floor(100 + Math.random() * 900)}`,
-      patientName: t.sos.defaultPatient,
-      condition: problem.trim() || t.sos.defaultCondition,
-      bloodGroup,
-      bagsRequired: bags,
-      bagsPledged: 0,
-      hospital: place.trim(),
-      hospitalLocation: area.trim(),
-      distanceKm: 2.1,
-      urgencyWindowText: within1Hour ? 'Critical: Within 1 Hour' : 'Urgent: Within 4 Hours',
-      windowRemainingSec: within1Hour ? 3600 : 14400,
-      urgencyTag: within1Hour ? 'High Emergency P1' : 'Priority P2',
-      verificationBadge: 'Community SOS Post',
-      attendantPhone: phone1.trim(),
-      status: 'active',
-    };
+    })
+      .unwrap()
+      .then((created) => rememberRequest(browserStorage(), { id: created.id, token: created.manageToken }))
+      .catch(() => undefined);
 
     submitTimer.current = setTimeout(() => {
-      onSosCreated(newDemand);
+      onSosCreated(info);
       setIsSubmitting(false);
       setPostedText(finalPost);
       window.scrollTo({ top: 0, behavior: 'smooth' });

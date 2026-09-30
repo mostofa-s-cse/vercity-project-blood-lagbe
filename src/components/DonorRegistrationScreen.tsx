@@ -2,7 +2,8 @@ import React, { useId, useState } from 'react';
 import { ScreenId, Donor, BloodGroup } from '../types/blood';
 import { sound } from '../utils/audio';
 import { isValidBdPhone } from '../utils/phone';
-import { saveDonor } from '../lib/api';
+import { useRegisterDonorMutation } from '../store/api';
+import type { DonorRegisteredInfo } from '../context/AppStateContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -28,7 +29,7 @@ const inputClass =
 
 interface DonorRegistrationScreenProps {
   onNavigate: (screen: ScreenId) => void;
-  onRegisterDonor: (newDonor: Donor) => void;
+  onRegisterDonor: (info: DonorRegisteredInfo) => void;
 }
 
 export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = ({
@@ -40,6 +41,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   const fieldId = (name: string) => `${uid}-${name}`;
 
   // Required fields
+  const [registerDonor] = useRegisterDonorMutation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -107,7 +109,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
     };
 
     // Save to the database when one is configured. Fire and forget: the demo works the same without it.
-    void saveDonor({
+    void registerDonor({
       name: createdDonor.name,
       phone: trimmedPhone,
       bloodGroup,
@@ -121,9 +123,11 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       vehicle,
       nearestHospital,
       isAvailable,
-    });
+    })
+      .unwrap()
+      .catch(() => undefined);
 
-    onRegisterDonor(createdDonor);
+    onRegisterDonor({ name: createdDonor.name, bloodGroup });
     setSubmittedDonor(createdDonor);
   };
 
