@@ -51,9 +51,22 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
   const [showPhone2, setShowPhone2] = useState(false);
   const [within1Hour, setWithin1Hour] = useState(true);
 
+  // More details (optional)
+  const [patientName, setPatientName] = useState('');
+  const [patientAgeText, setPatientAgeText] = useState('');
+  const [attendantName, setAttendantName] = useState('');
+  const moreDetailsRef = useRef<HTMLDetailsElement | null>(null);
+
   // Validation display
   const [triedSubmit, setTriedSubmit] = useState(false);
-  const [touched, setTouched] = useState({ place: false, phone1: false, phone2: false });
+  const [touched, setTouched] = useState({
+    place: false,
+    phone1: false,
+    phone2: false,
+    patientName: false,
+    patientAge: false,
+    attendantName: false,
+  });
 
   // Submit / success
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,12 +93,20 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
   const placeOk = place.trim() !== '';
   const phone1Ok = isValidBdPhone(phone1);
   const phone2Ok = !showPhone2 || phone2.trim() === '' || isValidBdPhone(phone2);
-  const canSubmit = bloodGroupOk && placeOk && phone1Ok && phone2Ok;
+  const patientNameOk = patientName.trim() === '' || (patientName.trim().length >= 2 && patientName.trim().length <= 80);
+  const patientAgeOk =
+    patientAgeText.trim() === '' ||
+    (/^\d+$/.test(patientAgeText.trim()) && Number(patientAgeText.trim()) >= 0 && Number(patientAgeText.trim()) <= 120);
+  const attendantNameOk = attendantName.trim() === '' || (attendantName.trim().length >= 2 && attendantName.trim().length <= 80);
+  const canSubmit = bloodGroupOk && placeOk && phone1Ok && phone2Ok && patientNameOk && patientAgeOk && attendantNameOk;
 
   const showBloodGroupError = triedSubmit && !bloodGroupOk;
   const showPlaceError = (triedSubmit || touched.place) && !placeOk;
   const showPhone1Error = (triedSubmit || touched.phone1) && !phone1Ok;
   const showPhone2Error = (triedSubmit || touched.phone2) && !phone2Ok;
+  const showPatientNameError = (triedSubmit || touched.patientName) && !patientNameOk;
+  const showPatientAgeError = (triedSubmit || touched.patientAge) && !patientAgeOk;
+  const showAttendantNameError = (triedSubmit || touched.attendantName) && !attendantNameOk;
 
   const touch = (field: keyof typeof touched) => setTouched((prev) => ({ ...prev, [field]: true }));
 
@@ -99,6 +120,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
     if (isSubmitting) return;
     if (!canSubmit || bloodGroup === null) {
       setTriedSubmit(true);
+      if ((!patientNameOk || !patientAgeOk || !attendantNameOk) && moreDetailsRef.current) moreDetailsRef.current.open = true;
       return;
     }
 
@@ -118,6 +140,9 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
     void createSos({
       area: area.trim() || undefined,
       problem: problem.trim() || undefined,
+      patientName: patientName.trim() || undefined,
+      patientAge: patientAgeText.trim() ? Number(patientAgeText.trim()) : undefined,
+      attendantName: attendantName.trim() || undefined,
       bloodGroup,
       bags,
       place: place.trim(),
@@ -166,8 +191,12 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
     setPhone2('');
     setShowPhone2(false);
     setWithin1Hour(true);
+    setPatientName('');
+    setPatientAgeText('');
+    setAttendantName('');
+    if (moreDetailsRef.current) moreDetailsRef.current.open = false;
     setTriedSubmit(false);
-    setTouched({ place: false, phone1: false, phone2: false });
+    setTouched({ place: false, phone1: false, phone2: false, patientName: false, patientAge: false, attendantName: false });
     setCopied(false);
     setPostedText(null);
   };
@@ -270,7 +299,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
           <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => onNavigate('live-tracker')}
+              onClick={() => onNavigate('request-tracking')}
               className="py-3 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 font-bold text-sm flex items-center justify-center gap-1.5"
             >
               <span className="material-symbols-outlined text-lg" aria-hidden="true">
@@ -304,6 +333,9 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
   const phone2Id = `${ids}-phone2`;
   const bagsId = `${ids}-bags`;
   const urgentId = `${ids}-urgent`;
+  const patientNameId = `${ids}-patient-name`;
+  const patientAgeId = `${ids}-patient-age`;
+  const attendantNameId = `${ids}-attendant-name`;
   const errorClass = 'mt-1.5 text-sm font-semibold text-red-600';
   const borderFor = (hasError: boolean) => (hasError ? 'border-red-400 bg-red-50/40' : 'border-slate-200 bg-white');
 
@@ -560,6 +592,91 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
           </span>
           <span className="text-base font-bold text-slate-900">{t.sos.within1Hour}</span>
         </label>
+
+        {/* More details (optional) */}
+        <details ref={moreDetailsRef} className="group rounded-xl border border-slate-200">
+          <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <span>
+              <span className="block text-sm font-bold text-slate-900">{t.sos.moreDetails}</span>
+              <span className="block text-xs text-slate-500 mt-0.5">{t.sos.moreDetailsHint}</span>
+            </span>
+            <span className="material-symbols-outlined text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true">
+              expand_more
+            </span>
+          </summary>
+
+          <div className="px-4 pb-4 pt-1 flex flex-col gap-4">
+            <div>
+              <label htmlFor={patientNameId} className={labelClass}>
+                {t.sos.patientName} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                id={patientNameId}
+                type="text"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                onBlur={() => touch('patientName')}
+                placeholder={t.sos.patientNamePlaceholder}
+                maxLength={80}
+                aria-invalid={showPatientNameError}
+                aria-describedby={showPatientNameError ? `${patientNameId}-error` : undefined}
+                className={`${inputClass} ${borderFor(showPatientNameError)}`}
+              />
+              {showPatientNameError && (
+                <p id={`${patientNameId}-error`} className={errorClass}>
+                  {t.sos.errors.patientName}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor={patientAgeId} className={labelClass}>
+                {t.sos.patientAge} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                id={patientAgeId}
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="120"
+                value={patientAgeText}
+                onChange={(e) => setPatientAgeText(e.target.value)}
+                onBlur={() => touch('patientAge')}
+                aria-invalid={showPatientAgeError}
+                aria-describedby={showPatientAgeError ? `${patientAgeId}-error` : undefined}
+                className={`${inputClass} ${borderFor(showPatientAgeError)}`}
+              />
+              {showPatientAgeError && (
+                <p id={`${patientAgeId}-error`} className={errorClass}>
+                  {t.sos.errors.patientAge}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor={attendantNameId} className={labelClass}>
+                {t.sos.attendantName} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                id={attendantNameId}
+                type="text"
+                value={attendantName}
+                onChange={(e) => setAttendantName(e.target.value)}
+                onBlur={() => touch('attendantName')}
+                placeholder={t.sos.attendantNamePlaceholder}
+                maxLength={80}
+                aria-invalid={showAttendantNameError}
+                aria-describedby={showAttendantNameError ? `${attendantNameId}-error` : undefined}
+                className={`${inputClass} ${borderFor(showAttendantNameError)}`}
+              />
+              {showAttendantNameError && (
+                <p id={`${attendantNameId}-error`} className={errorClass}>
+                  {t.sos.errors.attendantName}
+                </p>
+              )}
+            </div>
+          </div>
+        </details>
 
         {/* Live preview */}
         {postCard(postText, t.sos.previewTitle, t.sos.previewHint)}

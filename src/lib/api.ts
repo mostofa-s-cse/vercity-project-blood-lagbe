@@ -17,6 +17,9 @@ export interface DonorPayload {
 export interface SosPayload {
   area?: string;
   problem?: string;
+  patientName?: string;
+  patientAge?: number;
+  attendantName?: string;
   bloodGroup: string;
   bags: number;
   place: string;

@@ -15,7 +15,7 @@ export const register: DocSection = {
   tips: {
     t1: 'The "Register as donor" button stays grey until the four fields are filled, the mobile number is valid and the box is ticked.',
     t2: 'If the mobile number is not a valid Bangladesh number, a red message appears under it after you leave the field. The number is saved with +880 in front if you do not type it yourself.',
-    t3: 'This is a demo. Your profile is kept only in this browser tab and disappears when you reload the page. No real alerts or SMS are sent, and the email field is not saved.',
+    t3: 'When a database is connected, your profile is saved for real and stays after a reload. In this demo without a database, it is kept only in this browser tab and disappears when you reload the page. Either way, no real alerts or SMS are sent, and the email field is not saved.',
     t4: 'To keep the demo simple, a new donor is automatically marked as BDRCS verified, with sample health figures and a distance of 1.5 km.',
   },
 };
