@@ -9,7 +9,7 @@ export const faq: DocFaq = {
     },
     q2: {
       q: 'Is my data kept if I reload the page?',
-      a: 'Your new SOS requests, registered donors and notifications stay while you move between pages or switch language. A reload or a closed tab brings back the sample data. Two things are kept in your browser: the alert and radius messages set in the Admin Panel, and your language choice. Changes made inside the Admin Panel tables reset as soon as you leave the panel.',
+      a: 'When the site owner has connected a database, an SOS you post and a donor profile you register are saved for real: they survive a reload and show up in the Emergency Hub, Request Tracking and Donor Directory. Your browser also remembers the one-time manage token for each request you post (so you can mark it Donor Found, Completed or Cancelled later) in a small list capped in length; clearing your browser\'s site data loses that list, though the request itself is not deleted. In this demo without a database, nothing is saved: a reload or a closed tab brings back the sample data. Two things are always kept in your browser regardless: the alert and radius messages set in the Admin Panel, and your language choice. Changes made inside the other Admin Panel tabs reset as soon as you leave the panel.',
     },
     q3: {
       q: 'How do I change the language, and does it stay?',
@@ -33,11 +33,11 @@ export const faq: DocFaq = {
     },
     q8: {
       q: 'How do I show up in the Donor Directory?',
-      a: 'Fill in the "Register as Donor" form. You are added to the top of the Donor Directory with the BDRCS Verified mark. If you said you are not available, the "Available Now" filter hides you, so turn it off to see yourself. You disappear again after a reload, and you are not added to the Admin Panel\'s Donor Registry.',
+      a: 'Fill in the "Register as Donor" form. When a database is connected, you are saved for real and appear in the Donor Directory; if you said you are not available, the "Available Now" filter hides you, so turn it off to see yourself. In this demo without a database, registering still shows a success screen, but nothing is saved, so you do not appear in the Directory and you are gone after a reload. Either way, you are not added to the Admin Panel\'s Donor Registry, which still shows sample data.',
     },
     q9: {
-      q: 'Why does my new SOS not appear in the Emergency Hub list?',
-      a: 'The Emergency Hub list always shows the same sample requests. When you post an SOS, the app shows a confirmation page with your shareable post (copy it or send it on WhatsApp or Facebook) and adds an alert to the notification bell. The new request is not added to the hub list. If the site owner has connected a database, the request is also saved there, but the screens still show sample data.',
+      q: "Why doesn't my new SOS appear in the Emergency Hub list?",
+      a: 'When a database is connected, a posted SOS appears in the Emergency Hub and in Request Tracking\'s "My requests" tab straight away; check that the blood group or "Emergencies only" filter is not hiding it, or press Retry if the list failed to load. In this demo without a database, the Emergency Hub always shows the same sample requests: posting still shows a confirmation page with your shareable post (copy it or send it on WhatsApp or Facebook) and adds an alert to the notification bell, but the new request is not added to the hub or tracking lists.',
     },
     q10: {
       q: 'What do the blood groups and urgency levels mean?',
