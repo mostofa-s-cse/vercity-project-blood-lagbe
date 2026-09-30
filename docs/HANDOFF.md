@@ -7,20 +7,20 @@ The owner's spec ("Blood Donation & Blood Request Management System") asks for: 
 
 ## Where the work stands
 
-Realistic match to the spec: **~45%** at the start of M1 (screens ~62%, tech ~61%, works end to end ~21%).
+Realistic match to the spec: **~65%** after M1 (was ~45% at the start).
 
 Already built (all on the branch chain below):
 - Next.js migration from Vite; English/Bengali locale files; language in the URL (`/bn`, `/en`); user guide page.
 - Simple SOS request (Facebook-style post with share buttons) and short donor registration.
-- Supabase Google sign-in; Prisma schema and migrations `0001` to `0004`; row-level security on every table.
+- Supabase Google sign-in; Prisma schema and migrations `0001` to `0005`; row-level security on every table.
 - Dynamic roles and permissions (`src/lib/permissions.ts`, `roles.ts`, `grantService.ts`), Admin Panel **Access** tab, hospital-scoped stock editing with server checks.
-- Donors and SOS requests are **saved** to the database (`POST /api/donors`, `POST /api/sos`), but nothing reads them back yet. That is what M1 fixes.
+- Redux Toolkit / RTK Query as the client data layer; donors and requests are **saved and read back** from the database (Donor Directory, Emergency Hub, Request Tracking), with a real request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`), manage tokens for signed-out requesters, and donor responses. Every API falls back to `503` and every screen falls back to sample data with no database (demo mode). M1 is done.
 
 ## Milestones (from `docs/SPEC-MATCH-PLAN.md`)
 
 | Milestone | Packages | Status |
 |---|---|---|
-| **M1: real data and lifecycle** | WP9 Redux Toolkit + API layer, WP1 real data, WP2 request lifecycle | **In progress**, plan: `docs/superpowers/plans/2026-09-29-m1-real-data.md` |
+| **M1: real data and lifecycle** | WP9 Redux Toolkit + API layer, WP1 real data, WP2 request lifecycle | **Done**, plan: `docs/superpowers/plans/2026-09-29-m1-real-data.md` |
 | M2: donors and notifications | WP3, WP4, WP5 | Not started |
 | M3: organizations, admin, maps | WP7, WP8, WP6 | Not started |
 | M4: hardening and launch | WP10, WP11, WP12 | Not started |
@@ -33,7 +33,7 @@ Work is a linear chain (each branch contains the previous one). Push the tip.
 Nothing has been merged into `main` yet. The owner decides when to open a pull request.
 
 ## How to resume
-1. `git status`, `git branch --show-current`, `git log --oneline -5`. Continue on `feat/m1-real-data` unless the log says otherwise.
+1. `git status`, `git branch --show-current`, `git log --oneline -5`. M1 is done and merged into `main`/`prod`; the next milestone is **M2** (WP3 donors/seeker roles, WP4 matching and notifications, WP5 donation history) — it has no plan file yet, write one first (see `docs/SPEC-MATCH-PLAN.md`).
 2. Read `CLAUDE.md`, this file, and the plan for the current milestone. Find the first unchecked task.
 3. Run the gates before changing anything: `npm run lint && npm test && npm run build`. All should pass with no environment variables.
 4. Work task by task; after each: gates, browser or database check, commit, tick the plan checkbox, add a line to the progress log.
@@ -86,3 +86,4 @@ Newest last. One line per finished task: date, what, commit.
 - 2026-09-30: M1 Task 7 done: `DonorDirectory.tsx` on `useGetDonorsQuery`/`useLazyGetDonorContactQuery` (server paging, initials avatar, DTO-only fields, call number fetched on press, sample-data fallback and notice on 503); locale keys and donors user-guide section verified in sync. Gates (`lint`, 148 tests, `build`) clean with no env vars; browser-checked in demo mode (no DB) — sample donors, masked phones, call action all render correctly, only the expected 503 in the console. Real-Postgres path (server-side paging, live contact reveal) not checked: Docker unavailable in this sandbox.
 - 2026-09-30: M1 Task 8 done: `EmergencyHub`, `RequestTrackingScreen` and `AppStateContext` were already on real data from an earlier fix-up commit; added `CreateSosScreen`'s collapsed "More details" (patient name/age, attendant name, feeding the existing API fields) and fixed its success screen's "Track this request" button, which pointed at the sample Live Tracker instead of Request Tracking's My requests tab. Updated `sos`/`tracking`/`register` locale docs and FAQ q2/q8/q9 (en+bn), which still described pre-M1 sample-only behaviour. Gates green with no environment variables; browser-checked in demo mode (no database): form validates and submits, success page shows despite the expected 503, "Track this request" lands on Request Tracking with the demo notice, no crash. Real-database lifecycle not checked this session (no Docker in this sandbox).
 - 2026-09-30: M1 Task 9 done: no Docker on this machine, so used native `postgresql@16` binaries for a throwaway cluster (TCP-only, port 54329) instead — migrations 0001-0005 applied clean, `npm run db:seed` idempotent. `scripts/verify/check_writes.py` (34 checks) and `check_reads.py` (25 checks) both ALL PASS against it. Built and started the app against the real database and drove the full lifecycle in a real browser: posted an SOS, saw it live on the Emergency Hub, responded as an anonymous donor (name+phone), watched it auto-flip PENDING to Donor Found with the responder visible to the manager, marked it Completed — tab counts (Pending/Donor Found/Completed) updated correctly throughout. Donor Directory checked against the same database: real donors listed (masked phones, "Available Now" filter), Call reveals the full number only on press. No-database build/lint/test already green from Tasks 7-8's gate runs.
+- 2026-09-30: M1 Task 10 done, M1 finished: `docs/SETUP-SUPABASE.md` now mentions `npm run db:seed` and no longer says the screens read sample data; `docs/SPEC-MATCH-PLAN.md` module/technology tables and milestone table updated (realistic match ~45% to ~65%); this file's "Where the work stands" and milestone table updated. Every checkbox in `docs/superpowers/plans/2026-09-29-m1-real-data.md` is ticked. Branch merged into `main` and `prod` earlier in this session (fast-forward, no conflicts) and pushed; this final doc commit still needs pushing.

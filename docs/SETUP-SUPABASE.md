@@ -50,9 +50,10 @@ DIRECT_URL="postgresql://postgres.YOUR-PROJECT-REF:[YOUR-PASSWORD]@aws-0-REGION.
 ```bash
 npm install          # also runs `prisma generate`
 npm run db:migrate   # applies prisma/migrations to your database
+npm run db:seed      # optional: loads the same sample donors and requests the demo uses, so the directory and hub aren't empty
 ```
 
-This creates three tables (`profiles`, `donors`, `sos_requests`) and turns on **row-level security** with no policies. That means the browser key can read and write nothing in those tables; only the server (through Prisma) can. Check it in the dashboard under **Table Editor**: each table should show the RLS badge.
+This creates the tables (`profiles`, `donors`, `sos_requests`, `request_responses`, ...) and turns on **row-level security** with no policies. That means the browser key can read and write nothing in those tables; only the server (through Prisma) can. Check it in the dashboard under **Table Editor**: each table should show the RLS badge.
 
 ## 5. Create the Google sign-in credentials
 
@@ -154,7 +155,7 @@ A role's permissions are copied into the person's Supabase **`app_metadata`** (`
 - **Staying signed in and access control**: `src/proxy.ts` refreshes the session cookie on page requests and decides who may open the admin and signed-in pages (rules in `src/lib/roles.ts`).
 - **Roles**: the Access tab calls `/api/admin/roles` (role definitions) and `/api/admin/grants` (who has which role). `src/lib/grantService.ts` holds the rules; a role's permissions are copied into the person's `app_metadata` with the service key (`src/lib/supabase/admin.ts`, marked `server-only`) and read back from the login token by `src/lib/roles.ts`.
 - **Saving data**: the donor and SOS forms POST to `/api/donors` and `/api/sos`. Both work **signed out** (someone in an emergency should not have to sign in); when signed in, the record is linked to the person's profile.
-- **The screens still read sample data.** Saving works, but lists such as the donor directory and request tracking still come from `src/data/mockData.ts`. Reading them from the database is the next step.
+- **Reading data**: the donor directory, emergency hub and request tracking read from the database (`GET /api/donors`, `GET /api/requests`) through RTK Query. Without `DATABASE_URL` set, those APIs answer `503` and the screens fall back to the sample data in `src/data/mockData.ts`, exactly like the demo.
 
 ## Before going live
 

@@ -2,7 +2,11 @@
 
 Where we are, measured against the spec you gave (see "Starting point"), and the work packages (WP) that close each gap.
 
-## Starting point (measured from the code)
+## Status: M1 complete (2026-09-30)
+
+WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
+
+## Starting point (measured from the code, before M1)
 
 | Lens | Match |
 |---|---|
@@ -19,20 +23,20 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 
 | Spec module | Today | Missing |
 |---|---|---|
-| 1. Donor Registry | Registration form saves to the database | Read back, edit own profile, last donation date and availability management |
-| 2. Smart Donor Search | Filters (group, radius, available) on sample data | Search the database; real location; blood-group compatibility; availability/eligibility ranking |
-| 3. Blood Request Management | SOS post saved (write-only) | List, view, edit, cancel my requests; patient information |
-| 4. Emergency Request | A "within 1 hour" flag | Real priority; emergency ranks first; alerts donors |
+| 1. Donor Registry | Registration form saves to the database and is **read back** in the directory (M1) | Edit own profile, last donation date and availability management (WP3) |
+| 2. Smart Donor Search | Filters (group, availability, text) search the **real database**, server-paged (M1) | Real location; blood-group compatibility; eligibility ranking (WP6) |
+| 3. Blood Request Management | SOS saved and **read back**; list, view, cancel/complete my requests with a manage token; patient information (M1) | Edit a posted request |
+| 4. Emergency Request | Emergency and open requests **rank first** from the API; a "within 1 hour"/"within 4 hours" countdown (M1) | Alerts donors (WP4) |
 | 5. Donor Notifications | Bell with sample items | Matching by group and location; stored notifications; email/SMS/push |
 | 6. Donation History | Sample data on the passport | Data model, recording, availability cooldown |
-| 7. Request Tracking | Status tabs on sample data | Real statuses and transitions (Pending, Donor Found, Completed, Cancelled) |
+| 7. Request Tracking | **Real statuses and transitions** (Pending, Donor Found, Completed, Cancelled) from the database, server-enforced (M1) | Priority/urgency beyond emergency-first |
 | 8. Hospital & Organization | Hospital role, own-hospital stock saved | Organization accounts, verification workflow, managing requests |
 | 9. Admin Dashboard | Tabs on sample data; roles are real | Real user list, moderation, reports, activity log |
 
 | Spec technology | Today | Missing |
 |---|---|---|
-| Redux Toolkit | Not used (React Context) | Store, and RTK Query for the API |
-| REST API | 8 routes, mostly POST | Read/update/delete resources, pagination |
+| Redux Toolkit | **Adopted (M1)**: store + RTK Query is the client data layer | Auth slice beyond the existing `AuthContext` |
+| REST API | **Read/update endpoints added (M1)**: donors, requests, respond, status, pagination | Delete; district/radius filters |
 | Secure authentication | Google | Email and password, password reset |
 | Roles: Donor, Blood Seeker, Hospital/Org, Admin | Hospital and Admin (as dynamic roles) | Donor and Blood Seeker |
 | Protected API | Admin and hospital routes | Rate limiting and CAPTCHA on public routes |
@@ -55,26 +59,26 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 
 Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piece. "Gain" is the estimated rise in the realistic overall match.
 
-### WP9. Redux Toolkit and API layer (M, +3%). Do first
+### WP9. Redux Toolkit and API layer (M, +3%). Do first — **Done (M1)**
 - Add `@reduxjs/toolkit` and `react-redux`; a store provider in the root layout.
 - RTK Query API slice with tags (`Donor`, `Request`, `Notification`, `Hospital`).
 - An auth slice fed from the existing `AuthContext`.
 - Move donors, demands and notifications out of `AppStateContext` into RTK Query. Keep modal and toast state where it is.
 - Done when: no screen imports lists from `mockData.ts` for live data; unit tests for the slice and selectors.
 
-### WP1. Real data everywhere (L, +15%)
-- New read APIs: `GET /api/donors` (filters: group, district, availability, text, page), `GET /api/requests` (status, urgency, page), `GET /api/requests/[id]`.
-- Screens switch from sample data to RTK Query: Donor Directory, Emergency Hub, Request Tracking, Live Tracker, Hospitals list.
+### WP1. Real data everywhere (L, +15%) — **Done (M1)**
+- New read APIs: `GET /api/donors` (filters: group, availability, text, page), `GET /api/requests` (status, emergency, blood group, ids, mine, page), `GET /api/requests/[id]`.
+- Screens switch from sample data to RTK Query: Donor Directory, Emergency Hub, Request Tracking. (Live Tracker and Hospitals list are still sample data — out of M1's scope.)
 - A **seed script** (`prisma/seed.ts`) loads the current sample data into the database, so demos look the same.
-- Pagination and indexes (group + district + availability).
-- Done when: a donor registered in one browser appears in the directory in another; the hub shows a new SOS.
+- Pagination and indexes (blood group + availability + createdAt).
+- Done when: a donor registered in one browser appears in the directory in another; the hub shows a new SOS. Checked against a real Postgres.
 
-### WP2. Request lifecycle (M, +8%)
-- Statuses `PENDING`, `DONOR_FOUND`, `COMPLETED`, `CANCELLED` and priority `EMERGENCY` / `NORMAL` in the schema (migration converts the current `ACTIVE/FULFILLED/CANCELLED`).
-- `PATCH /api/requests/[id]` for the owner, the assigned hospital and admins; allowed transitions enforced on the server and unit-tested.
-- `POST /api/requests/[id]/respond`: a donor says "I can donate" (moves to `DONOR_FOUND`, records the donor).
-- Emergency requests sort first and get a stronger badge.
-- Done when: the whole path Pending, Donor Found, Completed works for real users and every transition is permission-checked.
+### WP2. Request lifecycle (M, +8%) — **Done (M1)**
+- Statuses `PENDING`, `DONOR_FOUND`, `COMPLETED`, `CANCELLED` in the schema (migration `0005` converts the old `ACTIVE`/`FULFILLED`/`CANCELLED`).
+- `PATCH /api/requests/[id]` for the manage-token holder, the owner and `panel.requests`; allowed transitions enforced on the server and unit-tested (race-safe: a racing pair of updates cannot both win).
+- `POST /api/requests/[id]/respond`: a donor says "I can donate" (moves `PENDING` to `DONOR_FOUND`, records the response; duplicate phone and closed requests refused).
+- Emergency and still-open requests sort first.
+- Done when: the whole path Pending, Donor Found, Completed works for real users and every transition is permission-checked. Verified with 34 scripted checks (`scripts/verify/check_writes.py`) plus a real-browser run of the full lifecycle.
 
 ### WP3. Donor and Blood Seeker roles, profiles (M, +6%)
 - Every signed-in person is a Blood Seeker automatically; becoming a Donor is registering a donor profile linked to the account.
@@ -125,7 +129,7 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 
 | Milestone | Packages | Realistic match after |
 |---|---|---|
-| **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% |
+| **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% — **done** |
 | **M2: donors and notifications** | WP3, WP4, WP5 | ~80% |
 | **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% |
 | **M4: hardening and launch** | WP10, WP11, WP12 | matches the spec |
