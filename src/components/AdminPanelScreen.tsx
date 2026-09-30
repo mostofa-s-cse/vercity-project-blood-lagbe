@@ -4,19 +4,34 @@ import { INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS, INITIAL_BLOOD_REQUESTS, FRAUD_INC
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
+import { useAuth } from '../context/AuthContext';
+import type { Permission } from '../lib/permissions';
+import { AdminRolesPanel } from './AdminRolesPanel';
 
 interface AdminPanelScreenProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenRequisition: (demand: any) => void;
 }
 
-type AdminTab = 'overview' | 'alerts' | 'donors' | 'requests' | 'hospitals' | 'fraud' | 'logs';
+type AdminTab = 'overview' | 'alerts' | 'donors' | 'requests' | 'hospitals' | 'fraud' | 'logs' | 'access';
+
+/** The permission each tab needs. Overview needs only `panel.open`, which anyone who reaches this screen has. */
+const TAB_PERMISSION: Record<AdminTab, Permission> = {
+  overview: 'panel.open',
+  alerts: 'panel.alerts',
+  donors: 'panel.donors',
+  requests: 'panel.requests',
+  hospitals: 'panel.hospitals',
+  fraud: 'panel.fraud',
+  logs: 'panel.logs',
+  access: 'roles.manage',
+};
 
 export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onNavigate,
   onOpenRequisition
 }) => {
-  const { language, toggleLanguage } = useLanguage();
+  const { language, toggleLanguage, t } = useLanguage();
   const {
     criticalAlert,
     emergencyRadius,
@@ -26,8 +41,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     getActiveAlertText,
     getActiveRadiusText,
   } = useAlert();
+  const { can } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [selectedTab, setActiveTab] = useState<AdminTab>('overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodFilter, setBloodFilter] = useState<string>('ALL');
@@ -97,9 +113,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       if (d.id === donorId) {
         const nextState = !d.isBdrcsVerified;
         showToast(
-          language === 'bn' 
-            ? `${d.name}-এর বিডিআরসিএস ও এনআইডি ভেরিফিকেশন স্ট্যাটাস পরিবর্তন করা হয়েছে।` 
-            : `${d.name} verification status toggled to ${nextState ? 'VERIFIED' : 'UNVERIFIED'}.`
+          t.admin.toasts.donorVerifyToggled(d.name, nextState)
         );
         return { ...d, isBdrcsVerified: nextState };
       }
@@ -113,9 +127,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       if (d.id === donorId) {
         const nextState = !d.isAvailable;
         showToast(
-          language === 'bn'
-            ? `${d.name}-এর প্রাপ্যতা আপডেট: ${nextState ? 'প্রস্তুত' : 'স্থগিত'}`
-            : `${d.name} availability set to ${nextState ? 'Available' : 'Paused'}`
+          t.admin.toasts.donorAvailabilityToggled(d.name, nextState)
         );
         return { ...d, isAvailable: nextState, isOnDuty: nextState };
       }
@@ -129,9 +141,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setRequests(prev => prev.map(r => {
       if (r.id === requestId) {
         showToast(
-          language === 'bn'
-            ? `রিকোয়েস্ট #${requestId} এর স্ট্যাটাস '${newStatus}' এ পরিবর্তন করা হয়েছে।`
-            : `Request #${requestId} status updated to ${newStatus.toUpperCase()}.`
+          t.admin.toasts.requestStatusUpdated(requestId, newStatus)
         );
         return { ...r, status: newStatus };
       }
@@ -145,9 +155,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       if (h.id === hospitalId) {
         const nextState = !h.isVerified;
         showToast(
-          language === 'bn'
-            ? `${h.name}-এর প্রাতিষ্ঠানিক অনুমোদন স্ট্যাটাস হালনাগাদ করা হয়েছে।`
-            : `${h.name} institution verification updated.`
+          t.admin.toasts.hospitalVerifyUpdated(h.name)
         );
         return { ...h, isVerified: nextState };
       }
@@ -160,8 +168,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setFraudList(prev => prev.map(item => item.id === id ? { ...item, status: action } : item));
     showToast(
       action === 'banned'
-        ? (language === 'bn' ? 'সংশ্লিষ্ট নম্বর ও এনআইডি স্থায়ীভাবে ব্লকলিস্টে রাখা হয়েছে।' : 'Entity blacklisted across national SMS gateways.')
-        : (language === 'bn' ? 'প্রতিবেদনটি খারিজ করা হয়েছে।' : 'Incident report dismissed.')
+        ? t.admin.toasts.fraudBanned
+        : t.admin.toasts.fraudDismissed
     );
   };
 
@@ -191,69 +199,79 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     return matchesSearch && matchesBlood && matchesStatus;
   });
 
-  const navTabs: { id: AdminTab; label: string; icon: string; count?: number; badgeColor?: string; description?: string }[] = [
+  const allTabs: { id: AdminTab; label: string; icon: string; count?: number; badgeColor?: string; description?: string }[] = [
     { 
       id: 'overview', 
-      label: language === 'bn' ? 'ড্যাশবোর্ড ওভারভিউ' : 'Overview & Analytics', 
+      label: t.admin.tabs.overview, 
       icon: 'dashboard',
-      description: language === 'bn' ? 'সিস্টেম কেপিআই, রক্তের চাহিদা পরিসংখ্যান ও রিয়েলটাইম সতর্কতা' : 'System KPI, Telemetry & Real-Time Alert Stream'
+      description: t.admin.tabs.overviewDesc
     },
     { 
       id: 'alerts', 
-      label: language === 'bn' ? 'জরুরি সতর্কতা ও ব্যাসার্ধ' : 'Alerts & Radius Control', 
+      label: t.admin.tabs.alerts, 
       icon: 'crisis_alert',
       count: emergencyRadius.requestCount,
       badgeColor: 'bg-red-600 text-white font-black animate-pulse',
-      description: language === 'bn' ? 'জরুরি সতর্কতা (হেডার ব্যানার) ও জরুরি ব্যাসার্ধ (রেডিয়াস ডিসপ্যাচ) সরাসরি পরিবর্তন ও ব্রডকাস্ট' : 'Live management of Critical Alert Banner and Emergency Radius Dispatch'
+      description: t.admin.tabs.alertsDesc
     },
     { 
       id: 'donors', 
-      label: language === 'bn' ? 'ডোনার রেজিস্ট্রি' : 'Donor Registry', 
+      label: t.admin.tabs.donors, 
       icon: 'groups', 
       count: donors.length,
       badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-      description: language === 'bn' ? 'রক্তদাতা প্রোফাইল নিরীক্ষা, বিডিআরসিএস ও এনআইডি ভেরিফিকেশন' : 'Donor Profiles, Clinical Serology & BDRCS Verification'
+      description: t.admin.tabs.donorsDesc
     },
     { 
       id: 'requests', 
-      label: language === 'bn' ? 'রক্তের রিকোয়েস্ট' : 'Blood Requests Desk', 
+      label: t.admin.tabs.requests, 
       icon: 'emergency', 
       count: requests.filter(r => r.status === 'pending').length,
       badgeColor: 'bg-red-600 text-white',
-      description: language === 'bn' ? 'জরুরি রক্তের চাহিদা, কোড-রেড ট্রায়াজ ও স্ট্যাটাস ট্র্যাকিং' : 'Emergency Demand Triage, Doctor Slips & Status Progression'
+      description: t.admin.tabs.requestsDesc
     },
     { 
       id: 'hospitals', 
-      label: language === 'bn' ? 'হাসপাতাল ও সংস্থা' : 'Hospitals & Blood Banks', 
+      label: t.admin.tabs.hospitals, 
       icon: 'local_hospital', 
       count: hospitals.length,
       badgeColor: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-      description: language === 'bn' ? 'ডিজিএইচএস অনুমোদিত হাসপাতাল, ব্লাড ব্যাংক ও কোল্ড চেইন' : 'Hospital Accreditation, Blood Bags Stock & Camp Coordination'
+      description: t.admin.tabs.hospitalsDesc
     },
     { 
       id: 'fraud', 
-      label: language === 'bn' ? 'দালাল চক্র প্রতিরোধ' : 'Anti-Fraud & Syndicates', 
+      label: t.admin.tabs.fraud, 
       icon: 'gavel', 
       count: fraudList.filter(f => f.status === 'pending').length,
       badgeColor: 'bg-amber-500 text-black font-black',
-      description: language === 'bn' ? 'রক্ত কেনাবেচা ও দালাল চক্রের রিপোর্ট তদন্ত ও জাতীয় ব্লকলিস্ট' : 'Syndicate Interception, Blacklist & Cyber Crime Investigation'
+      description: t.admin.tabs.fraudDesc
     },
     { 
       id: 'logs', 
-      label: language === 'bn' ? 'এসএমএস ও সিস্টেম অডিট' : 'Audit Logs & SMS', 
+      label: t.admin.tabs.logs, 
       icon: 'terminal',
-      description: language === 'bn' ? 'টেলকো এসএমএস গেটওয়ে, ওটিপি হ্যান্ডশেক ও সার্ভার নিরাপত্তা লগ' : 'Telco SMS Gateway, OTP Handshake Verification & Audit Trail'
+      description: t.admin.tabs.logsDesc
+    },
+    { 
+      id: 'access', 
+      label: t.admin.tabs.access, 
+      icon: 'admin_panel_settings',
+      description: t.admin.tabs.accessDesc
     },
   ];
+  const navTabs = allTabs.filter((tab) => tab.id === 'overview' || can(TAB_PERMISSION[tab.id]));
+
+  // Show only a tab the person may see: if the chosen one is hidden (or disappears), fall back to the first visible tab.
+  const activeTab: AdminTab = navTabs.some((tab) => tab.id === selectedTab) ? selectedTab : (navTabs[0]?.id ?? 'overview');
 
   const publicLinks: { id: ScreenId; label: string; icon: string }[] = [
-    { id: 'emergency-hub', label: language === 'bn' ? 'জরুরি হাব' : 'Emergency Hub', icon: 'emergency' },
-    { id: 'donor-directory', label: language === 'bn' ? 'রক্তদাতা খুঁজুন' : 'Find Donors', icon: 'person_search' },
-    { id: 'create-sos', label: language === 'bn' ? 'রক্তের SOS রিকোয়েস্ট' : 'Create SOS', icon: 'add_alert' },
-    { id: 'request-tracking', label: language === 'bn' ? 'রিকোয়েস্ট ট্র্যাকিং' : 'Request Tracking', icon: 'timeline' },
-    { id: 'hospital-org', label: language === 'bn' ? 'হাসপাতাল ও সংস্থা' : 'Hospitals & Orgs', icon: 'domain' },
-    { id: 'donor-passport', label: language === 'bn' ? 'ডোনার পাসপোর্ট' : 'Donor Passport', icon: 'badge' },
-    { id: 'pitch-deck', label: language === 'bn' ? 'প্রজেক্ট প্রপোজাল' : 'Project Proposal', icon: 'slideshow' },
+    { id: 'emergency-hub', label: t.admin.publicLinks.emergencyHub, icon: 'emergency' },
+    { id: 'donor-directory', label: t.admin.publicLinks.donorDirectory, icon: 'person_search' },
+    { id: 'create-sos', label: t.admin.publicLinks.createSos, icon: 'add_alert' },
+    { id: 'request-tracking', label: t.admin.publicLinks.requestTracking, icon: 'timeline' },
+    { id: 'hospital-org', label: t.admin.publicLinks.hospitalOrg, icon: 'domain' },
+    { id: 'donor-passport', label: t.admin.publicLinks.donorPassport, icon: 'badge' },
+    { id: 'pitch-deck', label: t.admin.publicLinks.pitchDeck, icon: 'slideshow' },
   ];
 
   return (
@@ -273,12 +291,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       <div className="bg-red-950 text-red-200 border-b border-red-900/60 px-4 py-2 overflow-hidden flex items-center gap-3 text-xs font-bold shrink-0">
         <div className="flex items-center gap-1.5 shrink-0 bg-red-600 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider animate-pulse">
           <span className="material-symbols-outlined text-xs">crisis_alert</span>
-          <span>{language === 'bn' ? 'জরুরি লাইভ অ্যালার্ট' : 'LIVE ALERT'}</span>
+          <span>{t.admin.marquee.liveAlert}</span>
         </div>
         <div className="flex-1 overflow-hidden relative">
           <div className="inline-block whitespace-nowrap animate-marquee">
             <span>
-              {getActiveAlertText(language)} • <span className="text-amber-400 font-extrabold">{language === 'bn' ? 'জরুরি ব্যাসার্ধ: ' : 'Emergency Radius: '}</span>{getActiveRadiusText(language)} • {language === 'bn' ? 'সেন্ট্রাল টেলিমেট্রি নোড সক্রিয় • হেল্পলাইন: ১৬২৬৩ / ৯৯৯' : 'Central Telemetry Node Active • 24/7 Helpline: 16263'}
+              {getActiveAlertText(language)} • <span className="text-amber-400 font-extrabold">{t.admin.marquee.emergencyRadius}</span>{getActiveRadiusText(language)} • {t.admin.marquee.telemetry}
             </span>
           </div>
         </div>
@@ -291,7 +309,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           <button
             onClick={() => setIsMobileSidebarOpen(true)}
             className="lg:hidden p-2 rounded-xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center cursor-pointer shadow-md shadow-red-600/30"
-            title="Open Admin Sidebar"
+            title={t.admin.header.openSidebar}
           >
             <span className="material-symbols-outlined text-xl">menu</span>
           </button>
@@ -304,14 +322,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-black text-sm tracking-tight text-white">
-                  {language === 'bn' ? 'ব্লাড লাগবে?' : 'Blood Lagbe?'}
+                  {t.admin.header.brand}
                 </span>
                 <span className="px-1.5 py-0.2 rounded bg-red-600 text-[9px] font-black text-white uppercase tracking-wider">
-                  ADMIN
+                  {t.admin.header.adminBadge}
                 </span>
               </div>
               <span className="text-[10px] text-slate-400 font-medium block">
-                {language === 'bn' ? 'সেন্ট্রাল অ্যাডমিন ও কমান্ড সেন্টার' : 'National Command & Admin Console'}
+                {t.admin.header.consoleSubtitle}
               </span>
             </div>
           </div>
@@ -325,7 +343,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={language === 'bn' ? 'ডোনার, রোগী, হাসপাতাল বা এনআইডি খুঁজুন...' : 'Search donors, requests, hospitals, NID...'}
+              placeholder={t.admin.header.searchPlaceholder}
               className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
             />
           </div>
@@ -340,10 +358,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               onNavigate('emergency-hub');
             }}
             className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-            title="Return to Public Website"
+            title={t.admin.header.returnToPublic}
           >
             <span className="material-symbols-outlined text-base text-red-400">public</span>
-            <span className="hidden sm:inline">{language === 'bn' ? 'পাবলিক সাইট' : 'Public Site'}</span>
+            <span className="hidden sm:inline">{t.admin.header.publicSite}</span>
           </button>
 
           {/* Language Switcher */}
@@ -353,9 +371,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               toggleLanguage();
             }}
             className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-bold cursor-pointer transition-colors"
-            title="Switch Language"
+            title={t.admin.header.switchLanguage}
           >
-            {language === 'bn' ? '🇺🇸 ENG' : '🇧🇩 বাংলা'}
+            {t.admin.header.languageToggle}
           </button>
 
           {/* Trigger Red Alert */}
@@ -363,16 +381,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             onClick={() => {
               sound.playSosSiren();
               showToast(
-                language === 'bn'
-                  ? 'দেশব্যাপী সমন্বয়কারীদের কাছে জরুরি রেড অ্যালার্ট জারি করা হয়েছে!'
-                  : 'Emergency Red Alert dispatched to all standby coordinators!'
+                t.admin.toasts.redAlertDispatched
               );
             }}
             className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs uppercase tracking-wider flex items-center gap-1 shadow-md shadow-red-600/30 cursor-pointer active:scale-95 transition-all"
-            title="Broadcast Emergency Red Alert"
+            title={t.admin.header.broadcastRedAlertTitle}
           >
             <span className="material-symbols-outlined text-sm animate-pulse">campaign</span>
-            <span className="hidden sm:inline">{language === 'bn' ? 'রেড অ্যালার্ট' : 'SOS Broadcast'}</span>
+            <span className="hidden sm:inline">{t.admin.header.sosBroadcast}</span>
           </button>
 
           {/* Admin User Avatar */}
@@ -380,17 +396,17 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="relative">
               <img
                 src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80"
-                alt="Admin"
+                alt={t.admin.header.adminAlt}
                 className="w-8 h-8 rounded-xl object-cover border border-slate-700"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-950 rounded-full" />
             </div>
             <div className="hidden xl:block text-left">
               <span className="text-xs font-bold text-white block leading-tight">
-                {language === 'bn' ? 'ডা. শাহরিয়ার রহমান' : 'Dr. Shahriar Rahman'}
+                {t.admin.header.adminName}
               </span>
               <span className="text-[10px] text-slate-400 block leading-tight">
-                Super Admin
+                {t.admin.header.superAdmin}
               </span>
             </div>
           </div>
@@ -419,7 +435,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded-full bg-red-600/30 text-red-400 text-[10px] font-black tracking-wider uppercase border border-red-500/40">
-                  DGHS & BDRCS PROTOCOL v4.5
+                  {t.admin.sidebar.protocol}
                 </span>
               </div>
 
@@ -437,16 +453,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
                 <span className="text-[11px] font-bold text-slate-200">
-                  {language === 'bn' ? 'সিস্টেম সক্রিয় (DHAKA NODE)' : 'System Active (DHAKA NODE)'}
+                  {t.admin.sidebar.systemActive}
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold">100% UP</span>
+              <span className="text-[10px] font-mono text-emerald-400 font-bold">{t.admin.sidebar.uptime}</span>
             </div>
 
             {/* Section 1: Main Admin Modules */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-3 mb-1">
-                {language === 'bn' ? 'অ্যাডমিন ডেস্ক মেনু' : 'ADMIN DESK'}
+                {t.admin.sidebar.adminDesk}
               </span>
 
               {navTabs.map((tab) => {
@@ -491,7 +507,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             {/* Section 2: Jump to Public Modules */}
             <div className="flex flex-col gap-1 border-t border-slate-800/80 pt-4">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-3 mb-1">
-                {language === 'bn' ? 'পাবলিক মডিউল সমূহ' : 'PUBLIC MODULES'}
+                {t.admin.sidebar.publicModules}
               </span>
 
               {publicLinks.map((link) => (
@@ -514,12 +530,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             {/* Quick Live Telemetry in Sidebar */}
             <div className="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3.5 flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                {language === 'bn' ? 'সরাসরি মেট্রিক্স' : 'LIVE TELEMETRY'}
+                {t.admin.sidebar.liveTelemetry}
               </span>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="bg-slate-950/80 p-2 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block font-medium">
-                    {language === 'bn' ? 'সক্রিয় ডোনার' : 'Active Donors'}
+                    {t.admin.sidebar.activeDonors}
                   </span>
                   <span className="text-sm font-black text-emerald-400">
                     {donors.filter(d => d.isAvailable).length}
@@ -527,7 +543,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 </div>
                 <div className="bg-slate-950/80 p-2 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block font-medium">
-                    {language === 'bn' ? 'পেন্ডিং রিকোয়েস্ট' : 'Pending'}
+                    {t.admin.sidebar.pending}
                   </span>
                   <span className="text-sm font-black text-red-400">
                     {requests.filter(r => r.status === 'pending').length}
@@ -542,15 +558,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 onClick={() => {
                   sound.playSosSiren();
                   showToast(
-                    language === 'bn'
-                      ? 'দেশব্যাপী সমন্বয়কারীদের কাছে জরুরি রেড অ্যালার্ট জারি করা হয়েছে!'
-                      : 'Emergency Red Alert dispatched to all standby coordinators!'
+                    t.admin.toasts.redAlertDispatched
                   );
                 }}
                 className="w-full py-2.5 px-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-red-600/30 transition-all hover:scale-[1.02] cursor-pointer active:scale-95"
               >
                 <span className="material-symbols-outlined text-base animate-pulse">campaign</span>
-                <span>{language === 'bn' ? 'রেড অ্যালার্ট সম্প্রচার' : 'Broadcast Red Alert'}</span>
+                <span>{t.admin.sidebar.broadcastRedAlert}</span>
               </button>
 
               <button
@@ -561,7 +575,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 className="w-full py-2 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-800 cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-base">public</span>
-                <span>{language === 'bn' ? 'পাবলিক পোর্টালে যান' : 'Back to Public App'}</span>
+                <span>{t.admin.sidebar.backToPublic}</span>
               </button>
             </div>
           </div>
@@ -572,17 +586,17 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="relative shrink-0">
                 <img
                   src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80"
-                  alt="Admin"
+                  alt={t.admin.header.adminAlt}
                   className="w-9 h-9 rounded-xl object-cover border border-slate-700"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-950 rounded-full" />
               </div>
               <div className="truncate">
                 <span className="text-xs font-bold text-white block truncate">
-                  {language === 'bn' ? 'ডা. শাহরিয়ার রহমান' : 'Dr. Shahriar Rahman'}
+                  {t.admin.header.adminName}
                 </span>
                 <span className="text-[10px] text-slate-400 block truncate">
-                  {language === 'bn' ? 'ন্যাশনাল অ্যাডমিন (MIS)' : 'DGHS MIS Admin'}
+                  {t.admin.sidebar.adminRole}
                 </span>
               </div>
             </div>
@@ -591,10 +605,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               onClick={() => {
                 sound.playTap();
                 showToast(
-                  language === 'bn' ? 'অ্যাডমিন সেশন সুরক্ষিত ও সক্রিয় রয়েছে।' : 'Admin session authenticated and active.'
+                  t.admin.toasts.sessionActive
                 );
               }}
-              title="Session Verified"
+              title={t.admin.sidebar.sessionVerified}
               className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 cursor-pointer"
             >
               <span className="material-symbols-outlined text-base">verified_user</span>
@@ -616,7 +630,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     {navTabs.find(t => t.id === activeTab)?.label}
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">
-                    BDRCS VERIFIED CONSOLE
+                    {t.admin.workspace.verifiedConsole}
                   </span>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
@@ -636,7 +650,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl text-center shadow-inner">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">
-                    {language === 'bn' ? 'সক্রিয় ডোনার' : 'Active Donors'}
+                    {t.admin.sidebar.activeDonors}
                   </span>
                   <span className="text-base font-black text-emerald-400">
                     {donors.filter(d => d.isAvailable).length} / {donors.length}
@@ -644,7 +658,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 </div>
                 <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl text-center shadow-inner">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">
-                    {language === 'bn' ? 'জরুরি পেন্ডিং' : 'Pending SOS'}
+                    {t.admin.workspace.pendingSos}
                   </span>
                   <span className="text-base font-black text-red-500">
                     {requests.filter(r => r.status === 'pending').length}
@@ -652,7 +666,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 </div>
                 <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl text-center shadow-inner">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">
-                    {language === 'bn' ? 'অনুমোদিত সংস্থা' : 'Approved Orgs'}
+                    {t.admin.workspace.approvedOrgs}
                   </span>
                   <span className="text-base font-black text-cyan-400">
                     {hospitals.filter(h => h.isVerified).length}
@@ -674,39 +688,41 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider">
-                    {language === 'bn' ? 'লাইভ অ্যালার্ট ও ব্যাসার্ধ নিয়ন্ত্রণ' : 'LIVE ALERT & RADIUS DISPATCH'}
+                    {t.admin.overview.liveAlertBadge}
                   </span>
                   <span className="text-xs font-mono font-bold text-red-300">
-                    {criticalAlert.isActive ? (language === 'bn' ? '● সক্রিয়' : '● ACTIVE') : (language === 'bn' ? '○ স্থগিত' : '○ PAUSED')}
+                    {criticalAlert.isActive ? t.admin.overview.active : t.admin.overview.paused}
                   </span>
                 </div>
                 <h3 className="text-base font-black text-white mt-1">
-                  {language === 'bn' ? 'জরুরি সতর্কতা ও জরুরি ব্যাসার্ধ সমন্বয় কেন্দ্র' : 'Emergency Alert & Emergency Radius Control'}
+                  {t.admin.overview.controlTitle}
                 </h3>
                 <div className="mt-1 flex flex-col gap-0.5 text-xs text-slate-300">
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-red-400 font-bold shrink-0">{language === 'bn' ? 'জরুরি সতর্কতা:' : 'Emergency Alert:'}</span>
+                    <span className="text-red-400 font-bold shrink-0">{t.admin.overview.emergencyAlert}</span>
                     <span className="truncate text-slate-200">{getActiveAlertText(language)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-amber-400 font-bold shrink-0">{language === 'bn' ? 'জরুরি ব্যাসার্ধ:' : 'Emergency Radius:'}</span>
+                    <span className="text-amber-400 font-bold shrink-0">{t.admin.overview.emergencyRadius}</span>
                     <span className="truncate text-slate-200">{getActiveRadiusText(language)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setActiveTab('alerts');
-                sound.playTap();
-              }}
-              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shrink-0 shadow-lg shadow-red-600/30 cursor-pointer transition-all hover:scale-105 active:scale-95"
-            >
-              <span className="material-symbols-outlined text-base">tune</span>
-              <span>{language === 'bn' ? 'সতর্কতা ও ব্যাসার্ধ এডিট করুন' : 'Configure Alerts & Radius'}</span>
-              <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
+{can('panel.alerts') && (
+              <button
+                onClick={() => {
+                  setActiveTab('alerts');
+                  sound.playTap();
+                }}
+                className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs flex items-center justify-center gap-2 shrink-0 shadow-lg shadow-red-600/30 cursor-pointer transition-all hover:scale-105 active:scale-95"
+              >
+                <span className="material-symbols-outlined text-base">tune</span>
+                <span>{t.admin.overview.configure}</span>
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            )}
           </div>
 
           {/* Key Metric Cards */}
@@ -714,12 +730,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  {language === 'bn' ? 'মোট নিবন্ধিত রক্তদাতা' : 'Total Registered Donors'}
+                  {t.admin.overview.totalDonors}
                 </span>
-                <span className="text-2xl font-black text-slate-900 mt-1 block">২,৪৮০ জন</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block">{t.admin.overview.totalDonorsValue}</span>
                 <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-sm">trending_up</span>
-                  {language === 'bn' ? '+১৮ জন আজ যুক্ত হয়েছেন' : '+18 joined today'}
+                  {t.admin.overview.joinedToday}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
@@ -730,12 +746,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  {language === 'bn' ? 'রক্তদান সম্পন্ন (এই মাসে)' : 'Fulfilled Transfusions'}
+                  {t.admin.overview.fulfilled}
                 </span>
-                <span className="text-2xl font-black text-slate-900 mt-1 block">৪৫২ টি</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block">{t.admin.overview.fulfilledValue}</span>
                 <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-sm">check_circle</span>
-                  {language === 'bn' ? '৯৬.৪% দ্রুত পূরণ হার' : '96.4% success rate'}
+                  {t.admin.overview.successRate}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -746,12 +762,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  {language === 'bn' ? 'গড় ডোনার পৌঁছানোর সময়' : 'Avg. Donor Transit ETA'}
+                  {t.admin.overview.avgEta}
                 </span>
-                <span className="text-2xl font-black text-slate-900 mt-1 block">১৮.২ মিনিট</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block">{t.admin.overview.avgEtaValue}</span>
                 <span className="text-[11px] text-cyan-600 font-bold flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-sm">near_me</span>
-                  {language === 'bn' ? 'ঢাকা মেট্রো ৫ কিমি রেডিয়াস' : 'Dhaka 5km radius'}
+                  {t.admin.overview.dhakaRadius}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center">
@@ -762,12 +778,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  {language === 'bn' ? 'দালাল চক্র প্রতিরোধ' : 'Syndicates Blocked'}
+                  {t.admin.overview.syndicatesBlocked}
                 </span>
-                <span className="text-2xl font-black text-red-600 mt-1 block">২১ জন</span>
+                <span className="text-2xl font-black text-red-600 mt-1 block">{t.admin.overview.syndicatesBlockedValue}</span>
                 <span className="text-[11px] text-red-600 font-bold flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-sm">block</span>
-                  {language === 'bn' ? 'টেলিটক ও জিপি গেটওয়ে ব্লক' : 'NID permanently blacklisted'}
+                  {t.admin.overview.nidBlacklisted}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -784,38 +800,38 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-red-600">bloodtype</span>
-                    <span>{language === 'bn' ? 'জাতীয় রক্তের গ্রুপ মজুত ও চাহিদার অনুপাত' : 'National Blood Group Supply & Demand Matrix'}</span>
+                    <span>{t.admin.overview.matrixTitle}</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {language === 'bn' ? 'ডিএমসিএইচ, বিএসএমএমইউ ও কোয়ান্টাম ল্যাবের লাইভ সেন্সর' : 'Live sensor data aggregated from major hospital blood vaults'}
+                    {t.admin.overview.matrixDesc}
                   </p>
                 </div>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-                  {language === 'bn' ? 'লাইভ সিঙ্ক' : 'Live Synced'}
+                  {t.admin.overview.liveSynced}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { group: 'O-', stock: 68, demand: 14, status: 'CRITICAL', color: 'bg-red-500', note: 'অতি স্বল্প' },
-                  { group: 'AB-', stock: 92, demand: 8, status: 'LOW', color: 'bg-amber-500', note: 'স্বল্প' },
-                  { group: 'A-', stock: 110, demand: 6, status: 'MODERATE', color: 'bg-yellow-500', note: 'মাঝারি' },
-                  { group: 'B-', stock: 125, demand: 9, status: 'MODERATE', color: 'bg-yellow-500', note: 'মাঝারি' },
-                  { group: 'O+', stock: 890, demand: 28, status: 'HEALTHY', color: 'bg-emerald-500', note: 'পর্যাপ্ত' },
-                  { group: 'A+', stock: 740, demand: 18, status: 'HEALTHY', color: 'bg-emerald-500', note: 'পর্যাপ্ত' },
-                  { group: 'B+', stock: 960, demand: 22, status: 'HEALTHY', color: 'bg-emerald-500', note: 'পর্যাপ্ত' },
-                  { group: 'AB+', stock: 410, demand: 7, status: 'HEALTHY', color: 'bg-emerald-500', note: 'পর্যাপ্ত' },
+                  { group: 'O-', stock: 68, demand: 14, status: 'CRITICAL', color: 'bg-red-500', label: t.admin.overview.stockCritical },
+                  { group: 'AB-', stock: 92, demand: 8, status: 'LOW', color: 'bg-amber-500', label: t.admin.overview.stockLow },
+                  { group: 'A-', stock: 110, demand: 6, status: 'MODERATE', color: 'bg-yellow-500', label: t.admin.overview.stockModerate },
+                  { group: 'B-', stock: 125, demand: 9, status: 'MODERATE', color: 'bg-yellow-500', label: t.admin.overview.stockModerate },
+                  { group: 'O+', stock: 890, demand: 28, status: 'HEALTHY', color: 'bg-emerald-500', label: t.admin.overview.stockHealthy },
+                  { group: 'A+', stock: 740, demand: 18, status: 'HEALTHY', color: 'bg-emerald-500', label: t.admin.overview.stockHealthy },
+                  { group: 'B+', stock: 960, demand: 22, status: 'HEALTHY', color: 'bg-emerald-500', label: t.admin.overview.stockHealthy },
+                  { group: 'AB+', stock: 410, demand: 7, status: 'HEALTHY', color: 'bg-emerald-500', label: t.admin.overview.stockHealthy },
                 ].map((item) => (
                   <div key={item.group} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-all">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-lg font-black text-slate-900">{item.group}</span>
                       <span className={`text-[9px] px-2 py-0.5 rounded-full font-extrabold text-white ${item.color}`}>
-                        {language === 'bn' ? item.note : item.status}
+                        {item.label}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs text-slate-600 mb-1.5 font-medium">
-                      <span>{language === 'bn' ? 'মজুত ব্যাগ:' : 'Stock:'} <strong>{item.stock}</strong></span>
-                      <span className="text-red-600 font-bold">{language === 'bn' ? 'চাহিদা:' : 'Req:'} {item.demand}</span>
+                      <span>{t.admin.overview.stock} <strong>{item.stock}</strong></span>
+                      <span className="text-red-600 font-bold">{t.admin.overview.req} {item.demand}</span>
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                       <div 
@@ -833,44 +849,44 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div>
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-2">
                   <span className="material-symbols-outlined text-amber-500">warning</span>
-                  <span>{language === 'bn' ? 'জরুরি রক্তের ঘাটতি সতর্কতা' : 'Urgent Shortage Alerts'}</span>
+                  <span>{t.admin.overview.shortageTitle}</span>
                 </h3>
                 <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                  {language === 'bn' 
-                    ? 'আইসিইউ ও জরুরি বিভাগে ও-নেগেটিভ ও এবি-নেগেটিভ রক্তের চরম সংকট রয়েছে।' 
-                    : 'Critical shortage of rare Rh-negative units across Dhaka Central ICU facilities.'}
+                  {t.admin.overview.shortageDesc}
                 </p>
 
                 <div className="space-y-3">
                   <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-900">
-                    <strong className="block text-red-700 font-bold mb-0.5">DMCH ICU Bed 14</strong>
-                    <span>{language === 'bn' ? 'ও-নেগেটিভ রক্ত অতি জরুরি (২ ব্যাগ প্রয়োজন)' : 'O- Negative required immediately (2 Bags)'}</span>
+                    <strong className="block text-red-700 font-bold mb-0.5">{t.admin.overview.shortage1Title}</strong>
+                    <span>{t.admin.overview.shortage1Desc}</span>
                   </div>
                   <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                    <strong className="block text-amber-700 font-bold mb-0.5">National Heart Foundation</strong>
-                    <span>{language === 'bn' ? 'এবি-নেগেটিভ বাইপাস সার্জারি (৩ ব্যাগ প্রয়োজন)' : 'AB- Negative Coronary Bypass (3 Bags)'}</span>
+                    <strong className="block text-amber-700 font-bold mb-0.5">{t.admin.overview.shortage2Title}</strong>
+                    <span>{t.admin.overview.shortage2Desc}</span>
                   </div>
                 </div>
               </div>
 
               <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    setActiveTab('requests');
-                    setBloodFilter('O-');
-                    sound.playTap();
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
-                >
-                  <span className="material-symbols-outlined text-base">filter_list</span>
-                  <span>{language === 'bn' ? 'ও-নেগেটিভ রিকোয়েস্ট ম্যানেজ করুন' : 'Manage O- Negative Requests'}</span>
-                </button>
+                {can('panel.requests') && (
+                  <button
+                    onClick={() => {
+                      setActiveTab('requests');
+                      setBloodFilter('O-');
+                      sound.playTap();
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-base">filter_list</span>
+                    <span>{t.admin.overview.manageONeg}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => onNavigate('hospital-org')}
                   className="w-full py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border border-red-200"
                 >
                   <span className="material-symbols-outlined text-base">account_balance</span>
-                  <span>{language === 'bn' ? 'হাসপাতাল স্টক পোর্টালে যান' : 'Open Hospital Stocks Hub'}</span>
+                  <span>{t.admin.overview.openHospitalStocks}</span>
                 </button>
               </div>
             </div>
@@ -890,19 +906,17 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <span className="px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider">
-                    {language === 'bn' ? 'সরাসরি ব্রডকাস্ট কন্ট্রোল' : 'LIVE BROADCAST HUB'}
+                    {t.admin.alerts.liveBroadcastHub}
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">
-                    PUBLIC RIBBON & RADAR SYNC
+                    {t.admin.alerts.ribbonSync}
                   </span>
                 </div>
                 <h2 className="text-xl font-black text-white tracking-tight">
-                  {language === 'bn' ? 'জরুরি সতর্কতা ও জরুরি ব্যাসার্ধ সমন্বয় কেন্দ্র' : 'Emergency Alerts & Radius Dispatch Center'}
+                  {t.admin.alerts.centerTitle}
                 </h2>
                 <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                  {language === 'bn'
-                    ? 'এখানে আপনি যে কোনো সময় ঢাকা ও সমগ্র বাংলাদেশের হাসপাতালগুলোর জন্য কোড-রেড জরুরি সতর্কতা এবং জরুরি ব্যাসার্ধের (Geo-Radius) তথ্য লাইভ পরিবর্তন, ব্রডকাস্ট বা বন্ধ করতে পারবেন।'
-                    : 'Manage real-time critical hospital alerts displayed on the top public marquee and adjust local emergency geo-radius broadcasting in real-time.'}
+                  {t.admin.alerts.centerDesc}
                 </p>
               </div>
             </div>
@@ -911,26 +925,26 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <button
                 onClick={() => {
                   sound.playSosSiren();
-                  showToast(language === 'bn' ? '🔊 অডিও সাইরেন টেস্ট সফলভাবে বাজানো হয়েছে!' : '🔊 Siren sound test executed!');
+                  showToast(t.admin.toasts.sirenTested);
                 }}
                 className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center gap-2 border border-slate-700 cursor-pointer transition-all"
-                title="Test Siren Audio"
+                title={t.admin.alerts.testSirenTitle}
               >
                 <span className="material-symbols-outlined text-amber-400 text-base">volume_up</span>
-                <span>{language === 'bn' ? 'সাইরেন টেস্ট' : 'Test Siren'}</span>
+                <span>{t.admin.alerts.testSiren}</span>
               </button>
 
               <button
                 onClick={() => {
                   resetAlertDefaults();
                   sound.playTap();
-                  showToast(language === 'bn' ? 'ডিফল্ট সতর্কতা ও ব্যাসার্ধ সেটিংসে রিসেট করা হয়েছে।' : 'Alert & Radius restored to factory defaults.');
+                  showToast(t.admin.toasts.alertsReset);
                 }}
                 className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-bold text-xs flex items-center gap-2 border border-slate-800 cursor-pointer transition-all"
-                title="Reset to factory settings"
+                title={t.admin.alerts.resetTitle}
               >
                 <span className="material-symbols-outlined text-base">restart_alt</span>
-                <span>{language === 'bn' ? 'ডিফল্ট রিসেট' : 'Reset'}</span>
+                <span>{t.admin.alerts.reset}</span>
               </button>
             </div>
           </div>
@@ -941,12 +955,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-600">visibility</span>
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                  {language === 'bn' ? 'লাইভ পাবলিক আউটপুট প্রিভিউ (ব্যবহারকারীরা যা দেখছেন)' : 'Public Live Previews (Real-Time Output)'}
+                  {t.admin.alerts.previewsTitle}
                 </h3>
               </div>
               <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                {language === 'bn' ? '১০০% লাইভ সিঙ্ক' : '100% Live Synced'}
+                {t.admin.alerts.liveSynced}
               </span>
             </div>
 
@@ -955,16 +969,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-slate-700 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-red-600 text-sm">campaign</span>
-                  {language === 'bn' ? '১. হেডারের শীর্ষ টিকার ব্যানার (জরুরি সতর্কতা)' : '1. Top Header Marquee (Emergency Alert)'}
+                  {t.admin.alerts.preview1}
                 </span>
                 <span className="text-[10px] font-mono text-slate-500">
-                  {criticalAlert.isActive ? (language === 'bn' ? 'স্ট্যাটাস: সক্রিয়' : 'Status: ACTIVE') : (language === 'bn' ? 'স্ট্যাটাস: নিষ্ক্রিয়' : 'Status: INACTIVE')}
+                  {criticalAlert.isActive ? t.admin.alerts.statusActive : t.admin.alerts.statusInactive}
                 </span>
               </div>
               <div className="bg-red-600 text-white rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center gap-3 shadow-inner overflow-hidden">
                 <span className="bg-red-700 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs animate-pulse">emergency</span>
-                  {language === 'bn' ? 'জরুরি সতর্কতা:' : 'EMERGENCY ALERT:'}
+                  {t.admin.alerts.emergencyAlertLabel}
                 </span>
                 <span className="truncate font-medium text-red-50">
                   {getActiveAlertText(language)}
@@ -977,16 +991,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-slate-700 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-amber-500 text-sm">radar</span>
-                  {language === 'bn' ? '২. এমার্জেন্সি হাব রাডার স্ট্রিপ (জরুরি ব্যাসার্ধ)' : '2. Emergency Hub Radar Strip (Emergency Radius)'}
+                  {t.admin.alerts.preview2}
                 </span>
                 <span className="text-[10px] font-mono text-slate-500">
-                  {emergencyRadius.isActive ? (language === 'bn' ? 'স্ট্যাটাস: সক্রিয়' : 'Status: ACTIVE') : (language === 'bn' ? 'স্ট্যাটাস: নিষ্ক্রিয়' : 'Status: INACTIVE')}
+                  {emergencyRadius.isActive ? t.admin.alerts.statusActive : t.admin.alerts.statusInactive}
                 </span>
               </div>
               <div className="bg-red-700 text-white rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center gap-3 shadow-inner overflow-hidden">
                 <span className="bg-red-800 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs animate-spin" style={{ animationDuration: '3s' }}>radar</span>
-                  {language === 'bn' ? 'জরুরি ব্যাসার্ধ:' : 'EMERGENCY RADIUS:'}
+                  {t.admin.alerts.emergencyRadiusLabel}
                 </span>
                 <span className="truncate font-medium text-red-50">
                   {getActiveRadiusText(language)}
@@ -1009,10 +1023,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     </div>
                     <div>
                       <h3 className="text-base font-black text-slate-900">
-                        {language === 'bn' ? 'জরুরি সতর্কতা সেটআপ' : 'Emergency Alert Setup'}
+                        {t.admin.alerts.alertSetupTitle}
                       </h3>
                       <span className="text-[11px] text-slate-500 font-medium">
-                        {language === 'bn' ? 'পাবলিক ওয়েবসাইটের হেডার স্লাইডারে প্রদর্শিত হবে' : 'Broadcasts to top header ribbon across all pages'}
+                        {t.admin.alerts.alertSetupDesc}
                       </span>
                     </div>
                   </div>
@@ -1020,7 +1034,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Active Switch */}
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <span className="text-xs font-bold text-slate-600">
-                      {alertIsActive ? (language === 'bn' ? 'সক্রিয়' : 'Active') : (language === 'bn' ? 'নিষ্ক্রিয়' : 'Inactive')}
+                      {alertIsActive ? t.admin.alerts.active : t.admin.alerts.inactive}
                     </span>
                     <input
                       type="checkbox"
@@ -1037,13 +1051,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Hospital Name */}
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      {language === 'bn' ? 'হাসপাতালের নাম *' : 'Hospital Name *'}
+                      {t.admin.alerts.hospitalName}
                     </label>
                     <input
                       type="text"
                       value={alertHospital}
                       onChange={(e) => setAlertHospital(e.target.value)}
-                      placeholder="e.g. ঢাকা মেডিকেল কলেজ হাসপাতাল"
+                      placeholder={t.admin.alerts.hospitalPlaceholder}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-red-500 focus:bg-white transition-colors"
                     />
                     {/* Quick Hospital Chips */}
@@ -1065,20 +1079,20 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">
-                        {language === 'bn' ? 'আইসিইউ / বেড / ওয়ার্ড *' : 'ICU / Bed / Ward *'}
+                        {t.admin.alerts.bedWard}
                       </label>
                       <input
                         type="text"
                         value={alertBed}
                         onChange={(e) => setAlertBed(e.target.value)}
-                        placeholder="e.g. ICU বেড ১৪"
+                        placeholder={t.admin.alerts.bedPlaceholder}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-red-500 focus:bg-white"
                       />
                     </div>
 
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">
-                        {language === 'bn' ? 'প্রয়োজনীয় রক্ত (ব্যাগ) *' : 'Quantity (Bags) *'}
+                        {t.admin.alerts.bags}
                       </label>
                       <input
                         type="number"
@@ -1094,7 +1108,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Blood Group Selector */}
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                      {language === 'bn' ? 'রক্তের গ্রুপ নির্বাচন করুন *' : 'Select Blood Group *'}
+                      {t.admin.alerts.bloodGroup}
                     </label>
                     <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
                       {(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as BloodGroup[]).map((bg) => {
@@ -1120,13 +1134,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Urgency Level */}
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                      {language === 'bn' ? 'জরুরি লেভেল' : 'Urgency Severity Level'}
+                      {t.admin.alerts.urgencyLevel}
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { id: 'code_red', labelBn: 'কোড-রেড (অতি জরুরি)', labelEn: 'Code-Red (Urgent)', color: 'border-red-500 text-red-600 bg-red-50' },
-                        { id: 'critical', labelBn: 'ক্রিটিক্যাল', labelEn: 'Critical', color: 'border-amber-500 text-amber-600 bg-amber-50' },
-                        { id: 'urgent', labelBn: 'জরুরি', labelEn: 'Urgent', color: 'border-blue-500 text-blue-600 bg-blue-50' }
+                        { id: 'code_red', label: t.admin.alerts.urgencyCodeRed, color: 'border-red-500 text-red-600 bg-red-50' },
+                        { id: 'critical', label: t.admin.alerts.urgencyCritical, color: 'border-amber-500 text-amber-600 bg-amber-50' },
+                        { id: 'urgent', label: t.admin.alerts.urgencyUrgent, color: 'border-blue-500 text-blue-600 bg-blue-50' }
                       ].map((lvl) => {
                         const isSelected = alertUrgency === lvl.id;
                         return (
@@ -1140,7 +1154,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                                 : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                             }`}
                           >
-                            {language === 'bn' ? lvl.labelBn : lvl.labelEn}
+                            {lvl.label}
                           </button>
                         );
                       })}
@@ -1150,7 +1164,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Custom Message (Optional Override) */}
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      {language === 'bn' ? 'কাস্টম বার্তা (বাংলা - খালি রাখলে স্বয়ংক্রিয়ভাবে তৈরি হবে)' : 'Custom Banner Message (Bangla)'}
+                      {t.admin.alerts.customAlertMessage}
                     </label>
                     <textarea
                       rows={2}
@@ -1179,15 +1193,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   });
                   sound.playSosSiren();
                   showToast(
-                    language === 'bn'
-                      ? '🚨 জরুরি সতর্কতা আপডেট করা হয়েছে এবং লাইভ ব্রডকাস্ট চালু হয়েছে!'
-                      : '🚨 Emergency Alert updated and broadcasted live to all users!'
+                    t.admin.toasts.alertSaved
                   );
                 }}
                 className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 cursor-pointer transition-all hover:scale-[1.01] active:scale-95"
               >
                 <span className="material-symbols-outlined text-base animate-pulse">campaign</span>
-                <span>{language === 'bn' ? 'জরুরি সতর্কতা সেভ ও ব্রডকাস্ট করুন' : 'Save & Broadcast Emergency Alert'}</span>
+                <span>{t.admin.alerts.saveAlert}</span>
               </button>
             </div>
 
@@ -1203,10 +1215,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     </div>
                     <div>
                       <h3 className="text-base font-black text-slate-900">
-                        {language === 'bn' ? 'জরুরি ব্যাসার্ধ সেটআপ' : 'Emergency Radius Setup'}
+                        {t.admin.alerts.radiusSetupTitle}
                       </h3>
                       <span className="text-[11px] text-slate-500 font-medium">
-                        {language === 'bn' ? 'এমার্জেন্সি হাবের রাডার স্ট্রিপ ও জোন ডিসপ্যাচ নিয়ন্ত্রণ' : 'Controls Emergency Hub radar strip & geographic radius'}
+                        {t.admin.alerts.radiusSetupDesc}
                       </span>
                     </div>
                   </div>
@@ -1214,7 +1226,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Active Switch */}
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <span className="text-xs font-bold text-slate-600">
-                      {radiusIsActive ? (language === 'bn' ? 'সক্রিয়' : 'Active') : (language === 'bn' ? 'নিষ্ক্রিয়' : 'Inactive')}
+                      {radiusIsActive ? t.admin.alerts.active : t.admin.alerts.inactive}
                     </span>
                     <input
                       type="checkbox"
@@ -1231,13 +1243,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Zone Name */}
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      {language === 'bn' ? 'জোন বা অঞ্চলের নাম *' : 'Emergency Zone Name *'}
+                      {t.admin.alerts.zoneName}
                     </label>
                     <input
                       type="text"
                       value={radiusZone}
                       onChange={(e) => setRadiusZone(e.target.value)}
-                      placeholder="e.g. ঢাকা সেন্ট্রাল জোন"
+                      placeholder={t.admin.alerts.zonePlaceholder}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
                     />
                     {/* Quick Zone Chips */}
@@ -1260,10 +1272,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-black text-amber-900 flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-amber-600 text-sm">adjust</span>
-                        <span>{language === 'bn' ? 'জরুরি ব্যাসার্ধের দূরত্ব (কিমি) *' : 'Emergency Radius Distance (KM) *'}</span>
+                        <span>{t.admin.alerts.radiusDistance}</span>
                       </label>
                       <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-xs">
-                        {radiusKm} {language === 'bn' ? 'কিমি ব্যাসার্ধ' : 'KM Radius'}
+                        {t.admin.alerts.radiusKmBadge(radiusKm)}
                       </span>
                     </div>
 
@@ -1287,7 +1299,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       />
                     </div>
                     <span className="text-[10px] text-amber-700/80 font-medium">
-                      {language === 'bn' ? 'সাধারণত ঢাকা মেট্রোর জন্য ৫ কিমি এবং অন্যান্য জেলার জন্য ১০-১৫ কিমি প্রস্তাবিত।' : 'Standard: 5 km for metropolitan areas, 10-15 km for divisional districts.'}
+                      {t.admin.alerts.radiusHint}
                     </span>
                   </div>
 
@@ -1295,7 +1307,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">
-                        {language === 'bn' ? 'জরুরি রক্তের রিকোয়েস্ট সংখ্যা *' : 'Urgent Requests Count *'}
+                        {t.admin.alerts.requestCount}
                       </label>
                       <input
                         type="number"
@@ -1309,13 +1321,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">
-                        {language === 'bn' ? 'অন্তর্ভুক্ত প্রধান হাসপাতালসমূহ *' : 'Key Hospitals in Radius *'}
+                        {t.admin.alerts.keyHospitals}
                       </label>
                       <input
                         type="text"
                         value={radiusHospitals}
                         onChange={(e) => setRadiusHospitals(e.target.value)}
-                        placeholder="e.g. DMCH, BSMMU, বারডেম"
+                        placeholder={t.admin.alerts.keyHospitalsPlaceholder}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:bg-white"
                       />
                     </div>
@@ -1324,7 +1336,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {/* Custom Message (Optional Override) */}
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      {language === 'bn' ? 'কাস্টম বার্তা (বাংলা - খালি রাখলে স্বয়ংক্রিয়ভাবে তৈরি হবে)' : 'Custom Radius Text (Bangla)'}
+                      {t.admin.alerts.customRadiusText}
                     </label>
                     <textarea
                       rows={2}
@@ -1352,15 +1364,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   });
                   sound.playBeacon();
                   showToast(
-                    language === 'bn'
-                      ? '📡 জরুরি ব্যাসার্ধ সফলভাবে আপডেট হয়েছে এবং এমার্জেন্সি হাবে লাইভ সিঙ্ক হয়েছে!'
-                      : '📡 Emergency Radius updated and synced with Emergency Hub!'
+                    t.admin.toasts.radiusSaved
                   );
                 }}
                 className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 cursor-pointer transition-all hover:scale-[1.01] active:scale-95"
               >
                 <span className="material-symbols-outlined text-base">radar</span>
-                <span>{language === 'bn' ? 'জরুরি ব্যাসার্ধ আপডেট করুন' : 'Update Emergency Radius'}</span>
+                <span>{t.admin.alerts.updateRadius}</span>
               </button>
             </div>
 
@@ -1376,12 +1386,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div>
               <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-600">groups</span>
-                <span>{language === 'bn' ? 'রক্তদাতা রেজিস্ট্রি ও ভেরিফিকেশন ব্যবস্থাপনা' : 'Donor Registry & Verification Desk'}</span>
+                <span>{t.admin.donors.title}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                {language === 'bn' 
-                  ? 'নিবন্ধিত রক্তদাতাদের প্রোফাইল, এনআইডি ও রেড ক্রিসেন্ট ভেরিফিকেশন এবং প্রাপ্যতা কন্ট্রোল।' 
-                  : 'Manage donor rosters, verify NID and BDRCS credentials, and toggle emergency standby status.'}
+                {t.admin.donors.desc}
               </p>
             </div>
 
@@ -1391,7 +1399,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
               >
                 <span className="material-symbols-outlined text-base">person_add</span>
-                <span>{language === 'bn' ? 'নতুন ডোনার যোগ করুন' : 'Add New Donor'}</span>
+                <span>{t.admin.donors.addDonor}</span>
               </button>
             </div>
           </div>
@@ -1404,7 +1412,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={language === 'bn' ? 'নাম, এলাকা বা ফোন নম্বর লিখুন...' : 'Search name, area, phone...'}
+                placeholder={t.admin.donors.searchPlaceholder}
                 className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
               />
             </div>
@@ -1415,7 +1423,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 onChange={(e) => setBloodFilter(e.target.value)}
                 className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
               >
-                <option value="ALL">{language === 'bn' ? 'সকল রক্তের গ্রুপ' : 'All Blood Groups'}</option>
+                <option value="ALL">{t.admin.donors.allBloodGroups}</option>
                 {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map(bg => (
                   <option key={bg} value={bg}>{bg}</option>
                 ))}
@@ -1428,10 +1436,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
               >
-                <option value="ALL">{language === 'bn' ? 'সকল স্ট্যাটাস' : 'All Statuses'}</option>
-                <option value="AVAILABLE">{language === 'bn' ? 'বর্তমানে প্রস্তুত' : 'Available & Ready'}</option>
-                <option value="VERIFIED">{language === 'bn' ? 'বিডিআরসিএস ভেরিফাইড' : 'BDRCS Verified'}</option>
-                <option value="RESTING">{language === 'bn' ? 'বিশ্রামে আছেন' : 'Resting Cooldown'}</option>
+                <option value="ALL">{t.admin.donors.allStatuses}</option>
+                <option value="AVAILABLE">{t.admin.donors.filterAvailable}</option>
+                <option value="VERIFIED">{t.admin.donors.filterVerified}</option>
+                <option value="RESTING">{t.admin.donors.filterResting}</option>
               </select>
             </div>
           </div>
@@ -1441,13 +1449,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3">{language === 'bn' ? 'রক্তদাতা' : 'Donor Profile'}</th>
-                  <th className="px-3 py-3 text-center">{language === 'bn' ? 'গ্রুপ' : 'Blood'}</th>
-                  <th className="px-3 py-3">{language === 'bn' ? 'এলাকা ও বিভাগ' : 'Location'}</th>
-                  <th className="px-3 py-3 text-center">{language === 'bn' ? 'রক্তদান সংখ্যা' : 'Donations'}</th>
-                  <th className="px-3 py-3">{language === 'bn' ? 'ভেরিফিকেশন' : 'Verification'}</th>
-                  <th className="px-3 py-3">{language === 'bn' ? 'প্রাপ্যতা' : 'Availability'}</th>
-                  <th className="px-4 py-3 text-right">{language === 'bn' ? 'অ্যাকশন' : 'Actions'}</th>
+                  <th className="px-4 py-3">{t.admin.donors.colDonor}</th>
+                  <th className="px-3 py-3 text-center">{t.admin.donors.colBlood}</th>
+                  <th className="px-3 py-3">{t.admin.donors.colLocation}</th>
+                  <th className="px-3 py-3 text-center">{t.admin.donors.colDonations}</th>
+                  <th className="px-3 py-3">{t.admin.donors.colVerification}</th>
+                  <th className="px-3 py-3">{t.admin.donors.colAvailability}</th>
+                  <th className="px-4 py-3 text-right">{t.admin.donors.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
@@ -1476,7 +1484,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       <span className="text-[11px] text-slate-500">{donor.division}</span>
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <span className="font-black text-slate-900">{donor.donationCount} বার</span>
+                      <span className="font-black text-slate-900">{t.admin.donors.donationTimes(donor.donationCount)}</span>
                     </td>
                     <td className="px-3 py-3">
                       <button
@@ -1490,7 +1498,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         <span className="material-symbols-outlined text-[14px]">
                           {donor.isBdrcsVerified ? 'verified' : 'pending'}
                         </span>
-                        <span>{donor.isBdrcsVerified ? (language === 'bn' ? 'ভেরিফাইড' : 'Verified') : (language === 'bn' ? 'পেন্ডিং' : 'Unverified')}</span>
+                        <span>{donor.isBdrcsVerified ? t.admin.donors.verified : t.admin.donors.unverified}</span>
                       </button>
                     </td>
                     <td className="px-3 py-3">
@@ -1503,14 +1511,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        <span>{donor.isAvailable ? (language === 'bn' ? 'সক্রিয়' : 'Available') : (language === 'bn' ? 'স্থগিত' : 'Resting')}</span>
+                        <span>{donor.isAvailable ? t.admin.donors.available : t.admin.donors.resting}</span>
                       </button>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => setSelectedDonor(donor)}
-                          title="View Donor Dossier"
+                          title={t.admin.donors.viewDossier}
                           className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-base">visibility</span>
@@ -1519,12 +1527,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                           onClick={() => {
                             sound.playSuccessTone();
                             showToast(
-                              language === 'bn'
-                                ? `${donor.name}-এর কাছে জরুরি এসএমএস পিং পাঠানো হয়েছে।`
-                                : `Emergency SMS dispatched to ${donor.name}.`
+                              t.admin.toasts.donorPinged(donor.name)
                             );
                           }}
-                          title="Send Emergency Ping"
+                          title={t.admin.donors.sendPing}
                           className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-base">sms</span>
@@ -1546,12 +1552,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div>
               <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-600">emergency</span>
-                <span>{language === 'bn' ? 'রক্তের রিকোয়েস্ট ও ব্রডকাস্ট পর্যবেক্ষণ' : 'Blood Request Management & Triage'}</span>
+                <span>{t.admin.requests.title}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                {language === 'bn' 
-                  ? 'রোগীর তথ্য, ডাক্তারের রিকুইজিশন যাচাই এবং স্ট্যাটাস (পেন্ডিং, ডোনার প্রাপ্ত, সম্পন্ন, বাতিল) নির্ধারণ করুন।' 
-                  : 'Track and verify clinical requisitions, change triage priority, and supervise request lifecycle.'}
+                {t.admin.requests.desc}
               </p>
             </div>
 
@@ -1560,7 +1564,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all self-start sm:self-auto"
             >
               <span className="material-symbols-outlined text-base">add_circle</span>
-              <span>{language === 'bn' ? 'নতুন রিকোয়েস্ট পোস্ট করুন' : 'Post Blood Request'}</span>
+              <span>{t.admin.requests.postRequest}</span>
             </button>
           </div>
 
@@ -1572,7 +1576,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={language === 'bn' ? 'রোগী, হাসপাতাল বা আইডি...' : 'Search patient, hospital, ID...'}
+                placeholder={t.admin.requests.searchPlaceholder}
                 className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
               />
             </div>
@@ -1583,7 +1587,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 onChange={(e) => setBloodFilter(e.target.value)}
                 className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
               >
-                <option value="ALL">{language === 'bn' ? 'সকল রক্তের গ্রুপ' : 'All Blood Groups'}</option>
+                <option value="ALL">{t.admin.donors.allBloodGroups}</option>
                 {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map(bg => (
                   <option key={bg} value={bg}>{bg}</option>
                 ))}
@@ -1596,11 +1600,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
               >
-                <option value="ALL">{language === 'bn' ? 'সকল স্ট্যাটাস' : 'All Statuses'}</option>
-                <option value="pending">{language === 'bn' ? 'অপেক্ষারত (Pending)' : 'Pending'}</option>
-                <option value="donor_found">{language === 'bn' ? 'ডোনার পাওয়া গেছে (Donor Found)' : 'Donor Found'}</option>
-                <option value="completed">{language === 'bn' ? 'সম্পন্ন (Completed)' : 'Completed'}</option>
-                <option value="cancelled">{language === 'bn' ? 'বাতিল (Cancelled)' : 'Cancelled'}</option>
+                <option value="ALL">{t.admin.donors.allStatuses}</option>
+                <option value="pending">{t.admin.requests.filterPending}</option>
+                <option value="donor_found">{t.admin.requests.filterDonorFound}</option>
+                <option value="completed">{t.admin.requests.filterCompleted}</option>
+                <option value="cancelled">{t.admin.requests.filterCancelled}</option>
               </select>
             </div>
           </div>
@@ -1621,10 +1625,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       req.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
                       'bg-slate-100 text-slate-600'
                     }`}>
-                      {req.status === 'pending' ? (language === 'bn' ? 'অপেক্ষারত' : 'Pending') :
-                       req.status === 'donor_found' ? (language === 'bn' ? 'ডোনার প্রস্তুত' : 'Donor Found') :
-                       req.status === 'completed' ? (language === 'bn' ? 'রক্তদান সম্পন্ন' : 'Completed') :
-                       (language === 'bn' ? 'বাতিল' : 'Cancelled')}
+                      {req.status === 'pending' ? t.admin.requests.statusPending :
+                       req.status === 'donor_found' ? t.admin.requests.statusDonorFound :
+                       req.status === 'completed' ? t.admin.requests.statusCompleted :
+                       t.admin.requests.statusCancelled}
                     </span>
                   </div>
 
@@ -1635,7 +1639,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex flex-col items-center justify-center font-black border border-red-200 shrink-0">
                       <span className="text-sm">{req.bloodGroup}</span>
-                      <span className="text-[9px] text-red-700 font-bold">{req.bagsRequired} {language === 'bn' ? 'ব্যাগ' : 'Bags'}</span>
+                      <span className="text-[9px] text-red-700 font-bold">{req.bagsRequired} {t.admin.requests.bags}</span>
                     </div>
                   </div>
 
@@ -1646,7 +1650,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-slate-400 text-base">call</span>
-                      <span>{language === 'bn' ? 'স্বজন:' : 'Attendant:'} <strong>{req.attendantName} ({req.attendantPhone})</strong></span>
+                      <span>{t.admin.requests.attendant} <strong>{req.attendantName} ({req.attendantPhone})</strong></span>
                     </div>
                     {req.doctorName && (
                       <div className="flex items-center gap-2 text-[11px] text-slate-500">
@@ -1664,7 +1668,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">prescriptions</span>
-                    <span>{language === 'bn' ? 'ডাক্তার স্লিপ' : 'Doctor Slip'}</span>
+                    <span>{t.admin.requests.doctorSlip}</span>
                   </button>
 
                   <div className="flex items-center gap-1.5">
@@ -1673,7 +1677,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         onClick={() => handleUpdateRequestStatus(req.id, 'donor_found')}
                         className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold cursor-pointer"
                       >
-                        {language === 'bn' ? 'ডোনার এসাইন' : 'Assign'}
+                        {t.admin.requests.assign}
                       </button>
                     )}
                     {req.status !== 'completed' && (
@@ -1681,7 +1685,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         onClick={() => handleUpdateRequestStatus(req.id, 'completed')}
                         className="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold cursor-pointer"
                       >
-                        {language === 'bn' ? 'সম্পন্ন করুন' : 'Complete'}
+                        {t.admin.requests.complete}
                       </button>
                     )}
                     {req.status !== 'cancelled' && (
@@ -1689,7 +1693,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         onClick={() => handleUpdateRequestStatus(req.id, 'cancelled')}
                         className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold cursor-pointer"
                       >
-                        {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                        {t.admin.requests.cancel}
                       </button>
                     )}
                   </div>
@@ -1707,12 +1711,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div>
               <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-600">local_hospital</span>
-                <span>{language === 'bn' ? 'হাসপাতাল ও স্বেচ্ছাসেবী সংস্থা যাচাইকরণ ডেস্ক' : 'Hospital & Organization Verification Desk'}</span>
+                <span>{t.admin.hospitals.title}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                {language === 'bn' 
-                  ? 'ডিজিএইচএস অনুমোদিত ব্লাড ব্যাংক ও স্বেচ্ছাসেবী ক্লাব (সন্ধানী, বাঁধন, কোয়ান্টাম) এর অডিট ও অনুমোদন ব্যবস্থাপনা।' 
-                  : 'Verify government hospitals, private trauma centers, voluntary student networks, and blood bank licenses.'}
+                {t.admin.hospitals.desc}
               </p>
             </div>
 
@@ -1721,7 +1723,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
             >
               <span className="material-symbols-outlined text-base">open_in_new</span>
-              <span>{language === 'bn' ? 'হাসপাতাল পোর্টাল খুলুন' : 'Open Hospital Portal'}</span>
+              <span>{t.admin.hospitals.openPortal}</span>
             </button>
           </div>
 
@@ -1747,7 +1749,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       <span className="material-symbols-outlined text-xs">
                         {hosp.isVerified ? 'verified' : 'pending'}
                       </span>
-                      <span>{hosp.isVerified ? (language === 'bn' ? 'অনুমোদিত' : 'Verified') : (language === 'bn' ? 'অপেক্ষারত' : 'Unverified')}</span>
+                      <span>{hosp.isVerified ? t.admin.hospitals.verified : t.admin.hospitals.unverified}</span>
                     </button>
                   </div>
 
@@ -1756,19 +1758,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
                   <div className="mt-3 p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-700">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">{language === 'bn' ? 'লাইসেন্স নম্বর:' : 'DGHS License:'}</span>
+                      <span className="text-slate-500">{t.admin.hospitals.license}</span>
                       <span className="font-mono font-bold text-slate-800">{hosp.licenseNumber}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">{language === 'bn' ? 'পরিচালক / ইনচার্জ:' : 'In-Charge:'}</span>
+                      <span className="text-slate-500">{t.admin.hospitals.inCharge}</span>
                       <span className="font-semibold text-slate-800">{hosp.directorName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">{language === 'bn' ? 'উপলব্ধ রক্ত মজুত:' : 'Available Bags:'}</span>
-                      <span className="font-black text-red-600">{hosp.availableBags} {language === 'bn' ? 'ব্যাগ' : 'Bags'}</span>
+                      <span className="text-slate-500">{t.admin.hospitals.availableBags}</span>
+                      <span className="font-black text-red-600">{hosp.availableBags} {t.admin.hospitals.bags}</span>
                     </div>
                     <div className="flex justify-between items-center pt-1 border-t border-slate-200/60">
-                      <span className="text-slate-500">{language === 'bn' ? 'কোল্ড স্টোরেজ তাপমাত্রা:' : 'Cold Storage:'}</span>
+                      <span className="text-slate-500">{t.admin.hospitals.coldStorage}</span>
                       <span className="font-mono font-bold text-emerald-600 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         {hosp.coldStorageTempC}°C
@@ -1779,14 +1781,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                   <span className="text-[11px] text-slate-400 font-medium">
-                    {language === 'bn' ? 'অডিট:' : 'Audited:'} {hosp.lastAuditDate}
+                    {t.admin.hospitals.audited} {hosp.lastAuditDate}
                   </span>
                   <a
                     href={`tel:${hosp.emergencyContact}`}
                     className="font-bold text-red-600 hover:text-red-700 flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">call</span>
-                    <span>{language === 'bn' ? 'হটলাইন' : 'Hotline'}</span>
+                    <span>{t.admin.hospitals.hotline}</span>
                   </a>
                 </div>
               </div>
@@ -1801,12 +1803,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           <div>
             <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-rose-600">gavel</span>
-              <span>{language === 'bn' ? 'দালাল চক্র ও প্রতারণা প্রতিরোধ সেল' : 'Anti-Broker & Syndicate Defense Desk'}</span>
+              <span>{t.admin.fraud.title}</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              {language === 'bn'
-                ? 'রক্ত বিক্রয়কারী দালাল, ভুয়া কল এবং প্রতারকদের স্থায়ীভাবে জাতীয় এসএমএস গেটওয়ে ও এনআইডি ব্লকলিস্টে রাখুন।'
-                : 'Intercept illegal blood broker syndicates, extortion calls, and synthetic bot swarms targeting emergency donor queues.'}
+              {t.admin.fraud.desc}
             </p>
           </div>
 
@@ -1819,7 +1819,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 font-black text-[10px] uppercase">
-                      {incident.severity} SEVERITY
+                      {t.admin.fraud.severity[incident.severity]}
                     </span>
                     <span className="font-mono text-xs font-bold text-slate-500">{incident.id}</span>
                     <span className="text-xs text-slate-400">• {incident.reportedAgo}</span>
@@ -1828,7 +1828,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       incident.status === 'dismissed' ? 'bg-slate-200 text-slate-700' :
                       'bg-amber-100 text-amber-800'
                     }`}>
-                      {incident.status.toUpperCase()}
+                      {t.admin.fraud.status[incident.status]}
                     </span>
                   </div>
 
@@ -1836,9 +1836,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <p className="text-xs text-slate-600 mt-1 leading-relaxed">{incident.description}</p>
 
                   <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-slate-500 font-mono">
-                    <span>Target: <strong>{incident.targetEntity}</strong></span>
-                    <span>Carrier: <strong>{incident.carrierInfo}</strong></span>
-                    <span>Evidence: <strong>{incident.evidence}</strong></span>
+                    <span>{t.admin.fraud.target} <strong>{incident.targetEntity}</strong></span>
+                    <span>{t.admin.fraud.carrier} <strong>{incident.carrierInfo}</strong></span>
+                    <span>{t.admin.fraud.evidence} <strong>{incident.evidence}</strong></span>
                   </div>
                 </div>
 
@@ -1850,20 +1850,20 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-base">block</span>
-                        <span>{language === 'bn' ? 'স্থায়ীভাবে ব্যান করুন' : 'Blacklist Entity'}</span>
+                        <span>{t.admin.fraud.blacklist}</span>
                       </button>
                       <button
                         onClick={() => handleResolveFraud(incident.id, 'dismissed')}
                         className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs cursor-pointer"
                       >
-                        {language === 'bn' ? 'খারিজ' : 'Dismiss'}
+                        {t.admin.fraud.dismiss}
                       </button>
                     </>
                   )}
                   {incident.status === 'banned' && (
                     <span className="text-xs font-bold text-red-600 flex items-center gap-1">
                       <span className="material-symbols-outlined text-base">verified</span>
-                      <span>Permanently Blocked on DGHS</span>
+                      <span>{t.admin.fraud.permanentlyBlocked}</span>
                     </span>
                   )}
                 </div>
@@ -1880,36 +1880,39 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
               <span className="font-black text-white text-sm">
-                {language === 'bn' ? 'ডিজিএইচএস মাল্টি-ক্যারিয়ার টেলিকম গেটওয়ে ও অডিট লগ' : 'DGHS Telecom SMS Gateways & Real-Time Audit Trail'}
+                {t.admin.logs.title}
               </span>
             </div>
-            <span className="text-[11px] text-slate-400">Throughput: 1,840 SMS/sec</span>
+            <span className="text-[11px] text-slate-400">{t.admin.logs.throughput}</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-2">
             {[
-              { name: 'Grameenphone (GP-SMS-E01)', latency: '42ms', status: 'ONLINE 100%' },
-              { name: 'Banglalink (BL-ALRT-GW)', latency: '58ms', status: 'ONLINE 99.9%' },
-              { name: 'Robi / Airtel (R-PUSH-02)', latency: '61ms', status: 'ONLINE 99.8%' },
-              { name: 'Teletalk Emergency (TT-999)', latency: '35ms', status: 'ONLINE 100%' }
+              { name: 'Grameenphone (GP-SMS-E01)', latency: '42ms', status: '100%' },
+              { name: 'Banglalink (BL-ALRT-GW)', latency: '58ms', status: '99.9%' },
+              { name: 'Robi / Airtel (R-PUSH-02)', latency: '61ms', status: '99.8%' },
+              { name: 'Teletalk Emergency (TT-999)', latency: '35ms', status: '100%' }
             ].map(gw => (
               <div key={gw.name} className="p-3 bg-slate-900 rounded-xl border border-slate-800">
                 <span className="text-[10px] text-slate-400 block truncate">{gw.name}</span>
-                <span className="text-emerald-400 font-bold block mt-1">{gw.status}</span>
-                <span className="text-[10px] text-slate-500">Latency: {gw.latency}</span>
+                <span className="text-emerald-400 font-bold block mt-1">{t.admin.logs.online(gw.status)}</span>
+                <span className="text-[10px] text-slate-500">{t.admin.logs.latency} {gw.latency}</span>
               </div>
             ))}
           </div>
 
           <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-2 max-h-72 overflow-y-auto">
-            <div className="text-slate-400">[10:24:18] <span className="text-emerald-400">[GP-SMS]</span> Broadcast payload dispatched to 42 donors within 2.5km cluster for REQ-1092 (O-).</div>
-            <div className="text-slate-400">[10:23:45] <span className="text-cyan-400">[BDRCS-AUTH]</span> Donor profile DON-01 verified with National ID biometric record.</div>
-            <div className="text-slate-400">[10:21:02] <span className="text-amber-400">[AUDIT-WARN]</span> Mitford Hospital Chiller Unit B-04 reported minor temperature variance (4.1°C). Re-calibrated.</div>
-            <div className="text-slate-400">[10:18:30] <span className="text-red-400">[SECURITY-BLOCK]</span> Automated bot spam from IP 103.114.*** throttled at firewall edge.</div>
-            <div className="text-slate-400">[10:14:12] <span className="text-emerald-400">[HANDSHAKE]</span> OTP #4921 confirmed for REQ-8942 between Donor Tanvir Ahmed and DMCH Ward Bed 14A.</div>
+            <div className="text-slate-400">[10:24:18] <span className="text-emerald-400">[GP-SMS]</span> {t.admin.logs.log1}</div>
+            <div className="text-slate-400">[10:23:45] <span className="text-cyan-400">[BDRCS-AUTH]</span> {t.admin.logs.log2}</div>
+            <div className="text-slate-400">[10:21:02] <span className="text-amber-400">[AUDIT-WARN]</span> {t.admin.logs.log3}</div>
+            <div className="text-slate-400">[10:18:30] <span className="text-red-400">[SECURITY-BLOCK]</span> {t.admin.logs.log4}</div>
+            <div className="text-slate-400">[10:14:12] <span className="text-emerald-400">[HANDSHAKE]</span> {t.admin.logs.log5}</div>
           </div>
         </div>
       )}
+
+      {/* TAB 7: ACCESS & ROLES */}
+      {activeTab === 'access' && <AdminRolesPanel />}
 
         </div>
       </div>
@@ -1921,7 +1924,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-600">badge</span>
-                <span>{language === 'bn' ? 'রক্তদাতার পূর্ণাঙ্গ ফাইল' : 'Donor Full Dossier'}</span>
+                <span>{t.admin.dossier.title}</span>
               </h3>
               <button 
                 onClick={() => setSelectedDonor(null)}
@@ -1941,33 +1944,33 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <h4 className="font-black text-slate-900 text-base">{selectedDonor.name}</h4>
                 <p className="text-xs text-slate-500 font-medium">{selectedDonor.location}, {selectedDonor.division}</p>
                 <span className="inline-block mt-1 px-2.5 py-0.5 rounded-md bg-red-100 text-red-800 font-black text-xs">
-                  Blood Group: {selectedDonor.bloodGroup} (Rh {selectedDonor.rhType})
+                  {t.admin.dossier.bloodGroup(selectedDonor.bloodGroup, selectedDonor.rhType)}
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs mb-4">
               <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block text-[11px]">{language === 'bn' ? 'বয়স ও ওজন:' : 'Age & Weight:'}</span>
-                <span className="font-bold text-slate-800">{selectedDonor.age} yrs • {selectedDonor.weightKg} kg</span>
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.ageWeight}</span>
+                <span className="font-bold text-slate-800">{t.admin.dossier.ageWeightValue(selectedDonor.age, selectedDonor.weightKg)}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block text-[11px]">{language === 'bn' ? 'হিমোগ্লোবিন স্তর:' : 'Hemoglobin:'}</span>
-                <span className="font-bold text-emerald-600">{selectedDonor.hbLevel} g/dL (Optimal)</span>
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.hemoglobin}</span>
+                <span className="font-bold text-emerald-600">{t.admin.dossier.hemoglobinValue(selectedDonor.hbLevel)}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block text-[11px]">{language === 'bn' ? 'রক্তদান সংখ্যা:' : 'Total Donations:'}</span>
-                <span className="font-bold text-slate-800">{selectedDonor.donationCount} Times Verified</span>
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.totalDonations}</span>
+                <span className="font-bold text-slate-800">{t.admin.dossier.totalDonationsValue(selectedDonor.donationCount)}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block text-[11px]">{language === 'bn' ? 'শেষ রক্তদানের সময়:' : 'Last Donation:'}</span>
-                <span className="font-bold text-slate-800">{selectedDonor.daysElapsedSinceDonation} days ago</span>
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.lastDonation}</span>
+                <span className="font-bold text-slate-800">{t.admin.dossier.daysAgo(selectedDonor.daysElapsedSinceDonation)}</span>
               </div>
             </div>
 
             <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-800 mb-5">
-              <span className="font-bold block mb-1">BDRCS & Clinical Serology:</span>
-              <span>HIV 1/2: Negative • Hep B/C: Negative • Syphilis: Negative • Malaria: Negative</span>
+              <span className="font-bold block mb-1">{t.admin.dossier.serologyTitle}</span>
+              <span>{t.admin.dossier.serologyResults}</span>
             </div>
 
             <div className="flex gap-2">
@@ -1978,13 +1981,13 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs cursor-pointer shadow-sm"
               >
-                {selectedDonor.isBdrcsVerified ? (language === 'bn' ? 'ভেরিফিকেশন স্থগিত' : 'Revoke Verification') : (language === 'bn' ? 'অনুমোদন দিন' : 'Grant Verified Badge')}
+                {selectedDonor.isBdrcsVerified ? t.admin.dossier.revoke : t.admin.dossier.grant}
               </button>
               <button
                 onClick={() => setSelectedDonor(null)}
                 className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
               >
-                {language === 'bn' ? 'বন্ধ করুন' : 'Close'}
+                {t.admin.dossier.close}
               </button>
             </div>
           </div>

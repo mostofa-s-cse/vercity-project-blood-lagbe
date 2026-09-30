@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
+import { AuthButton } from './AuthButton';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
 
@@ -28,20 +30,24 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
   const { getActiveAlertText } = useAlert();
+  const { can } = useAuth();
   const activeAlertMessage = getActiveAlertText(language);
 
-  const navItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
-    { id: 'emergency-hub', label: t.navEmergencyHub, icon: 'emergency_home' },
-    { id: 'donor-directory', label: t.navDonorDirectory, icon: 'person_search' },
-    { id: 'create-sos', label: t.navCreateSos, icon: 'add_circle' },
-    { id: 'request-tracking', label: t.navRequestTracking, icon: 'track_changes', badge: 'NEW' },
-    { id: 'donor-register', label: t.navDonorRegister, icon: 'how_to_reg' },
-    { id: 'live-tracker', label: t.navLiveTracker, icon: 'near_me', badge: 'LIVE' },
-    { id: 'hospital-org', label: t.navHospitalOrg, icon: 'local_hospital' },
-    { id: 'admin-panel', label: t.navAdminPanel, icon: 'admin_panel_settings' },
-    { id: 'donor-passport', label: t.navDonorPassport, icon: 'badge' },
-    { id: 'pitch-deck', label: t.navPitchDeck, icon: 'co_present' },
+  const allNavItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
+    { id: 'emergency-hub', label: t.header.nav.emergencyHub, icon: 'emergency_home' },
+    { id: 'donor-directory', label: t.header.nav.donorDirectory, icon: 'person_search' },
+    { id: 'create-sos', label: t.header.nav.createSos, icon: 'add_circle' },
+    { id: 'request-tracking', label: t.header.nav.requestTracking, icon: 'track_changes', badge: t.header.badgeNew },
+    { id: 'donor-register', label: t.header.nav.donorRegister, icon: 'how_to_reg' },
+    { id: 'live-tracker', label: t.header.nav.liveTracker, icon: 'near_me', badge: t.header.badgeLive },
+    { id: 'hospital-org', label: t.header.nav.hospitalOrg, icon: 'local_hospital' },
+    { id: 'admin-panel', label: t.header.nav.adminPanel, icon: 'admin_panel_settings' },
+    { id: 'donor-passport', label: t.header.nav.donorPassport, icon: 'badge' },
+    { id: 'pitch-deck', label: t.header.nav.pitchDeck, icon: 'co_present' },
+    { id: 'user-docs', label: t.header.nav.userDocs, icon: 'menu_book' },
   ];
+  // The Admin Panel link is only for people who may open it (the proxy also blocks the page itself).
+  const navItems = allNavItems.filter((item) => item.id !== 'admin-panel' || can('panel.open'));
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl shadow-sm border-b border-slate-200">
@@ -56,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <span className="uppercase tracking-wider font-extrabold shrink-0 text-[11px] bg-red-700/90 px-2 py-0.5 rounded shadow-xs flex items-center gap-1">
               <span className="material-symbols-outlined text-[13px] animate-pulse">campaign</span>
-              {t.criticalAlertPrefix}
+              {t.header.criticalAlertPrefix}
             </span>
           </div>
 
@@ -95,20 +101,20 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Helpline & Audio controls */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <span className="hidden sm:inline opacity-90 text-[11px] font-mono">
-              {t.helplineText}
+              {t.header.helplineText}
             </span>
             <button
               onClick={() => {
                 onToggleAudioMute();
                 sound.playTap();
               }}
-              title={isAudioMuted ? 'Unmute Live Alert Chimes' : 'Mute Live Alert Chimes'}
+              title={isAudioMuted ? t.header.unmuteChimes : t.header.muteChimes}
               className="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-sm">
                 {isAudioMuted ? 'volume_off' : 'volume_up'}
               </span>
-              <span>{isAudioMuted ? t.audioMuted : t.audioOn}</span>
+              <span>{isAudioMuted ? t.header.audioMuted : t.header.audioOn}</span>
             </button>
           </div>
         </div>
@@ -142,14 +148,14 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-lg sm:text-xl text-red-600 leading-tight tracking-tight">
-                  {t.brandName}
+                  {t.common.brandName}
                 </span>
                 <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">
-                  {t.banglaTag}
+                  {t.common.banglaTag}
                 </span>
               </div>
               <span className="text-[11px] text-slate-500 font-medium leading-none">
-                {t.brandSub}
+                {t.common.brandSub}
               </span>
             </div>
           </button>
@@ -162,11 +168,11 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => onSelectDivision(e.target.value)}
               className="bg-transparent font-bold outline-none cursor-pointer pr-1 text-xs"
             >
-              <option value="Dhaka Central">{language === 'bn' ? 'ঢাকা সেন্ট্রাল (DMCH / BSMMU)' : 'Dhaka Central (DMCH / BSMMU)'}</option>
-              <option value="Dhaka North">{language === 'bn' ? 'ঢাকা উত্তর (উত্তরা / কুর্মিটোলা)' : 'Dhaka North (Uttara / Kurmitola)'}</option>
-              <option value="Chattogram Port">{language === 'bn' ? 'চট্টগ্রাম পোর্ট হাব' : 'Chattogram Port Hub'}</option>
-              <option value="Sylhet Sadar">{language === 'bn' ? 'সিলেট ওসমানী জোন' : 'Sylhet Osmani Zone'}</option>
-              <option value="Rajshahi Division">{language === 'bn' ? 'রাজশাহী সদর' : 'Rajshahi Sadar'}</option>
+              <option value="Dhaka Central">{t.header.divisions.dhakaCentral}</option>
+              <option value="Dhaka North">{t.header.divisions.dhakaNorth}</option>
+              <option value="Chattogram Port">{t.header.divisions.chattogram}</option>
+              <option value="Sylhet Sadar">{t.header.divisions.sylhet}</option>
+              <option value="Rajshahi Division">{t.header.divisions.rajshahi}</option>
             </select>
           </div>
         </div>
@@ -181,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
                 sound.playTap();
               }
             }}
-            title={language === 'bn' ? 'জরুরি রক্ত বিজ্ঞপ্তি' : 'Emergency Blood Alerts'}
+            title={t.header.notificationsTitle}
             className="relative p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-red-600 rounded-xl border border-slate-300 shadow-xs transition-all cursor-pointer active:scale-95 flex items-center justify-center"
           >
             <span className="material-symbols-outlined text-lg sm:text-xl">notifications</span>
@@ -198,11 +204,11 @@ export const Header: React.FC<HeaderProps> = ({
               toggleLanguage();
               sound.playTap();
             }}
-            title={language === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'}
+            title={t.header.langToggleTitle}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 shadow-sm transition-all cursor-pointer active:scale-95"
           >
             <span className="material-symbols-outlined text-base text-red-600">translate</span>
-            <span className="font-extrabold">{t.langToggle}</span>
+            <span className="font-extrabold">{t.header.langToggle}</span>
             <span className="px-1 py-0.2 rounded bg-red-100 text-red-700 text-[10px] font-black uppercase">
               {language.toUpperCase()}
             </span>
@@ -217,19 +223,22 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-extrabold rounded-xl shadow-md shadow-red-600/30 transition-all transform active:scale-95 animate-pulse shrink-0 cursor-pointer"
           >
             <span className="material-symbols-outlined text-base sm:text-lg">emergency_share</span>
-            <span className="tracking-wide uppercase">{t.sosTriggerBtn}</span>
+            <span className="tracking-wide uppercase">{t.header.sosTriggerBtn}</span>
           </button>
+
+          {/* Sign in with Google (only when Supabase is configured) */}
+          <AuthButton />
 
           {/* User Profile Avatar Pill */}
           <button
             onClick={() => onNavigate('donor-passport')}
             className="flex items-center gap-2 pl-0.5 group cursor-pointer shrink-0"
-            title="View Lifeline Donor Passport"
+            title={t.header.viewPassportTitle}
           >
             <div className="relative">
               <img
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI"
-                alt="Profile"
+                alt={t.header.profileAlt}
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 group-hover:ring-red-500 transition-all"
               />
               <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[9px] font-black px-1 rounded-full border border-white">
@@ -242,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 cursor-pointer border border-slate-200"
-            title="Toggle Menu"
+            title={t.header.toggleMenu}
           >
             <span className="material-symbols-outlined text-xl">
               {isMobileMenuOpen ? 'close' : 'menu'}
@@ -297,18 +306,18 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="mb-3 p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs gap-2">
             <span className="text-slate-500 font-semibold flex items-center gap-1">
               <span className="material-symbols-outlined text-red-600 text-sm">location_on</span>
-              {t.divisionLabel}
+              {t.header.divisionLabel}
             </span>
             <select
               value={selectedDivision}
               onChange={(e) => onSelectDivision(e.target.value)}
               className="font-bold text-slate-800 bg-transparent outline-none text-xs"
             >
-              <option value="Dhaka Central">{language === 'bn' ? 'ঢাকা সেন্ট্রাল' : 'Dhaka Central'}</option>
-              <option value="Dhaka North">{language === 'bn' ? 'ঢাকা উত্তর' : 'Dhaka North'}</option>
-              <option value="Chattogram Port">{language === 'bn' ? 'চট্টগ্রাম' : 'Chattogram'}</option>
-              <option value="Sylhet Sadar">{language === 'bn' ? 'সিলেট' : 'Sylhet'}</option>
-              <option value="Rajshahi Division">{language === 'bn' ? 'রাজশাহী' : 'Rajshahi'}</option>
+              <option value="Dhaka Central">{t.header.divisionsShort.dhakaCentral}</option>
+              <option value="Dhaka North">{t.header.divisionsShort.dhakaNorth}</option>
+              <option value="Chattogram Port">{t.header.divisionsShort.chattogram}</option>
+              <option value="Sylhet Sadar">{t.header.divisionsShort.sylhet}</option>
+              <option value="Rajshahi Division">{t.header.divisionsShort.rajshahi}</option>
             </select>
           </div>
 

@@ -13,7 +13,8 @@ export type ScreenId =
   | 'hospital-org'
   | 'admin-panel'
   | 'ops-command'
-  | 'pitch-deck';
+  | 'pitch-deck'
+  | 'user-docs';
 
 export type RequestStatus = 'pending' | 'donor_found' | 'completed' | 'cancelled';
 

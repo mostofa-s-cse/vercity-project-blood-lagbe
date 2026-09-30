@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Language, TRANSLATIONS } from '../utils/translations';
+'use client';
+
+import React, { createContext, useCallback, useContext, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Language, TRANSLATIONS } from '../locales';
+import { LANGUAGE_COOKIE, switchLanguagePath } from '../utils/routes';
 
 interface LanguageContextType {
   language: Language;
@@ -10,26 +14,28 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('blood_lagbe_lang');
-      if (saved === 'en' || saved === 'bn') return saved;
-    }
-    return 'bn'; // default to Bengali as requested by Bangladeshi users
-  });
+/** The language comes from the URL (`/bn/...`, `/en/...`); switching it navigates to the same page in the other one. */
+export const LanguageProvider: React.FC<{ language: Language; children: React.ReactNode }> = ({
+  language,
+  children,
+}) => {
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('blood_lagbe_lang', lang);
-    }
-  };
+  // Remember the language so the proxy can send prefix-less URLs to it.
+  useEffect(() => {
+    document.cookie = `${LANGUAGE_COOKIE}=${language}; path=/; max-age=31536000; samesite=lax`;
+  }, [language]);
 
-  const toggleLanguage = () => {
-    const next = language === 'bn' ? 'en' : 'bn';
-    setLanguage(next);
-  };
+  const setLanguage = useCallback(
+    (next: Language) => {
+      if (next === language) return;
+      router.push(`${switchLanguagePath(pathname, next)}${window.location.search}${window.location.hash}`, { scroll: false });
+    },
+    [language, pathname, router]
+  );
+
+  const toggleLanguage = () => setLanguage(language === 'bn' ? 'en' : 'bn');
 
   const t = TRANSLATIONS[language];
 

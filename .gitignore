@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.playwright-mcp/
+
+# Generated Prisma client (created by `npm install` / `npm run db:generate`)
+src/generated/

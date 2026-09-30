@@ -20,7 +20,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onClearAll,
   onNavigate
 }) => {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
 
   if (!isOpen) return null;
 
@@ -35,10 +35,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">
-                {language === 'bn' ? 'জরুরি রক্তদাতা নোটিফিকেশন' : 'Donor Emergency Alerts'}
+                {t.notifications.title}
               </h3>
               <p className="text-[11px] text-slate-500">
-                {language === 'bn' ? 'আপনার রক্তের গ্রুপ ও এলাকা অনুযায়ী সতর্কবার্তা' : 'Geofenced blood calls matching your blood type'}
+                {t.notifications.subtitle}
               </p>
             </div>
           </div>
@@ -51,7 +51,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               }}
               className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
             >
-              {language === 'bn' ? 'সব মুছুন' : 'Clear All'}
+              {t.notifications.clearAll}
             </button>
             <button
               onClick={onClose}
@@ -68,7 +68,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
             <div className="py-12 text-center text-slate-400">
               <span className="material-symbols-outlined text-4xl mb-2 text-slate-300">notifications_off</span>
               <p className="text-xs font-semibold">
-                {language === 'bn' ? 'কোনো নতুন বিজ্ঞপ্তি নেই।' : 'No active notifications.'}
+                {t.notifications.empty}
               </p>
             </div>
           ) : (
@@ -102,7 +102,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs">
                     {notif.bloodGroup && (
                       <span className="px-2 py-0.5 rounded-md bg-red-600 text-white font-black text-[10px]">
-                        {notif.bloodGroup} Needed
+                        {t.notifications.bloodNeeded(notif.bloodGroup)}
                       </span>
                     )}
 
@@ -117,7 +117,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           }}
                           className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] shadow-xs cursor-pointer"
                         >
-                          {language === 'bn' ? 'রক্ত দিন' : 'Respond Now'}
+                          {t.notifications.respondNow}
                         </button>
                       )}
                       {!notif.read && (
@@ -135,13 +135,13 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1 font-semibold text-[11px]">
             <span className="material-symbols-outlined text-sm text-emerald-600">sms</span>
-            {language === 'bn' ? 'এসএমএস গেটওয়ে সক্রিয়' : 'DGHS Carrier SMS Live'}
+            {t.notifications.smsGatewayLive}
           </span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl cursor-pointer"
           >
-            {language === 'bn' ? 'বন্ধ করুন' : 'Close'}
+            {t.common.close}
           </button>
         </div>
       </div>

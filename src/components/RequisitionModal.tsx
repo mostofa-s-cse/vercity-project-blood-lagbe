@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface RequisitionModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export const RequisitionModal: React.FC<RequisitionModalProps> = ({
   bloodGroup = 'O+',
   units = 2,
 }) => {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   return (
@@ -28,8 +31,8 @@ export const RequisitionModal: React.FC<RequisitionModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-red-600 text-2xl">description</span>
             <div>
-              <h3 className="font-bold text-lg text-slate-900 leading-tight">Official Clinical Requisition</h3>
-              <p className="text-xs text-slate-500 font-mono">DGHS Blood Safety Protocol v4.2 • Verified Slip</p>
+              <h3 className="font-bold text-lg text-slate-900 leading-tight">{t.requisition.title}</h3>
+              <p className="text-xs text-slate-500 font-mono">{t.requisition.subtitle}</p>
             </div>
           </div>
           <button 
@@ -48,35 +51,35 @@ export const RequisitionModal: React.FC<RequisitionModalProps> = ({
                 +
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-base">GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH</h4>
-                <p className="text-xs text-slate-600">Department of Blood Transfusion & Critical Care</p>
+                <h4 className="font-bold text-slate-900 text-base">{t.requisition.govHeader}</h4>
+                <p className="text-xs text-slate-600">{t.requisition.department}</p>
                 <p className="text-xs font-semibold text-red-700">{hospitalName}</p>
               </div>
             </div>
             <div className="text-right">
               <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                URGENT OT ORDER
+                {t.requisition.urgentOtOrder}
               </span>
-              <p className="text-[11px] text-slate-500 font-mono mt-1">SLIP #BD-DMCH-2025-98321</p>
+              <p className="text-[11px] text-slate-500 font-mono mt-1">{t.requisition.slipNumber}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/80 p-3 rounded-lg border border-amber-100 text-xs">
             <div>
-              <span className="text-slate-400 block font-medium">PATIENT NAME</span>
+              <span className="text-slate-400 block font-medium">{t.requisition.patientNameLabel}</span>
               <span className="font-bold text-slate-800 text-sm">{patientName}</span>
             </div>
             <div>
-              <span className="text-slate-400 block font-medium">BLOOD GROUP</span>
+              <span className="text-slate-400 block font-medium">{t.requisition.bloodGroupLabel}</span>
               <span className="font-black text-red-600 text-sm">{bloodGroup}</span>
             </div>
             <div>
-              <span className="text-slate-400 block font-medium">REQUIRED UNITS</span>
-              <span className="font-bold text-slate-800 text-sm">{units} Bags (PRBC)</span>
+              <span className="text-slate-400 block font-medium">{t.requisition.requiredUnitsLabel}</span>
+              <span className="font-bold text-slate-800 text-sm">{t.requisition.unitsValue(units)}</span>
             </div>
             <div>
-              <span className="text-slate-400 block font-medium">CROSS-MATCH STATUS</span>
-              <span className="font-bold text-emerald-700 text-sm">Pre-Screened OK</span>
+              <span className="text-slate-400 block font-medium">{t.requisition.crossMatchLabel}</span>
+              <span className="font-bold text-emerald-700 text-sm">{t.requisition.crossMatchOk}</span>
             </div>
           </div>
 
@@ -87,12 +90,12 @@ export const RequisitionModal: React.FC<RequisitionModalProps> = ({
               </div>
               <div className="text-xs">
                 <span className="font-bold text-slate-900 block">{doctorName}</span>
-                <span className="text-slate-500">BMDC Reg #A-48190 • Biometric Stamped</span>
+                <span className="text-slate-500">{t.requisition.doctorReg}</span>
               </div>
             </div>
             <div className="border border-red-400 rounded px-3 py-1 bg-red-50 text-center transform -rotate-2">
-              <span className="text-[10px] text-red-800 font-extrabold block">DGHS VALIDATED</span>
-              <span className="text-[9px] text-red-600 font-mono">SEAL 24/7 VERIFIED</span>
+              <span className="text-[10px] text-red-800 font-extrabold block">{t.requisition.dghsValidated}</span>
+              <span className="text-[9px] text-red-600 font-mono">{t.requisition.sealVerified}</span>
             </div>
           </div>
         </div>
@@ -100,13 +103,13 @@ export const RequisitionModal: React.FC<RequisitionModalProps> = ({
         <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
           <span className="flex items-center gap-1 text-emerald-700 font-semibold">
             <span className="material-symbols-outlined text-sm">verified_user</span>
-            Cryptographically signed and matched with hospital admissions database
+            {t.requisition.signedNotice}
           </span>
           <button 
             onClick={onClose}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors shadow-sm"
           >
-            Acknowledge & Close
+            {t.requisition.acknowledgeClose}
           </button>
         </div>
       </div>

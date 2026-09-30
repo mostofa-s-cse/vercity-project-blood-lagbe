@@ -1,0 +1,170 @@
+// Blood Lagbe? database schema (PostgreSQL on Supabase).
+// The connection URL lives in prisma.config.ts, not here (Prisma 7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BloodGroup {
+  A_POS  @map("A+")
+  A_NEG  @map("A-")
+  B_POS  @map("B+")
+  B_NEG  @map("B-")
+  AB_POS @map("AB+")
+  AB_NEG @map("AB-")
+  O_POS  @map("O+")
+  O_NEG  @map("O-")
+
+  @@map("blood_group")
+}
+
+/// The life of a blood request. Allowed moves are in src/lib/requestStatus.ts.
+enum RequestStatus {
+  PENDING
+  DONOR_FOUND
+  COMPLETED
+  CANCELLED
+
+  @@map("request_status")
+}
+
+/// One row per signed-in person. `id` is the Supabase Auth user id (auth.users.id).
+model Profile {
+  id          String       @id @db.Uuid
+  email       String?
+  name        String?
+  avatarUrl   String?      @map("avatar_url")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  donors      Donor[]
+  sosRequests SosRequest[]
+
+  @@map("profiles")
+}
+
+model Donor {
+  id                 String     @id @default(cuid())
+  userId             String?    @map("user_id") @db.Uuid
+  user               Profile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name               String
+  phone              String
+  bloodGroup         BloodGroup @map("blood_group")
+  area               String
+  age                Int?
+  gender             String?
+  division           String?
+  email              String?
+  weightKg           Int?       @map("weight_kg")
+  lastDonationMonths Int?       @map("last_donation_months")
+  vehicle            String?
+  nearestHospital    String?    @map("nearest_hospital")
+  isAvailable        Boolean    @default(true) @map("is_available")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  responses RequestResponse[]
+
+  @@index([bloodGroup, area])
+  @@index([isAvailable, createdAt])
+  @@index([userId])
+  @@map("donors")
+}
+
+model SosRequest {
+  id              String            @id @default(cuid())
+  userId          String?           @map("user_id") @db.Uuid
+  user            Profile?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  area            String?
+  problem         String?
+  patientName     String?           @map("patient_name")
+  patientAge      Int?              @map("patient_age")
+  attendantName   String?           @map("attendant_name")
+  bloodGroup      BloodGroup        @map("blood_group")
+  bags            Int               @default(1)
+  place           String
+  phones          String[]
+  isCritical      Boolean           @default(true) @map("is_critical")
+  language        String            @default("bn")
+  postText        String            @map("post_text")
+  status          RequestStatus     @default(PENDING)
+  /// SHA-256 of the manage token given once to whoever made the request; lets a person without an account
+  /// complete or cancel it later. The token itself is never stored.
+  manageTokenHash String?           @map("manage_token_hash")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at")
+  completedAt     DateTime?         @map("completed_at")
+  responses       RequestResponse[]
+
+  @@index([status, createdAt])
+  @@index([isCritical, status, createdAt])
+  @@index([userId])
+  @@map("sos_requests")
+}
+
+/// Someone who said "I can donate" for a request.
+model RequestResponse {
+  id        String     @id @default(cuid())
+  requestId String     @map("request_id")
+  request   SosRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  donorId   String?    @map("donor_id")
+  donor     Donor?     @relation(fields: [donorId], references: [id], onDelete: SetNull)
+  userId    String?    @map("user_id") @db.Uuid
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@unique([requestId, phone])
+  @@index([donorId])
+  @@map("request_responses")
+}
+
+/// A named set of permissions that an admin creates in the admin panel. The permission ids are a fixed
+/// list in code (src/lib/permissions.ts). Built-in roles have a `systemKey` ("admin" or "hospital").
+model Role {
+  id          String      @id @default(cuid())
+  name        String
+  /// Lower-cased `name`, so two roles cannot differ only by capitals.
+  nameKey     String      @unique @map("name_key")
+  description String?
+  permissions String[]
+  systemKey   String?     @unique @map("system_key")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  grants      RoleGrant[]
+
+  @@map("roles")
+}
+
+/// A role an admin gave to an email address. The role's permissions are copied into the person's
+/// Supabase `app_metadata` when they sign in (or right away if they already have), see src/lib/grantService.ts.
+model RoleGrant {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  roleId     String    @map("role_id")
+  role       Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  /// For roles that manage only their own hospital: the id of that hospital (e.g. "ORG-01").
+  hospitalId String?   @map("hospital_id")
+  grantedBy  String?   @map("granted_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  /// Set once the role has been copied into the person's login data.
+  appliedAt  DateTime? @map("applied_at")
+
+  @@index([roleId])
+  @@map("role_grants")
+}
+
+/// Blood units a hospital has told us it holds. Missing rows fall back to the sample data.
+model HospitalStock {
+  hospitalId String     @map("hospital_id")
+  bloodGroup BloodGroup @map("blood_group")
+  units      Int
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+  /// The Supabase user id of whoever last changed it.
+  updatedBy  String?    @map("updated_by")
+
+  @@id([hospitalId, bloodGroup])
+  @@map("hospital_stock")
+}

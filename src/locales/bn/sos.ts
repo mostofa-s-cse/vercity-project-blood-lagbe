@@ -1,0 +1,72 @@
+import type { Sos } from '../en/sos.ts';
+
+const BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+
+/** Writes a number with Bengali digits, e.g. 12 -> '১২'. */
+const toBnDigits = (value: number) => String(value).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]);
+
+export const sos: Sos = {
+  badge: 'জরুরি SOS',
+  title: 'রক্ত চাই',
+  subtitle: 'অল্প কিছু তথ্য দিন। আমরা একটি ছোট পোস্ট বানিয়ে দেব, যা সাথে সাথে শেয়ার করতে পারবেন।',
+  backToHub: 'হাবে ফিরে যান',
+  optional: 'ঐচ্ছিক',
+  area: 'এলাকা',
+  areaPlaceholder: 'যেমন: হবিগঞ্জ',
+  problem: 'রোগীর সমস্যা',
+  problemPlaceholder: 'ওপরের একটিতে চাপুন অথবা এখানে লিখুন',
+  problemChips: {
+    pregnant: 'প্রেগন্যান্ট',
+    accident: 'দুর্ঘটনা',
+    surgery: 'অপারেশন',
+    thalassemia: 'থ্যালাসেমিয়া',
+    cancer: 'ক্যান্সার',
+    other: 'অন্যান্য',
+  },
+  bloodGroup: 'রক্তের গ্রুপ',
+  bags: 'রক্তের পরিমাণ',
+  bagsValue: (bags: number) => `${toBnDigits(bags)} ব্যাগ`,
+  bagsLess: 'এক ব্যাগ কম',
+  bagsMore: 'এক ব্যাগ বেশি',
+  place: 'রক্তদানের স্থান',
+  placePlaceholder: 'হাসপাতালের নাম, যেমন: হবিগঞ্জ সদর হাসপাতাল',
+  phone: 'যোগাযোগের নম্বর',
+  phonePlaceholder: 'যেমন: 01712345678',
+  phone2: 'দ্বিতীয় নম্বর',
+  addPhone: '+ আরেকটি নম্বর যোগ করুন',
+  removePhone: 'বাদ দিন',
+  within1Hour: '১ ঘণ্টার মধ্যে দরকার',
+  errors: {
+    bloodGroup: 'একটি রক্তের গ্রুপ বেছে নিন।',
+    place: 'কোথায় রক্ত লাগবে তা লিখুন।',
+    phone: 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন, যেমন: 01712345678।',
+  },
+  previewTitle: 'আপনার পোস্ট',
+  previewHint: 'শেয়ার করলে মানুষ ঠিক এটিই দেখবে।',
+  missingGroup: '?',
+  submit: 'SOS পোস্ট করুন',
+  submitting: 'সম্প্রচার হচ্ছে...',
+  submitHint: 'পোস্ট করতে রক্তের গ্রুপ, স্থান ও যোগাযোগের নম্বর দিন।',
+  defaultPatient: 'জরুরি রোগী',
+  defaultCondition: 'জরুরি রক্তের প্রয়োজন',
+  demoNote: 'এটি একটি ডেমো অ্যাপ: রক্তদাতাদের কাছে কোনো আসল SMS বা সতর্কবার্তা যায় না।',
+  success: {
+    title: 'আপনার SOS পোস্ট হয়েছে',
+    subtitle: 'এখনই শেয়ার করুন, যাতে আরও বেশি মানুষ দেখে সাহায্য করতে পারে।',
+    copy: 'পোস্ট কপি করুন',
+    copied: 'কপি হয়েছে',
+    whatsapp: 'WhatsApp-এ শেয়ার করুন',
+    facebook: 'Facebook-এ শেয়ার করুন',
+    track: 'এই রিকোয়েস্ট ট্র্যাক করুন',
+    postAnother: 'আরেকটি পোস্ট করুন',
+  },
+  post: {
+    title: (area: string) => (area ? `ইমার্জেন্সি রক্তের প্রয়োজন - ${area}` : 'ইমার্জেন্সি রক্তের প্রয়োজন'),
+    problem: 'রোগীর সমস্যা',
+    bloodGroup: 'রক্তের গ্রুপ',
+    amountLabel: 'রক্তের পরিমাণ',
+    amount: (bags: number) => `${toBnDigits(bags)} ব্যাগ`,
+    place: 'রক্তদানের স্থান',
+    contact: 'যোগাযোগ',
+  },
+};

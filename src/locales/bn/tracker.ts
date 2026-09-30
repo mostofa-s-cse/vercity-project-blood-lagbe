@@ -1,0 +1,33 @@
+import type { Tracker } from '../en/tracker.ts';
+
+export const tracker: Tracker = {
+  liveBadge: 'লাইভ রেসকিউ টেলিমেট্রি',
+  caseLabel: (id: string) => `কেস #${id}`,
+  refLabel: (ref: string) => `• রেফ: ${ref}`,
+  missionElapsed: 'মিশনের অতিবাহিত সময়',
+  inspectSlip: 'স্লিপ দেখুন',
+  handshakeSignOff: 'গ্রহীতার হ্যান্ডশেক সাইন-অফ',
+  protocolProgress: '৫-ধাপের জরুরি প্রোটোকল অগ্রগতি',
+  stages: {
+    s1: { title: 'SOS সম্প্রচার', time: 'সকাল ১০:০৫', desc: '২৪ জন স্থানীয় ডোনারের কাছে পাঠানো হয়েছে' },
+    s2: { title: 'ডোনার গ্রহণ করেছেন', time: 'সকাল ১০:১৪', desc: 'তানভীর আহমেদ নিশ্চিত করেছেন' },
+    s3: { title: 'পথে আছেন', time: 'সকাল ১০:২০', desc: 'বকশীবাজার হয়ে যাচ্ছেন' },
+    s4: { title: 'ল্যাব ক্রস-ম্যাচ', time: 'সকাল ১০:৩২', desc: 'রুম ১০৪-এ সামঞ্জস্যতা পরীক্ষা' },
+    s5: { title: 'হ্যান্ডশেক সম্পন্ন', time: 'OTP অপেক্ষমাণ', desc: 'গ্রহীতার নার্সের কাছে হস্তান্তর' },
+  },
+  gpsTitle: 'লাইভ ডোনার জিপিএস টেলিমেট্রি (ঢাকা সেন্ট্রাল ক্লাস্টার)',
+  simulatedGps: 'সিমুলেটেড জিপিএস লাইভ',
+  destinationPin: 'DMCH ICU (গন্তব্য)',
+  bsmmuPin: 'BSMMU / শাহবাগ',
+  donorPinLabel: 'তানভীর (মোটরসাইকেল) • পৌঁছাতে ৮ মি.',
+  currentSpeed: 'বর্তমান গতি',
+  speedValue: '২২ কিমি/ঘণ্টা',
+  remainingDistance: 'বাকি দূরত্ব',
+  distanceValue: '১.২ কিমি',
+  trafficIndex: 'ট্রাফিক সূচক',
+  trafficValue: 'মাঝারি (চানখারপুল)',
+  assignedDonors: 'নির্ধারিত ডোনার (২ ব্যাগ নিশ্চিত)',
+  etaLine: (mins: number, km: number | string) => `পৌঁছাতে: ${mins} মিনিট (${km} কিমি)`,
+  callDonor: 'ডোনারকে কল করুন',
+  pulseTitle: 'সম্প্রচার পালস ইভেন্ট',
+};

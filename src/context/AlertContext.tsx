@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { sound } from '../utils/audio';
+import { TRANSLATIONS } from '../locales';
 
 export interface CriticalAlertConfig {
   hospital: string;
@@ -60,29 +61,24 @@ const DEFAULT_RADIUS: EmergencyRadiusConfig = {
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [criticalAlert, setCriticalAlert] = useState<CriticalAlertConfig>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('blood_lagbe_critical_alert');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error loading critical alert', e);
-      }
-    }
-    return DEFAULT_ALERT;
-  });
+  const [criticalAlert, setCriticalAlert] = useState<CriticalAlertConfig>(DEFAULT_ALERT);
+  const [emergencyRadius, setEmergencyRadius] = useState<EmergencyRadiusConfig>(DEFAULT_RADIUS);
 
-  const [emergencyRadius, setEmergencyRadius] = useState<EmergencyRadiusConfig>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('blood_lagbe_emergency_radius');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error loading emergency radius', e);
-      }
+  // Load saved config after mount so server and first client render match.
+  useEffect(() => {
+    try {
+      const savedAlert = localStorage.getItem('blood_lagbe_critical_alert');
+      if (savedAlert) setCriticalAlert(JSON.parse(savedAlert));
+    } catch (e) {
+      console.error('Error loading critical alert', e);
     }
-    return DEFAULT_RADIUS;
-  });
+    try {
+      const savedRadius = localStorage.getItem('blood_lagbe_emergency_radius');
+      if (savedRadius) setEmergencyRadius(JSON.parse(savedRadius));
+    } catch (e) {
+      console.error('Error loading emergency radius', e);
+    }
+  }, []);
 
   const updateCriticalAlert = (updates: Partial<CriticalAlertConfig>) => {
     setCriticalAlert(prev => {
@@ -140,26 +136,24 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getActiveAlertText = (lang: 'bn' | 'en'): string => {
     if (!criticalAlert.isActive) {
-      return lang === 'bn' 
-        ? 'বর্তমানে কোনো কোড-রেড জরুরি সতর্কতা জারি নেই • সেন্ট্রাল ব্লাড ব্যাংক সক্রিয়' 
-        : 'No Code-Red alert currently active • Central blood bank active';
+      return TRANSLATIONS[lang].common.alertInactive;
     }
+    const fallback = TRANSLATIONS[lang].common.alertFallback(criticalAlert.hospital, criticalAlert.bed, criticalAlert.bloodGroup, criticalAlert.bags);
     if (lang === 'bn') {
-      return criticalAlert.customMessageBn || `${criticalAlert.hospital}ে (${criticalAlert.bed}) ${criticalAlert.bloodGroup} রক্ত অতি জরুরি • ${criticalAlert.bags} ব্যাগ প্রয়োজন`;
+      return criticalAlert.customMessageBn || fallback;
     }
-    return criticalAlert.customMessageEn || `${criticalAlert.hospital} (${criticalAlert.bed}) ${criticalAlert.bloodGroup} blood urgently required • ${criticalAlert.bags} Bag(s) needed`;
+    return criticalAlert.customMessageEn || fallback;
   };
 
   const getActiveRadiusText = (lang: 'bn' | 'en'): string => {
     if (!emergencyRadius.isActive) {
-      return lang === 'bn' 
-        ? 'সেন্ট্রাল জোনের রেডিয়াস অ্যালার্ট সক্রিয়' 
-        : 'Central zone radius dispatch standby';
+      return TRANSLATIONS[lang].common.radiusInactive;
     }
+    const fallback = TRANSLATIONS[lang].common.radiusFallback(emergencyRadius.zone, emergencyRadius.radiusKm, emergencyRadius.requestCount, emergencyRadius.hospitals);
     if (lang === 'bn') {
-      return emergencyRadius.customTextBn || `${emergencyRadius.zone}ে ${emergencyRadius.radiusKm} কিমি এর মধ্যে ${emergencyRadius.requestCount}টি জরুরি রক্তের রিকোয়েস্ট (${emergencyRadius.hospitals})`;
+      return emergencyRadius.customTextBn || fallback;
     }
-    return emergencyRadius.customTextEn || `${emergencyRadius.requestCount} Urgent blood requests within ${emergencyRadius.radiusKm} km in ${emergencyRadius.zone} (${emergencyRadius.hospitals})`;
+    return emergencyRadius.customTextEn || fallback;
   };
 
   return (

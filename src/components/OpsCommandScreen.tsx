@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { OpsSubTab, ScreenId, EmergencyDemand, FraudIncident } from '../types/blood';
 import { INITIAL_DEMANDS, CHILLER_UNITS, HOSPITAL_STOCKS, FRAUD_INCIDENTS } from '../data/mockData';
 import { sound } from '../utils/audio';
+import { useLanguage } from '../context/LanguageContext';
 
 interface OpsCommandScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -12,6 +13,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
   onNavigate,
   onOpenRequisition,
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<OpsSubTab>('overview');
   const [demands, setDemands] = useState<EmergencyDemand[]>(INITIAL_DEMANDS);
   const [fraudList, setFraudList] = useState<FraudIncident[]>(FRAUD_INCIDENTS);
@@ -24,8 +26,8 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
     );
     setToastMessage(
       action === 'banned'
-        ? `Entity permanently blocked across DGHS SMS gateway & NID flagged.`
-        : `Report flagged as dismissed after verification.`
+        ? t.command.toastEntityBlocked
+        : t.command.toastReportDismissed
     );
     setTimeout(() => setToastMessage(null), 4000);
   };
@@ -35,7 +37,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
     setDemands((prev) =>
       prev.map((d) => (d.id === id ? { ...d, status: d.status === 'active' ? 'in-progress' : 'active' } : d))
     );
-    setToastMessage(`Dispatcher updated status for demand #${id}.`);
+    setToastMessage(t.command.toastDemandStatusUpdated(id));
     setTimeout(() => setToastMessage(null), 3000);
   };
 
@@ -60,39 +62,39 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full bg-red-600/30 text-red-400 text-[10px] font-black uppercase tracking-wider border border-red-500/40">
-                GOVERNMENT OF BANGLADESH • DGHS
+                {t.command.govBadge}
               </span>
               <span className="text-xs text-slate-400 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                Live Command Console (24/7 Transfusion Control)
+                {t.command.liveConsole}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              National Emergency Blood Operations Hub
+              {t.command.title}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-              Centralized telemetry oversight for Bangladesh Directorate General of Health Services, Red Crescent Society, and affiliated government blood banks.
+              {t.command.subtitle}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-center">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Active National SOS</span>
-              <span className="text-xl font-black text-red-500">14 In Progress</span>
+              <span className="text-[10px] text-slate-400 uppercase font-bold block">{t.command.activeNationalSos}</span>
+              <span className="text-xl font-black text-red-500">{t.command.activeNationalSosValue}</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-center">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Donors On Standby</span>
-              <span className="text-xl font-black text-emerald-400">2,480 Active</span>
+              <span className="text-[10px] text-slate-400 uppercase font-bold block">{t.command.donorsOnStandby}</span>
+              <span className="text-xl font-black text-emerald-400">{t.command.donorsOnStandbyValue}</span>
             </div>
             <button
               onClick={() => {
                 sound.playSosSiren();
-                setToastMessage('Red Alert Broadcast sent to standby volunteer coordinators.');
+                setToastMessage(t.command.toastRedAlertSent);
               }}
               className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-red-600/30 transition-all hover:scale-105"
             >
               <span className="material-symbols-outlined text-base">campaign</span>
-              <span>Trigger Red Alert</span>
+              <span>{t.command.triggerRedAlert}</span>
             </button>
           </div>
         </div>
@@ -100,11 +102,11 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
         {/* Tab Navigation Pill Bar */}
         <div className="relative z-10 flex items-center gap-2 overflow-x-auto mt-6 pt-6 border-t border-slate-800/80">
           {[
-            { id: 'overview' as OpsSubTab, label: 'Overview & Matrix', icon: 'grid_view' },
-            { id: 'sos-queue' as OpsSubTab, label: 'Emergency SOS Queue', icon: 'emergency' },
-            { id: 'hospitals-stocks' as OpsSubTab, label: 'Hospitals & Cold-Chain Stocks', icon: 'ac_unit' },
-            { id: 'anti-fraud' as OpsSubTab, label: 'Anti-Fraud & Syndicates', icon: 'security' },
-            { id: 'system-gateways' as OpsSubTab, label: 'Telecom Gateways', icon: 'settings_input_antenna' },
+            { id: 'overview' as OpsSubTab, label: t.command.tabs.overview, icon: 'grid_view' },
+            { id: 'sos-queue' as OpsSubTab, label: t.command.tabs.sosQueue, icon: 'emergency' },
+            { id: 'hospitals-stocks' as OpsSubTab, label: t.command.tabs.hospitalsStocks, icon: 'ac_unit' },
+            { id: 'anti-fraud' as OpsSubTab, label: t.command.tabs.antiFraud, icon: 'security' },
+            { id: 'system-gateways' as OpsSubTab, label: t.command.tabs.systemGateways, icon: 'settings_input_antenna' },
           ].map((tab) => {
             const isSelected = activeTab === tab.id;
             return (
@@ -136,22 +138,22 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-slate-600 block">Avg Response Time</span>
-                  <span className="text-2xl font-black text-slate-900 mt-1 block">18.4 mins</span>
+                  <span className="text-xs font-bold text-slate-600 block">{t.command.avgResponseTime}</span>
+                  <span className="text-2xl font-black text-slate-900 mt-1 block">{t.command.avgResponseTimeValue}</span>
                 </div>
                 <span className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center material-symbols-outlined">
                   speed
                 </span>
               </div>
               <span className="text-[11px] text-emerald-600 font-semibold mt-2 block">
-                ↓ 4.2m faster than 2023 baseline
+                {t.command.avgResponseTimeNote}
               </span>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-slate-600 block">Fulfillment Ratio</span>
+                  <span className="text-xs font-bold text-slate-600 block">{t.command.fulfillmentRatio}</span>
                   <span className="text-2xl font-black text-slate-900 mt-1 block">94.2%</span>
                 </div>
                 <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center material-symbols-outlined">
@@ -159,37 +161,37 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                 </span>
               </div>
               <span className="text-[11px] text-blue-600 font-semibold mt-2 block">
-                1,120 of 1,188 emergency cases
+                {t.command.fulfillmentRatioNote}
               </span>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-slate-600 block">Cold-Chain Alarms</span>
-                  <span className="text-2xl font-black text-amber-600 mt-1 block">1 Active</span>
+                  <span className="text-xs font-bold text-slate-600 block">{t.command.coldChainAlarms}</span>
+                  <span className="text-2xl font-black text-amber-600 mt-1 block">{t.command.coldChainAlarmsValue}</span>
                 </div>
                 <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center material-symbols-outlined">
                   thermostat
                 </span>
               </div>
               <span className="text-[11px] text-amber-600 font-semibold mt-2 block">
-                Kurmitola Unit D-09 (5.7°C - Inspecting)
+                {t.command.coldChainAlarmsNote}
               </span>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-xs font-bold text-slate-600 block">Syndicates Intercepted</span>
-                  <span className="text-2xl font-black text-red-600 mt-1 block">28 Brokers</span>
+                  <span className="text-xs font-bold text-slate-600 block">{t.command.syndicatesIntercepted}</span>
+                  <span className="text-2xl font-black text-red-600 mt-1 block">{t.command.syndicatesInterceptedValue}</span>
                 </div>
                 <span className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center material-symbols-outlined">
                   gavel
                 </span>
               </div>
               <span className="text-[11px] text-red-600 font-semibold mt-2 block">
-                Blacklisted with DGHS & Police 999
+                {t.command.syndicatesInterceptedNote}
               </span>
             </div>
           </div>
@@ -199,21 +201,21 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-red-600 text-base">water_drop</span>
-                National Blood Group Reserves (Dhaka Hubs)
+                {t.command.reservesTitle}
               </h3>
-              <span className="text-xs text-slate-400">Updated 2 mins ago</span>
+              <span className="text-xs text-slate-400">{t.command.updatedAgo}</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               {[
-                { grp: 'A+', bags: 412, status: 'Safe', color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'A-', bags: 64, status: 'Moderate', color: 'text-amber-600 bg-amber-50' },
-                { grp: 'B+', bags: 580, status: 'Optimal', color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'B-', bags: 38, status: 'Low Stock', color: 'text-red-600 bg-red-50' },
-                { grp: 'O+', bags: 840, status: 'Optimal', color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'O-', bags: 12, status: 'CRITICAL', color: 'text-red-700 bg-red-100 font-black ring-1 ring-red-400' },
-                { grp: 'AB+', bags: 290, status: 'Safe', color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'AB-', bags: 18, status: 'CRITICAL', color: 'text-red-700 bg-red-100 font-black ring-1 ring-red-400' },
+                { grp: 'A+', bags: 412, status: t.command.stockStatus.safe, color: 'text-emerald-600 bg-emerald-50' },
+                { grp: 'A-', bags: 64, status: t.command.stockStatus.moderate, color: 'text-amber-600 bg-amber-50' },
+                { grp: 'B+', bags: 580, status: t.command.stockStatus.optimal, color: 'text-emerald-600 bg-emerald-50' },
+                { grp: 'B-', bags: 38, status: t.command.stockStatus.low, color: 'text-red-600 bg-red-50' },
+                { grp: 'O+', bags: 840, status: t.command.stockStatus.optimal, color: 'text-emerald-600 bg-emerald-50' },
+                { grp: 'O-', bags: 12, status: t.command.stockStatus.critical, color: 'text-red-700 bg-red-100 font-black ring-1 ring-red-400' },
+                { grp: 'AB+', bags: 290, status: t.command.stockStatus.safe, color: 'text-emerald-600 bg-emerald-50' },
+                { grp: 'AB-', bags: 18, status: t.command.stockStatus.critical, color: 'text-red-700 bg-red-100 font-black ring-1 ring-red-400' },
               ].map((item) => (
                 <div
                   key={item.grp}
@@ -236,9 +238,9 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col gap-4 animate-in fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Live Hospital SOS Dispatch Queue</h3>
+              <h3 className="text-sm font-bold text-slate-900">{t.command.sosQueueTitle}</h3>
               <p className="text-xs text-slate-500">
-                Direct triage and verification for hospital ICU and surgical wards.
+                {t.command.sosQueueDesc}
               </p>
             </div>
             <button
@@ -246,7 +248,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
             >
               <span className="material-symbols-outlined text-sm">add</span>
-              <span>Manual SOS Intake</span>
+              <span>{t.command.manualSosIntake}</span>
             </button>
           </div>
 
@@ -254,13 +256,13 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-3">Case ID</th>
-                  <th className="py-3 px-3">Patient & Condition</th>
-                  <th className="py-3 px-3">Blood Group</th>
-                  <th className="py-3 px-3">Hospital & Ward</th>
-                  <th className="py-3 px-3">Urgency</th>
-                  <th className="py-3 px-3">Slip Status</th>
-                  <th className="py-3 px-3 text-right">Actions</th>
+                  <th className="py-3 px-3">{t.command.colCaseId}</th>
+                  <th className="py-3 px-3">{t.command.colPatient}</th>
+                  <th className="py-3 px-3">{t.command.colBloodGroup}</th>
+                  <th className="py-3 px-3">{t.command.colHospital}</th>
+                  <th className="py-3 px-3">{t.command.colUrgency}</th>
+                  <th className="py-3 px-3">{t.command.colSlipStatus}</th>
+                  <th className="py-3 px-3 text-right">{t.command.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -273,7 +275,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                     </td>
                     <td className="py-3.5 px-3">
                       <span className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 font-black text-xs">
-                        {demand.bloodGroup} ({demand.bagsRequired} Bags)
+                        {demand.bloodGroup} ({t.command.bags(demand.bagsRequired)})
                       </span>
                     </td>
                     <td className="py-3.5 px-3">
@@ -291,7 +293,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                         className="text-red-600 hover:underline font-semibold flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-sm">visibility</span>
-                        <span>Inspect</span>
+                        <span>{t.command.inspect}</span>
                       </button>
                     </td>
                     <td className="py-3.5 px-3 text-right">
@@ -300,13 +302,13 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                           onClick={() => handleToggleDemandStatus(demand.id)}
                           className="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 text-[11px] font-semibold"
                         >
-                          {demand.status === 'active' ? 'Mark Dispatched' : 'Active'}
+                          {demand.status === 'active' ? t.command.markDispatched : t.command.active}
                         </button>
                         <button
                           onClick={() => onNavigate('live-tracker')}
                           className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[11px] font-bold hover:bg-red-700"
                         >
-                          Telemetry
+                          {t.command.telemetry}
                         </button>
                       </div>
                     </td>
@@ -325,7 +327,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-red-600 text-base">ac_unit</span>
-              IoT Cold-Chain Storage Vaults (Target: +2°C to +6°C)
+              {t.command.vaultsTitle}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -358,7 +360,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                         {unit.tempCelsius}°C
                       </span>
                       <span className="text-xs text-slate-500 font-semibold">
-                        {unit.volumePct}% Filled ({unit.capacityBags} Max)
+                        {t.command.filled(unit.volumePct, unit.capacityBags)}
                       </span>
                     </div>
 
@@ -378,7 +380,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-red-600 text-base">local_hospital</span>
-              Hospital Blood Bank Stocks & Triage Leads
+              {t.command.hospitalStocksTitle}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -398,20 +400,20 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
 
                     <div className="grid grid-cols-2 gap-2 my-3 text-xs bg-white p-2.5 rounded-xl border border-slate-100">
                       <div>
-                        <span className="text-[10px] text-slate-400 block">Total Bags Stock</span>
-                        <strong className="text-slate-800 font-black">{hosp.totalBags} Units</strong>
+                        <span className="text-[10px] text-slate-400 block">{t.command.totalBagsStock}</span>
+                        <strong className="text-slate-800 font-black">{t.command.units(hosp.totalBags)}</strong>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-400 block">Critical Beds</span>
-                        <strong className="text-slate-800 font-black">{hosp.criticalBeds} Beds</strong>
+                        <span className="text-[10px] text-slate-400 block">{t.command.criticalBeds}</span>
+                        <strong className="text-slate-800 font-black">{t.command.beds(hosp.criticalBeds)}</strong>
                       </div>
                     </div>
 
                     <p className="text-[11px] text-slate-600">
-                      <strong>Triage Lead:</strong> {hosp.triageLead}
+                      <strong>{t.command.triageLead}</strong> {hosp.triageLead}
                     </p>
                     <p className="text-[11px] text-slate-600">
-                      <strong>Stock Health:</strong> {hosp.stockStatus}
+                      <strong>{t.command.stockHealth}</strong> {hosp.stockStatus}
                     </p>
                   </div>
 
@@ -421,7 +423,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                     className="mt-3 py-1.5 text-center rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 transition-colors flex items-center justify-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">call</span>
-                    <span>Direct Hotline: {hosp.hotline}</span>
+                    <span>{t.command.directHotline(hosp.hotline)}</span>
                   </a>
                 </div>
               ))}
@@ -437,14 +439,14 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <span className="material-symbols-outlined text-red-600">shield_person</span>
-                Syndicate Interception & Blacklist Enforcement
+                {t.command.fraudTitle}
               </h3>
               <p className="text-xs text-slate-500">
-                Automated detection of extortionists, fraudulent medical requisitions, and fake donor calls.
+                {t.command.fraudDesc}
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-              AI Heuristics Active (99.2% Accuracy)
+              {t.command.aiHeuristics}
             </span>
           </div>
 
@@ -457,7 +459,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="px-2 py-0.5 rounded bg-red-600 text-white font-black text-[10px]">
-                      {inc.severity} SEVERITY
+                      {t.command.severity(inc.severity)}
                     </span>
                     <strong className="text-xs text-slate-900">{inc.type}</strong>
                     <span className="text-[11px] text-slate-400 font-mono">• {inc.reportedAgo}</span>
@@ -466,9 +468,9 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                   <p className="text-xs text-slate-800 mt-1 leading-relaxed">{inc.description}</p>
 
                   <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 mt-2 font-mono">
-                    <span>Target: {inc.targetEntity}</span>
-                    <span>Carrier: {inc.carrierInfo}</span>
-                    <span>Location: {inc.location}</span>
+                    <span>{t.command.target(inc.targetEntity)}</span>
+                    <span>{t.command.carrier(inc.carrierInfo)}</span>
+                    <span>{t.command.location(inc.location)}</span>
                   </div>
                 </div>
 
@@ -480,18 +482,18 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                         className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm"
                       >
                         <span className="material-symbols-outlined text-sm">block</span>
-                        <span>Permanent Blacklist</span>
+                        <span>{t.command.permanentBlacklist}</span>
                       </button>
                       <button
                         onClick={() => handleResolveFraud(inc.id, 'dismissed')}
                         className="px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50"
                       >
-                        Dismiss
+                        {t.command.dismiss}
                       </button>
                     </>
                   ) : (
                     <span className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold uppercase">
-                      Action Taken ({inc.status})
+                      {t.command.actionTaken(inc.status === 'banned' ? t.command.fraudStatus.banned : inc.status === 'dismissed' ? t.command.fraudStatus.dismissed : inc.status)}
                     </span>
                   )}
                 </div>
@@ -506,10 +508,10 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col gap-6 animate-in fade-in">
           <div>
             <h3 className="text-sm font-bold text-slate-900">
-              Telecom Carriers & Automated Dispatch Gateways
+              {t.command.gatewaysTitle}
             </h3>
             <p className="text-xs text-slate-500">
-              High-throughput SMS aggregation, DGHS API endpoints, and Emergency 999 link status.
+              {t.command.gatewaysDesc}
             </p>
           </div>
 
@@ -517,29 +519,29 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             {[
               {
                 carrier: 'Grameenphone (GP)',
-                tps: '450 SMS/sec',
-                latency: '42 ms',
+                tps: t.command.smsPerSec(450),
+                latency: t.command.latencyMs(42),
                 success: '99.8%',
                 status: 'HEALTHY',
               },
               {
                 carrier: 'Robi Axiata',
-                tps: '380 SMS/sec',
-                latency: '48 ms',
+                tps: t.command.smsPerSec(380),
+                latency: t.command.latencyMs(48),
                 success: '99.7%',
                 status: 'HEALTHY',
               },
               {
                 carrier: 'Banglalink (VEON)',
-                tps: '320 SMS/sec',
-                latency: '39 ms',
+                tps: t.command.smsPerSec(320),
+                latency: t.command.latencyMs(39),
                 success: '99.9%',
                 status: 'HEALTHY',
               },
               {
                 carrier: 'Teletalk Bangladesh',
-                tps: '150 SMS/sec',
-                latency: '82 ms',
+                tps: t.command.smsPerSec(150),
+                latency: t.command.latencyMs(82),
                 success: '98.9%',
                 status: 'HEALTHY',
               },
@@ -551,15 +553,15 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                 </div>
                 <div className="my-2 space-y-1 text-xs text-slate-600">
                   <div className="flex justify-between">
-                    <span>Throughput:</span>
+                    <span>{t.command.throughput}</span>
                     <strong className="text-slate-800">{gw.tps}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span>API Latency:</span>
+                    <span>{t.command.apiLatency}</span>
                     <strong className="text-slate-800">{gw.latency}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span>Delivery Rate:</span>
+                    <span>{t.command.deliveryRate}</span>
                     <strong className="text-emerald-600">{gw.success}</strong>
                   </div>
                 </div>
@@ -573,12 +575,12 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                 999
               </span>
               <div>
-                <h4 className="font-bold text-xs text-white">National Emergency Service 999 API</h4>
-                <p className="text-[11px] text-slate-400">Direct integration for trauma police & fire service escorts.</p>
+                <h4 className="font-bold text-xs text-white">{t.command.emergency999Title}</h4>
+                <p className="text-[11px] text-slate-400">{t.command.emergency999Desc}</p>
               </div>
             </div>
             <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30">
-              Synchronized 100%
+              {t.command.synchronized}
             </span>
           </div>
         </div>
