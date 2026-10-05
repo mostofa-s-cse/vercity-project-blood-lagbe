@@ -6,7 +6,6 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { NotificationsModal } from './NotificationsModal';
 import { RequisitionModal } from './RequisitionModal';
-import { OtpVerificationModal } from './OtpVerificationModal';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const app = useAppState();
@@ -77,15 +76,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {notificationsModal}
       {requisitionModal}
-
-      <OtpVerificationModal
-        isOpen={app.otpModal.isOpen}
-        onClose={app.closeOtpModal}
-        expectedOtp={app.otpModal.mission?.otpCode || '4921'}
-        donorName={app.otpModal.mission?.donors[0]?.name || 'Tanvir Ahmed'}
-        patientName={app.otpModal.mission?.patientName || 'Nahidul Islam'}
-        onSuccess={app.handleOtpSuccess}
-      />
     </div>
   );
 }

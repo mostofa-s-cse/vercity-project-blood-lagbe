@@ -8,7 +8,6 @@ import { sampleRequests } from '../data/sample';
 import { isValidBdPhone } from '../utils/phone';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
-import { useAlert } from '../context/AlertContext';
 
 interface EmergencyHubProps {
   onNavigate: (screen: ScreenId) => void;
@@ -84,12 +83,9 @@ function ExtraRequestsPage({
 }
 
 export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
-  const { language, t } = useLanguage();
-  const { getActiveRadiusText } = useAlert();
-  const activeRadiusMessage = getActiveRadiusText(language);
+  const { t } = useLanguage();
   const [selectedBlood, setSelectedBlood] = useState<BloodGroup | 'ALL'>('ALL');
   const [emergencyOnly, setEmergencyOnly] = useState(false);
-  const [isAvailableOnDuty, setIsAvailableOnDuty] = useState<boolean>(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -163,13 +159,6 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
       COMPLETED: t.hub.statusCompleted,
       CANCELLED: t.hub.statusCancelled,
     })[request.status] ?? t.hub.statusPending;
-
-  const handleToggleAvailability = () => {
-    const nextState = !isAvailableOnDuty;
-    setIsAvailableOnDuty(nextState);
-    sound.playTap();
-    showToast(nextState ? t.hub.toastBeaconActive : t.hub.toastBeaconPaused);
-  };
 
   const handleShare = (request: RequestDto) => {
     sound.playTap();
@@ -383,16 +372,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
     );
   };
 
-  const bloodChips: Array<{ group: BloodGroup; count: string }> = [
-    { group: 'O+', count: t.hub.availableCount(38) },
-    { group: 'B+', count: t.hub.availableCount(52) },
-    { group: 'A+', count: t.hub.availableCount(27) },
-    { group: 'AB+', count: t.hub.availableCount(12) },
-    { group: 'O-', count: t.hub.criticalCount(8) },
-    { group: 'B-', count: t.hub.availableCount(6) },
-    { group: 'A-', count: t.hub.availableCount(4) },
-    { group: 'AB-', count: t.hub.availableCount(2) },
-  ];
+  const bloodGroups: BloodGroup[] = ['O+', 'B+', 'A+', 'AB+', 'O-', 'B-', 'A-', 'AB-'];
 
   const selectBlood = (group: BloodGroup | 'ALL') => {
     setSelectedBlood(group);
@@ -412,271 +392,60 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* Critical Radius Ticker Strip */}
-      <div className="w-full bg-red-600 text-white px-3 md:px-8 py-2.5 shadow-sm overflow-hidden">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 md:gap-4">
-          {/* Static Radar Badge */}
-          <div className="flex items-center gap-2 text-xs md:text-sm font-semibold shrink-0">
-            <span className="flex h-2.5 w-2.5 relative shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-            </span>
-            <span className="font-extrabold uppercase tracking-wider flex items-center gap-1 shrink-0 text-xs md:text-sm bg-red-700/80 px-2 py-0.5 rounded shadow-xs">
-              <span className="material-symbols-outlined text-base animate-spin text-amber-300" style={{ animationDuration: '4s' }}>radar</span>
-              {t.hub.criticalRadius}
-            </span>
-          </div>
-
-          {/* Continuous Sliding / Marquee Ticker */}
-          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={activeRadiusMessage}>
-            <div className="animate-marquee-infinite flex items-center shrink-0">
-              {/* Set 1 */}
-              <div className="flex items-center gap-6 px-3 shrink-0">
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">local_hospital</span>
-                  <span>{activeRadiusMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">near_me</span>
-                  <span>{activeRadiusMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-              </div>
-              {/* Set 2 (Identical for seamless infinite continuous loop) */}
-              <div className="flex items-center gap-6 px-3 shrink-0" aria-hidden="true">
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">local_hospital</span>
-                  <span>{activeRadiusMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">near_me</span>
-                  <span>{activeRadiusMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right GPS & Sync Badge */}
-          <div className="flex items-center gap-2 md:gap-3 text-xs opacity-90 shrink-0">
-            <span className="bg-white/20 px-2 py-0.5 rounded-full font-bold text-[11px] md:text-xs">
-              {t.hub.liveGpsActive}
-            </span>
-            <span className="hidden lg:inline-flex items-center gap-1 font-mono text-[11px]">
-              <span className="material-symbols-outlined text-sm">schedule</span>
-              {t.hub.autoRefreshed}
-            </span>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 md:px-8 w-full py-6 flex flex-col gap-6">
-        {/* Dual Action Hero Cards */}
-        <div className="grid grid-cols-12 gap-6 items-stretch">
-          {/* Left Card: Emergency SOS Broadcast */}
-          <div className="col-span-12 lg:col-span-7 rounded-2xl bg-gradient-to-br from-red-600 via-red-700 to-rose-900 p-6 md:p-8 text-white shadow-xl flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
-            <div className="absolute -left-12 -bottom-12 w-48 h-48 rounded-full bg-black/20 blur-xl pointer-events-none"></div>
+        {/* Emergency SOS Broadcast */}
+        <div className="rounded-2xl bg-gradient-to-br from-red-600 via-red-700 to-rose-900 p-6 md:p-8 text-white shadow-xl flex flex-col gap-4 relative overflow-hidden">
+          <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
 
-            <div className="relative z-10 flex flex-col gap-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider">
-                  <span className="material-symbols-outlined text-sm">emergency_home</span>
-                  {t.hub.sosRelayBadge}
-                </span>
-                <span className="flex items-center gap-1.5 text-xs text-white/90 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                  {t.hub.donorsOnCall}
-                </span>
-              </div>
-
-              <div className="mt-2">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                  {t.hub.needBloodTitle}
-                </h1>
-                <p className="text-sm md:text-base text-white/90 max-w-xl mt-2 leading-relaxed">
-                  {t.hub.needBloodDesc}
-                </p>
-              </div>
-            </div>
-
-            <div className="relative z-10 pt-6 mt-4 flex flex-wrap items-center gap-4">
-              <button
-                onClick={() => {
-                  sound.playEmergencyChime();
-                  onNavigate('create-sos');
-                }}
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-red-600 font-extrabold text-sm md:text-base shadow-lg hover:bg-slate-50 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-xl">campaign</span>
-                <span>{t.hub.broadcastSosBtn} →</span>
-              </button>
-              <div className="flex items-center gap-1 text-white/90 text-xs font-semibold">
-                <span className="material-symbols-outlined text-emerald-400 text-lg">verified_user</span>
-                <span>{t.hub.hospitalVerifiedDispatch}</span>
-              </div>
-            </div>
+          <div className="relative z-10">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
+              {t.hub.needBloodTitle}
+            </h1>
+            <p className="text-sm md:text-base text-white/90 max-w-xl mt-2 leading-relaxed">{t.hub.needBloodDesc}</p>
           </div>
 
-          {/* Right Card: Active Donor Status (Tanvir Ahmed) */}
-          <div className="col-span-12 lg:col-span-5 rounded-2xl bg-white p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col justify-between">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <img
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI"
-                      alt={t.hub.donorName}
-                      className="w-14 h-14 rounded-full object-cover shadow-sm ring-2 ring-slate-100"
-                    />
-                    <span
-                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-white ${
-                        isAvailableOnDuty ? 'bg-emerald-500' : 'bg-slate-400'
-                      }`}
-                    ></span>
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-900 text-base">{t.hub.donorName}</span>
-                      <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
-                        {t.hub.heroBadge}
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-500 mt-0.5">{t.hub.donorMeta}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-600 text-white font-extrabold text-xl shadow-md">
-                  O+
-                </div>
-              </div>
-
-              {/* Eligibility & Readiness */}
-              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">{t.hub.eligibility}</span>
-                  <span className="font-bold text-emerald-700 text-sm flex items-center gap-1 mt-0.5">
-                    <span className="material-symbols-outlined text-base">check_circle</span> {t.hub.cleared}
-                  </span>
-                  <span className="text-[11px] text-slate-500">{t.hub.lastGave}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">{t.hub.readiness}</span>
-                  <span className="font-bold text-slate-900 text-sm mt-0.5">{t.hub.immediate}</span>
-                  <span className="text-[11px] text-emerald-700 font-medium">{t.hub.readyWholeBlood}</span>
-                </div>
-              </div>
-
-              {/* Fast Live Toggle Box */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-100/80 border border-slate-200">
-                <div className="flex flex-col max-w-[240px]">
-                  <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    {t.hub.volunteerTitle}
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isAvailableOnDuty ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
-                      }`}
-                    ></span>
-                  </span>
-                  <span className="text-[11px] text-slate-600 leading-tight mt-0.5">
-                    {t.hub.volunteerDesc}
-                  </span>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isAvailableOnDuty}
-                    onChange={handleToggleAvailability}
-                    className="sr-only peer"
-                  />
-                  <div className="w-12 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                </label>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span className="flex items-center gap-1 text-slate-600">
-                <span className="material-symbols-outlined text-sm text-emerald-600">shield</span>
-                {t.hub.privacyProtected}
-              </span>
-              <button
-                onClick={() => onNavigate('donor-passport')}
-                className="text-red-600 hover:text-red-700 font-bold transition-colors cursor-pointer"
-              >
-                {t.hub.viewDonorPassport}
-              </button>
-            </div>
+          <div className="relative z-10 pt-2">
+            <button
+              onClick={() => {
+                sound.playEmergencyChime();
+                onNavigate('create-sos');
+              }}
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-red-600 font-extrabold text-sm md:text-base shadow-lg hover:bg-slate-50 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xl">campaign</span>
+              <span>{t.hub.broadcastSosBtn} →</span>
+            </button>
           </div>
         </div>
 
-        {/* Quick Compatibility ABO/Rh Filter Bar */}
+        {/* Blood Group Filter */}
         <div className="flex flex-col gap-3 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-red-600 text-xl">bloodtype</span>
-              <h2 className="font-bold text-base text-slate-900">{t.hub.bloodCompatibilityTitle}</h2>
-              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full hidden md:inline">
-                {t.hub.selectBloodGroupHint}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-              <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-600"></span>
-              <span>{t.hub.criticalShortageLegend}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 pt-1">
-            {/* ALL */}
+          <h2 className="font-bold text-sm text-slate-900">{t.hub.filterByBloodGroup}</h2>
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
             <button
               onClick={() => selectBlood('ALL')}
               aria-pressed={selectedBlood === 'ALL'}
-              className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+              className={`py-2.5 px-1 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                 selectedBlood === 'ALL'
                   ? 'bg-slate-900 text-white shadow-md'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-800'
               }`}
             >
-              <span>{t.hub.filterAll}</span>
-              <span className={`text-[10px] font-normal ${selectedBlood === 'ALL' ? 'text-slate-300' : 'text-slate-500'}`}>
-                {t.hub.onlineCount(178)}
-              </span>
+              {t.hub.filterAll}
             </button>
 
-            {bloodChips.map(({ group, count }) => {
+            {bloodGroups.map((group) => {
               const active = selectedBlood === group;
-              if (group === 'O-') {
-                // O- is marked as a critical shortage.
-                return (
-                  <button
-                    key={group}
-                    onClick={() => selectBlood(group)}
-                    aria-pressed={active}
-                    className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl font-bold text-sm transition-all cursor-pointer relative ${
-                      active
-                        ? 'bg-red-700 text-white ring-2 ring-red-400 shadow-md'
-                        : 'bg-rose-50 hover:bg-rose-100 text-red-700 border border-red-200'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1">
-                      {group}
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
-                    </span>
-                    <span className="text-[10px] font-extrabold uppercase">{count}</span>
-                  </button>
-                );
-              }
               return (
                 <button
                   key={group}
                   onClick={() => selectBlood(group)}
                   aria-pressed={active}
-                  className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                  className={`py-2.5 px-1 rounded-xl font-bold text-sm transition-all cursor-pointer ${
                     active ? 'bg-red-600 text-white shadow-md' : 'bg-slate-50 hover:bg-slate-100 text-slate-800'
                   }`}
                 >
-                  <span className={active ? 'text-white' : 'text-red-600'}>{group}</span>
-                  <span className={`text-[10px] font-normal ${active ? 'text-white/80' : 'text-slate-500'}`}>{count}</span>
+                  {group}
                 </button>
               );
             })}
@@ -782,150 +551,10 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
                 </button>
               </div>
             )}
-
-            {/* View Other Demands Button */}
-            <div className="text-center pt-2">
-              <button
-                onClick={() => onNavigate('live-tracker')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-800 hover:bg-slate-200 font-bold text-xs md:text-sm transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-lg">format_list_bulleted</span>
-                <span>{t.hub.viewAllRequests}</span>
-              </button>
-            </div>
           </div>
 
-          {/* RIGHT 4 COLUMNS: Stats, Realtime Handshakes & Hospital Hotlines */}
+          {/* RIGHT 4 COLUMNS: Hospital Hotlines */}
           <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
-            {/* Community Impact Stats Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-red-600">insights</span>
-                  {t.hub.impactTitle}
-                </span>
-                <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
-                  {t.hub.verified247}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2.5">
-                {/* Metric 1 */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-xl">favorite</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.hub.livesSaved}</span>
-                      <span className="text-xs text-slate-600">{t.hub.throughAppAlerts}</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-lg font-black text-slate-900">4,820+</span>
-                </div>
-
-                {/* Metric 2 */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-xl">group</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.hub.activeDonors}</span>
-                      <span className="text-xs text-slate-600">{t.hub.availableOnCall}</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-lg font-black text-emerald-700">12,450</span>
-                </div>
-
-                {/* Metric 3 */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-xl">speed</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold">{t.hub.avgResponse}</span>
-                      <span className="text-xs text-slate-600">{t.hub.sosToMatch}</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-lg font-black text-red-600">{t.hub.avgResponseValue}</span>
-                </div>
-              </div>
-
-              {/* Sparkline Chart SVG */}
-              <div className="pt-1 flex flex-col gap-1">
-                <div className="flex justify-between items-center text-xs text-slate-500">
-                  <span>{t.hub.hourlyRequests}</span>
-                  <span className="text-red-600 font-bold">{t.hub.vsYesterday}</span>
-                </div>
-                <div className="h-16 w-full flex items-end pt-2">
-                  <svg className="w-full h-full text-red-600" preserveAspectRatio="none" viewBox="0 0 300 60">
-                    <defs>
-                      <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="currentColor" stopOpacity="0.3"></stop>
-                        <stop offset="100%" stopColor="currentColor" stopOpacity="0.0"></stop>
-                      </linearGradient>
-                    </defs>
-                    <path d="M0,45 Q30,48 60,32 T120,20 T180,35 T240,15 T300,8 L300,60 L0,60 Z" fill="url(#chartGradient)"></path>
-                    <path d="M0,45 Q30,48 60,32 T120,20 T180,35 T240,15 T300,8" fill="none" stroke="currentColor" strokeWidth="2.5"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Live Donation Handshakes Ticker */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-emerald-600">handshake</span>
-                  {t.hub.liveHandshakes}
-                </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    O+
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <p className="text-xs text-slate-900 font-bold truncate">{t.hub.handshake1}</p>
-                    <span className="text-[11px] text-slate-500 flex items-center gap-0.5">
-                      <span className="material-symbols-outlined text-xs text-slate-400">location_on</span>
-                      {t.hub.handshake1Meta}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    A+
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <p className="text-xs text-slate-900 font-bold truncate">{t.hub.handshake2}</p>
-                    <span className="text-[11px] text-slate-500 flex items-center gap-0.5">
-                      <span className="material-symbols-outlined text-xs text-slate-400">location_on</span>
-                      {t.hub.handshake2Meta}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-rose-600 text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
-                    B+
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <p className="text-xs text-slate-900 font-bold truncate">{t.hub.handshake3}</p>
-                    <span className="text-[11px] text-slate-500 flex items-center gap-0.5">
-                      <span className="material-symbols-outlined text-xs text-slate-400">location_on</span>
-                      {t.hub.handshake3Meta}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* 24/7 Verified Blood Banks Hotlines */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 flex flex-col gap-3">
               <div className="flex items-center gap-2">

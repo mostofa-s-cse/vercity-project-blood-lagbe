@@ -6,11 +6,11 @@ export const gettingStarted: DocSection = {
     'Blood Lagbe? helps people in Bangladesh find blood fast in an emergency by connecting families, voluntary donors and hospitals in one place. This page explains who the app is for and where to begin.',
   steps: {
     s1: 'Open the app. It starts on the Emergency Hub, which shows urgent blood requests near you and a big button to send an SOS.',
-    s2: 'If your family needs blood, use Create SOS Request to post the request, then follow it on Track Requests and Live Tracker.',
+    s2: 'If your family needs blood, use Create SOS Request to post the request, then follow it on Track Requests.',
     s3: 'If you want to give blood, use Register as Donor to create your donor profile, find people to help on the Emergency Hub, and see your record on Donor Passport.',
     s4: 'If you work at a hospital or run the service, use Hospitals & Blood Banks and the Admin Panel to see blood stock, requests and alerts. Who can open the Admin Panel and the National Emergency Blood Operations Hub (Ops Command) depends on the permissions in their role. Hospital staff get a role too: someone who manages roles gives your Google email a role such as Hospital staff, and after you sign in with Google you can manage your hospital\'s blood stock.',
     s5: 'Choose your language. The language is part of the web address (/bn/... for Bengali, /en/... for English). Press the language button in the top bar (it shows বাংলা or English) to switch the same page to the other language.',
-    s6: 'Explore in this order for the full picture: Emergency Hub, Create SOS Request, Track Requests, Live Tracker, Donor Directory, Register as Donor, Donor Passport, Hospitals & Blood Banks, Admin Panel, then Pitch Deck.',
+    s6: 'Explore in this order for the full picture: Emergency Hub, Create SOS Request, Track Requests, Donor Directory, Register as Donor, Donor Passport, Hospitals & Blood Banks, then the Admin Panel.',
     s7: 'Come back to this User Guide any time from the navigation tabs or the footer.',
   },
   tips: {

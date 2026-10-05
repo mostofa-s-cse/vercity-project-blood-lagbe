@@ -1,4 +1,4 @@
-import { EmergencyDemand, Donor, ActiveMission, ChillerUnit, HospitalStock, FraudIncident, BloodRequest, HospitalOrganization, DonationCamp, DonorNotification, DonationRecord } from '../types/blood';
+import { EmergencyDemand, Donor, ChillerUnit, HospitalStock, FraudIncident, BloodRequest, HospitalOrganization, DonationCamp, DonorNotification, DonationRecord } from '../types/blood';
 
 export const INITIAL_DEMANDS: EmergencyDemand[] = [
   {
@@ -246,68 +246,6 @@ export const INITIAL_DONORS: Donor[] = [
     avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBePRb3bIO_KXBCKEdN7FILsLgb_kEUzH668kAolnL-tv7vuHNI7cKW6RGk5QwBYKxBeakczC519yzEBPEesDh7v6saqUMYD42s7SpS1pRynJ7sn25QyIU0wfeDmQ2bWQkh4NGVH9_JV6b5b4YEk1psS0wrvHQ84s0O3DpJAzDhkO2rGeD_nq4H9D7y1ywpY7uAAKljyYpyKyjpFVJjS0f-eh50DVOX2lopQv2aVu0zqQAVSMEmp5Ta'
   }
 ];
-
-export const ACTIVE_MISSION_DEFAULT: ActiveMission = {
-  id: 'REQ-8942',
-  referenceNo: 'DMCH-ICU-1049',
-  patientName: 'Nahidul Islam',
-  bloodGroup: 'O+',
-  bagsNeeded: 2,
-  hospital: 'Dhaka Medical College Hospital (DMCH)',
-  bedRoom: 'Emergency Room • Bed 14A',
-  urgency: 'HIGH URGENCY - CRITICAL',
-  elapsedSeconds: 34 * 60 + 16,
-  stage: 2, // 1: Broadcasted, 2: Accepted, 3: Cross-Match, 4: Handover, 5: Handshake
-  otpCode: '4921',
-  donors: [
-    {
-      id: 'DON-01',
-      name: 'Tanvir Ahmed',
-      bloodGroup: 'O+',
-      bagLabel: 'O+ (Bag 1)',
-      status: 'En Route',
-      distanceKm: 1.2,
-      etaMinutes: 8,
-      vehicle: 'Motorcycle • Speed 22 km/h via Bakshibazar',
-      phone: '+880 1712-489021',
-      avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI'
-    },
-    {
-      id: 'DON-07',
-      name: 'Kamrul Ahsan',
-      bloodGroup: 'O+',
-      bagLabel: 'O+ (Bag 2)',
-      status: 'In Lab Cross-Match',
-      distanceKm: 0.1,
-      etaMinutes: 12,
-      vehicle: 'On-site Volunteer (Room 104 • Central Blood Bank)',
-      phone: '+880 1819-334455',
-      avatarUrl: ''
-    }
-  ],
-  broadcastPulse: [
-    {
-      time: '10:14 AM',
-      message: 'Hospital verified medical slip authenticity approved by Dr. Farhana (DMCH Admin). Priority Level 1 assigned.',
-      type: 'verified'
-    },
-    {
-      time: '10:22 AM',
-      message: '3 nearby donors in Dhanmondi / Bakshibazar cluster (Radius 2.4 km) opened urgent case details.',
-      type: 'viewed'
-    },
-    {
-      time: '10:05 AM',
-      message: 'Automated SMS dispatcher queued to 24 registered volunteers within Dhaka South zone.',
-      type: 'sms'
-    },
-    {
-      time: '09:58 AM',
-      message: 'Initial SOS broadcast initiated from DMCH ICU Terminal Bed 14A.',
-      type: 'created'
-    }
-  ]
-};
 
 export const CHILLER_UNITS: ChillerUnit[] = [
   {

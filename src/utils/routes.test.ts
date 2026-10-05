@@ -15,8 +15,8 @@ import {
 
 test('SCREEN_PATHS covers every screen with a unique path', () => {
   const paths = Object.values(SCREEN_PATHS);
-  assert.equal(paths.length, 12);
-  assert.equal(new Set(paths).size, 12);
+  assert.equal(paths.length, 10);
+  assert.equal(new Set(paths).size, 10);
   assert.equal(SCREEN_PATHS['emergency-hub'], '/');
   assert.equal(SCREEN_PATHS['admin-panel'], '/admin');
   assert.equal(SCREEN_PATHS['user-docs'], '/docs');
@@ -50,8 +50,6 @@ test('resolveLegacyRedirect maps every old alias from root', () => {
     'request-tracking': '/tracking',
     register: '/register',
     'donor-register': '/register',
-    tracker: '/tracker',
-    'live-tracker': '/tracker',
     hospitals: '/hospitals',
     orgs: '/hospitals',
     'hospital-org': '/hospitals',
@@ -59,9 +57,6 @@ test('resolveLegacyRedirect maps every old alias from root', () => {
     'donor-passport': '/passport',
     command: '/command',
     'ops-command': '/command',
-    deck: '/deck',
-    proposal: '/deck',
-    'pitch-deck': '/deck',
     emergency: '/',
     'emergency-hub': '/',
     docs: '/docs',

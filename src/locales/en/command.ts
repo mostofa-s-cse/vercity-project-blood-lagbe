@@ -59,7 +59,6 @@ export const command = {
   inspect: 'Inspect',
   markDispatched: 'Mark Dispatched',
   active: 'Active',
-  telemetry: 'Telemetry',
 
   vaultsTitle: 'IoT Cold-Chain Storage Vaults (Target: +2°C to +6°C)',
   filled: (pct: number, max: number) => `${pct}% Filled (${max} Max)`,

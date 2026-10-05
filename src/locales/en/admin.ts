@@ -44,7 +44,6 @@ export const admin = {
     requestTracking: 'Request Tracking',
     hospitalOrg: 'Hospitals & Orgs',
     donorPassport: 'Donor Passport',
-    pitchDeck: 'Project Proposal',
   },
 
   marquee: {

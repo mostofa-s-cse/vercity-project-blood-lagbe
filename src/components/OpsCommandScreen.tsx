@@ -304,12 +304,6 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                         >
                           {demand.status === 'active' ? t.command.markDispatched : t.command.active}
                         </button>
-                        <button
-                          onClick={() => onNavigate('live-tracker')}
-                          className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[11px] font-bold hover:bg-red-700"
-                        >
-                          {t.command.telemetry}
-                        </button>
                       </div>
                     </td>
                   </tr>

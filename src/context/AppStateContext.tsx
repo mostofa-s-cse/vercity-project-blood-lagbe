@@ -2,8 +2,8 @@
 
 import React, { createContext, useCallback, useContext, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ScreenId, ActiveMission, BloodGroup, DonorNotification } from '../types/blood';
-import { ACTIVE_MISSION_DEFAULT, INITIAL_NOTIFICATIONS } from '../data/mockData';
+import { ScreenId, BloodGroup, DonorNotification } from '../types/blood';
+import { INITIAL_NOTIFICATIONS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { pathToScreen, screenPath } from '../utils/routes';
 import { usePersistentState } from '../utils/persistentState';
@@ -32,11 +32,6 @@ export interface DonorRegisteredInfo {
   bloodGroup: string;
 }
 
-interface OtpModalState {
-  isOpen: boolean;
-  mission: ActiveMission;
-}
-
 interface AppStateValue {
   currentScreen: ScreenId;
   navigate: (screen: ScreenId) => void;
@@ -56,10 +51,6 @@ interface AppStateValue {
   requisitionModal: RequisitionModalState;
   openRequisition: (demand: any) => void;
   closeRequisition: () => void;
-  otpModal: OtpModalState;
-  openOtpModal: (mission: ActiveMission) => void;
-  closeOtpModal: () => void;
-  handleOtpSuccess: () => void;
   handleSosCreated: (info: SosCreatedInfo) => void;
   handleRegisterDonor: (info: DonorRegisteredInfo) => void;
 }
@@ -78,10 +69,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [notifications, setNotifications] = usePersistentState<DonorNotification[]>('notifications', INITIAL_NOTIFICATIONS);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [requisitionModal, setRequisitionModal] = useState<RequisitionModalState>({ isOpen: false });
-  const [otpModal, setOtpModal] = useState<OtpModalState>({
-    isOpen: false,
-    mission: ACTIVE_MISSION_DEFAULT,
-  });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const navigate = useCallback(
@@ -136,14 +123,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast(t.toast.donorRegistered(name, bloodGroup));
   };
 
-  const openOtpModal = (mission: ActiveMission) => {
-    setOtpModal({ isOpen: true, mission });
-  };
-
-  const handleOtpSuccess = () => {
-    showToast(t.toast.otpSuccess);
-  };
-
   const markNotificationRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
@@ -171,10 +150,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     requisitionModal,
     openRequisition,
     closeRequisition: () => setRequisitionModal({ isOpen: false }),
-    otpModal,
-    openOtpModal,
-    closeOtpModal: () => setOtpModal((prev) => ({ ...prev, isOpen: false })),
-    handleOtpSuccess,
     handleSosCreated,
     handleRegisterDonor,
   };

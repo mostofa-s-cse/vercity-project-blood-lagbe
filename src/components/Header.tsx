@@ -39,11 +39,9 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'create-sos', label: t.header.nav.createSos, icon: 'add_circle' },
     { id: 'request-tracking', label: t.header.nav.requestTracking, icon: 'track_changes', badge: t.header.badgeNew },
     { id: 'donor-register', label: t.header.nav.donorRegister, icon: 'how_to_reg' },
-    { id: 'live-tracker', label: t.header.nav.liveTracker, icon: 'near_me', badge: t.header.badgeLive },
     { id: 'hospital-org', label: t.header.nav.hospitalOrg, icon: 'local_hospital' },
     { id: 'admin-panel', label: t.header.nav.adminPanel, icon: 'admin_panel_settings' },
     { id: 'donor-passport', label: t.header.nav.donorPassport, icon: 'badge' },
-    { id: 'pitch-deck', label: t.header.nav.pitchDeck, icon: 'co_present' },
     { id: 'user-docs', label: t.header.nav.userDocs, icon: 'menu_book' },
   ];
   // The Admin Panel link is only for people who may open it (the proxy also blocks the page itself).

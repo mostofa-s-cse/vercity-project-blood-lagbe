@@ -271,7 +271,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     { id: 'request-tracking', label: t.admin.publicLinks.requestTracking, icon: 'timeline' },
     { id: 'hospital-org', label: t.admin.publicLinks.hospitalOrg, icon: 'domain' },
     { id: 'donor-passport', label: t.admin.publicLinks.donorPassport, icon: 'badge' },
-    { id: 'pitch-deck', label: t.admin.publicLinks.pitchDeck, icon: 'slideshow' },
   ];
 
   return (

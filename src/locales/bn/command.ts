@@ -61,7 +61,6 @@ export const command: Command = {
   inspect: 'পরিদর্শন',
   markDispatched: 'প্রেরিত হিসেবে চিহ্নিত করুন',
   active: 'সক্রিয়',
-  telemetry: 'টেলিমেট্রি',
 
   vaultsTitle: 'IoT কোল্ড-চেইন সংরক্ষণ ভল্ট (লক্ষ্য: +২°C থেকে +৬°C)',
   filled: (pct: number, max: number) => `${pct}% পূর্ণ (সর্বোচ্চ ${max})`,

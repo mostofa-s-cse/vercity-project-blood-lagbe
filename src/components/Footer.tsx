@@ -72,9 +72,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <button onClick={() => onNavigate('donor-register')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.donorRegister}
           </button>
-          <button onClick={() => onNavigate('live-tracker')} className="hover:text-white transition-colors cursor-pointer">
-            {t.header.nav.liveTracker}
-          </button>
           <button onClick={() => onNavigate('hospital-org')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.hospitalOrg}
           </button>
@@ -85,9 +82,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           )}
           <button onClick={() => onNavigate('donor-passport')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.donorPassport}
-          </button>
-          <button onClick={() => onNavigate('pitch-deck')} className="hover:text-white transition-colors cursor-pointer">
-            {t.header.nav.pitchDeck}
           </button>
           <button onClick={() => onNavigate('user-docs')} className="hover:text-white transition-colors cursor-pointer">
             {t.header.nav.userDocs}

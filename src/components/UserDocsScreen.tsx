@@ -11,13 +11,11 @@ type SectionId =
   | 'donors'
   | 'sos'
   | 'tracking'
-  | 'tracker'
   | 'register'
   | 'passport'
   | 'hospitals'
   | 'command'
-  | 'admin'
-  | 'deck';
+  | 'admin';
 
 // Order follows a first-time user's journey, first screen to last.
 const SECTIONS: { id: SectionId; icon: string; screen?: ScreenId }[] = [
@@ -27,13 +25,11 @@ const SECTIONS: { id: SectionId; icon: string; screen?: ScreenId }[] = [
   { id: 'donors', icon: 'person_search', screen: 'donor-directory' },
   { id: 'sos', icon: 'add_circle', screen: 'create-sos' },
   { id: 'tracking', icon: 'track_changes', screen: 'request-tracking' },
-  { id: 'tracker', icon: 'near_me', screen: 'live-tracker' },
   { id: 'register', icon: 'how_to_reg', screen: 'donor-register' },
   { id: 'passport', icon: 'badge', screen: 'donor-passport' },
   { id: 'hospitals', icon: 'local_hospital', screen: 'hospital-org' },
   { id: 'command', icon: 'monitor_heart', screen: 'ops-command' },
   { id: 'admin', icon: 'admin_panel_settings', screen: 'admin-panel' },
-  { id: 'deck', icon: 'co_present', screen: 'pitch-deck' },
 ];
 
 const FAQ_ID = 'faq';

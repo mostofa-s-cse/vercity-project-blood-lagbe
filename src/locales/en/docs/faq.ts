@@ -19,13 +19,9 @@ export const faq: DocFaq = {
       q: 'What happens if I open a link without /bn or /en, or an old link like /#admin?',
       a: 'A link without a language is sent to your saved language, or to Bangla if you have none. An old link such as /#admin, /#donors or /#sos is sent to the matching page, for example /bn/admin. A page that does not exist shows a "not found" page.',
     },
-    q5: {
-      q: 'What is the OTP handshake, and what is the demo code?',
-      a: 'It is a 4-digit code the patient\'s attendant gives the donor at the bedside, to confirm the blood was really handed over and stop brokers. Open it from "Recipient Handshake Sign-Off" in the Live Tracker. The demo code is 4921, and the auto-fill button enters it for you. Confirming only shows a success message.',
-    },
     q6: {
       q: 'What is a requisition slip?',
-      a: 'It is the doctor\'s written request for blood. In the app you open a sample slip with buttons such as "Inspect Doctor Slip" on the Emergency Hub, "Inspect Slip" in the Live Tracker or "Doctor Slip" in the Admin Panel. The patient name, blood group and bags come from the request. The rest is sample text, not a real verified document.',
+      a: 'It is the doctor\'s written request for blood. In the app you open a sample slip with a "Doctor Slip" or "Inspect" button in the Admin Panel, Hospitals & Blood Banks or Ops Command. The patient name, blood group and bags come from the request. The rest is sample text, not a real verified document.',
     },
     q7: {
       q: 'How are the header alert ticker and the radius message set, and who can change them?',

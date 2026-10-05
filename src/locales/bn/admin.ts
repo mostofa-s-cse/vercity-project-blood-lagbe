@@ -46,7 +46,6 @@ export const admin: Admin = {
     requestTracking: 'রিকোয়েস্ট ট্র্যাকিং',
     hospitalOrg: 'হাসপাতাল ও সংস্থা',
     donorPassport: 'ডোনার পাসপোর্ট',
-    pitchDeck: 'প্রজেক্ট প্রপোজাল',
   },
 
   marquee: {

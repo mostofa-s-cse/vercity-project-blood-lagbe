@@ -8,12 +8,10 @@ export type ScreenId =
   | 'create-sos'
   | 'request-tracking'
   | 'donor-register'
-  | 'live-tracker'
   | 'donor-passport'
   | 'hospital-org'
   | 'admin-panel'
   | 'ops-command'
-  | 'pitch-deck'
   | 'user-docs';
 
 export type RequestStatus = 'pending' | 'donor_found' | 'completed' | 'cancelled';
@@ -168,37 +166,6 @@ export interface Donor {
   phone: string;
   bmdcReg?: string;
   avatarUrl: string;
-}
-
-export interface ActiveMission {
-  id: string;
-  referenceNo: string;
-  patientName: string;
-  bloodGroup: BloodGroup;
-  bagsNeeded: number;
-  hospital: string;
-  bedRoom: string;
-  urgency: 'HIGH URGENCY - CRITICAL' | 'SURGERY' | 'MATERNAL';
-  elapsedSeconds: number;
-  stage: 1 | 2 | 3 | 4 | 5;
-  otpCode: string;
-  donors: {
-    id: string;
-    name: string;
-    bloodGroup: BloodGroup;
-    bagLabel: string;
-    status: 'En Route' | 'In Lab Cross-Match' | 'Arrived' | 'Completed';
-    distanceKm: number;
-    etaMinutes: number;
-    vehicle: string;
-    phone: string;
-    avatarUrl: string;
-  }[];
-  broadcastPulse: {
-    time: string;
-    message: string;
-    type: 'verified' | 'viewed' | 'sms' | 'created';
-  }[];
 }
 
 export interface ChillerUnit {
