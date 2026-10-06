@@ -72,10 +72,10 @@ endpoints.
 ## Tasks
 
 ### Task 1: Schema and seed
-- [ ] `prisma/schema.prisma`: add `FraudIncident`, `AuditLog`. `prisma/migrations/0006_fraud_and_audit/migration.sql` (hand-written, following the house style).
-- [ ] Verify on the local throwaway Postgres: apply, check both tables, `prisma migrate diff` prints empty (no drift).
-- [ ] `prisma/seed.ts`: seed `FraudIncident` from `src/data/mockData.ts`'s `FRAUD_INCIDENTS` (fixed ids, upsert, idempotent like the rest of the seed).
-- [ ] Commit.
+- [x] `prisma/schema.prisma`: add `FraudIncident`, `AuditLog`. `prisma/migrations/0006_fraud_and_audit/migration.sql` (hand-written, following the house style).
+- [x] Verify on the local throwaway Postgres: apply, check both tables, `prisma migrate diff` prints empty (no drift).
+- [x] `prisma/seed.ts`: seed `FraudIncident` from `src/data/mockData.ts`'s `FRAUD_INCIDENTS` (fixed ids, upsert, idempotent like the rest of the seed).
+- [x] Commit.
 
 ### Task 2: Admin stats, fraud and logs APIs
 - [ ] `src/lib/dto.ts` or a new `src/lib/adminDto.ts`: `toFraudIncidentDto`.

@@ -156,6 +156,41 @@ model RoleGrant {
   @@map("role_grants")
 }
 
+/// A reported fraud or abuse incident, reviewed from the Admin Panel's Fraud tab or Ops Command.
+model FraudIncident {
+  id           String    @id @default(cuid())
+  type         String
+  location     String
+  description  String
+  targetEntity String?   @map("target_entity")
+  carrierInfo  String?   @map("carrier_info")
+  evidence     String?
+  /// 'HIGH' | 'MED-HIGH' | 'CRITICAL' (src/types/blood.ts FraudIncident)
+  severity     String
+  /// 'pending' | 'banned' | 'throttled' | 'dismissed'
+  status       String    @default("pending")
+  reportedBy   String?   @map("reported_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  resolvedAt   DateTime? @map("resolved_at")
+  resolvedBy   String?   @map("resolved_by")
+
+  @@index([status, createdAt])
+  @@map("fraud_incidents")
+}
+
+/// A short record of an admin action, read by the Admin Panel's Logs tab.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorEmail String?  @map("actor_email")
+  /// Short machine key, e.g. "stock.update", "fraud.resolve", "role.grant".
+  action     String
+  detail     String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
 /// Blood units a hospital has told us it holds. Missing rows fall back to the sample data.
 model HospitalStock {
   hospitalId String     @map("hospital_id")

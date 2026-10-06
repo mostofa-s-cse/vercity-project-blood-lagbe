@@ -7,7 +7,7 @@
  */
 import { config } from 'dotenv';
 import type { BloodGroup, RequestStatus } from '../src/generated/prisma/client';
-import { INITIAL_DEMANDS, INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS } from '../src/data/mockData';
+import { INITIAL_DEMANDS, INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../src/data/mockData';
 import { getPrisma } from '../src/lib/prisma';
 import { DB_BLOOD_GROUP } from '../src/lib/validation';
 
@@ -103,13 +103,36 @@ async function main() {
     }
   }
 
-  const [donors, requests, responses, stockRows] = await Promise.all([
+  for (const [index, incident] of FRAUD_INCIDENTS.entries()) {
+    const id = `seed-${incident.id}`;
+    await prisma.fraudIncident.upsert({
+      where: { id },
+      create: {
+        id,
+        type: incident.type,
+        location: incident.location,
+        description: incident.description,
+        targetEntity: incident.targetEntity,
+        carrierInfo: incident.carrierInfo,
+        evidence: incident.evidence,
+        severity: incident.severity,
+        status: incident.status,
+        createdAt: new Date(now - (index + 1) * 20 * MINUTE),
+      },
+      update: {},
+    });
+  }
+
+  const [donors, requests, responses, stockRows, fraudRows] = await Promise.all([
     prisma.donor.count(),
     prisma.sosRequest.count(),
     prisma.requestResponse.count(),
     prisma.hospitalStock.count(),
+    prisma.fraudIncident.count(),
   ]);
-  console.log(`Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses, ${stockRows} hospital stock rows.`);
+  console.log(
+    `Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses, ${stockRows} hospital stock rows, ${fraudRows} fraud incidents.`
+  );
   await prisma.$disconnect();
 }
 
