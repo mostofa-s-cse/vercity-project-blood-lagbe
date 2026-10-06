@@ -1,5 +1,5 @@
-import type { Donor, RequestResponse, SosRequest } from '../generated/prisma/client';
-import type { DonorDto, RequestDto, ResponseDto } from './dtoTypes';
+import type { AuditLog, Donor, FraudIncident, RequestResponse, SosRequest } from '../generated/prisma/client';
+import type { AuditLogDto, DonorDto, FraudIncidentDto, RequestDto, ResponseDto } from './dtoTypes';
 import { maskPhone } from './phoneMask';
 import { BLOOD_GROUP_FROM_DB } from './validation';
 import type { RequestStatusValue } from './requestStatus';
@@ -60,5 +60,31 @@ export function toResponseDto(row: RequestResponse, includePhone: boolean): Resp
     name: row.name,
     createdAt: row.createdAt.toISOString(),
     ...(includePhone ? { phone: row.phone } : {}),
+  };
+}
+
+export function toFraudIncidentDto(row: FraudIncident): FraudIncidentDto {
+  return {
+    id: row.id,
+    type: row.type,
+    location: row.location,
+    description: row.description,
+    targetEntity: row.targetEntity,
+    carrierInfo: row.carrierInfo,
+    evidence: row.evidence,
+    severity: row.severity,
+    status: row.status,
+    createdAt: row.createdAt.toISOString(),
+    resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+  };
+}
+
+export function toAuditLogDto(row: AuditLog): AuditLogDto {
+  return {
+    id: row.id,
+    actorEmail: row.actorEmail,
+    action: row.action,
+    detail: row.detail,
+    createdAt: row.createdAt.toISOString(),
   };
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { BloodGroup } from '@/generated/prisma/client';
 import { SAMPLE_HOSPITAL_ORGS } from '@/data/mockData';
+import { claimsEmail, writeAuditLog } from '@/lib/auditLog';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { canManageHospital } from '@/lib/roles';
 import { getClaims } from '@/lib/supabase/server';
@@ -42,6 +43,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       create: { hospitalId: id, bloodGroup, units: parsed.value.units, updatedBy },
       update: { units: parsed.value.units, updatedBy },
     });
+    await writeAuditLog(claimsEmail(claims), 'stock.update', `${id} ${parsed.value.bloodGroup} set to ${parsed.value.units} units`);
     return NextResponse.json({ hospitalId: id, bloodGroup: parsed.value.bloodGroup, units: parsed.value.units });
   } catch (error) {
     console.error('Could not save hospital stock', error);

@@ -10,6 +10,7 @@ import {
   parseRespondInput,
   parseRoleInput,
   parseSosInput,
+  parseFraudStatusInput,
   parseStatusInput,
   parseStockInput,
 } from './validation.ts';
@@ -217,6 +218,15 @@ test('a status change takes one of the four statuses', () => {
   }
   for (const bad of [{ status: 'DONE' }, { status: 'pending' }, { status: 7 }, {}, null, 'COMPLETED']) {
     assert.notEqual(parseStatusInput(bad).error, null, JSON.stringify(bad));
+  }
+});
+
+test('a fraud incident is resolved as banned or dismissed, nothing else', () => {
+  for (const status of ['banned', 'dismissed']) {
+    assert.equal(parseFraudStatusInput({ status }).error, null, status);
+  }
+  for (const bad of [{ status: 'pending' }, { status: 'BANNED' }, { status: 'throttled' }, { status: 7 }, {}, null]) {
+    assert.notEqual(parseFraudStatusInput(bad).error, null, JSON.stringify(bad));
   }
 });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/adminGuard';
 import { grantErrorResponse } from '@/lib/apiErrors';
+import { writeAuditLog } from '@/lib/auditLog';
 import { getGrantService } from '@/lib/grants';
 import { isDatabaseConfigured } from '@/lib/prisma';
 
@@ -16,6 +17,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   try {
     const email = typeof guard.claims.email === 'string' ? guard.claims.email : null;
     await getGrantService().revoke(id, { email });
+    await writeAuditLog(email, 'role.revoke', `grant ${id} revoked`);
     return NextResponse.json({ ok: true });
   } catch (error) {
     const known = grantErrorResponse(error);

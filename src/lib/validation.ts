@@ -261,6 +261,18 @@ export function parseStatusInput(raw: unknown): ParseResult<{ status: RequestSta
   return { error: null, value: { status: raw.status as RequestStatusValue } };
 }
 
+const FRAUD_RESOLUTIONS = ['banned', 'dismissed'] as const;
+export type FraudResolution = (typeof FRAUD_RESOLUTIONS)[number];
+
+/** How a pending fraud incident is resolved. `pending` and `throttled` are not resolutions. */
+export function parseFraudStatusInput(raw: unknown): ParseResult<{ status: FraudResolution }> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  if (typeof raw.status !== 'string' || !(FRAUD_RESOLUTIONS as readonly string[]).includes(raw.status)) {
+    return { value: null, error: 'status' };
+  }
+  return { error: null, value: { status: raw.status as FraudResolution } };
+}
+
 /** Anything with `.get(name)`, such as `URLSearchParams`. */
 interface Params {
   get(name: string): string | null;

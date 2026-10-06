@@ -16,3 +16,13 @@ export async function requirePermission(permission: Permission): Promise<Guard> 
   if (!can(claims, permission)) return { claims: null, response: NextResponse.json({ error: 'forbidden' }, { status: 403 }) };
   return { claims, response: null };
 }
+
+/** Like `requirePermission`, but any one of the given permissions is enough (e.g. the Admin Panel's Fraud tab and Ops Command share data). */
+export async function requireAnyPermission(permissions: readonly Permission[]): Promise<Guard> {
+  const claims = await getClaims();
+  if (!claims) return { claims: null, response: NextResponse.json({ error: 'sign_in_required' }, { status: 401 }) };
+  if (!permissions.some((permission) => can(claims, permission))) {
+    return { claims: null, response: NextResponse.json({ error: 'forbidden' }, { status: 403 }) };
+  }
+  return { claims, response: null };
+}

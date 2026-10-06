@@ -78,11 +78,11 @@ endpoints.
 - [x] Commit.
 
 ### Task 2: Admin stats, fraud and logs APIs
-- [ ] `src/lib/dto.ts` or a new `src/lib/adminDto.ts`: `toFraudIncidentDto`.
-- [ ] `GET /api/admin/stats`, `GET /api/admin/fraud`, `PATCH /api/admin/fraud/[id]`, `GET /api/admin/logs`. Each checks its permission server-side (`src/lib/roles.ts`/`can`), 401/403 like the existing admin routes, 503 with no database.
-- [ ] A tiny `writeAuditLog(actorEmail, action, detail)` helper in `src/lib/auditLog.ts`, called from: fraud resolve, hospital stock change (`POST /api/hospitals/[id]/stock` already exists — add the call there), role grant/revoke (`src/lib/grantService.ts`).
-- [ ] Database checks on the throwaway Postgres: each endpoint's permission matrix (right permission 200, wrong 403, signed out 401, no database 503).
-- [ ] Commit.
+- [x] `src/lib/dto.ts`: `toFraudIncidentDto`, `toAuditLogDto`.
+- [x] `GET /api/admin/stats`, `GET /api/admin/fraud`, `PATCH /api/admin/fraud/[id]`, `GET /api/admin/logs`. Each checks its permission server-side (`requirePermission`/`requireAnyPermission` in `src/lib/adminGuard.ts`), 401 signed out, 503 with no database.
+- [x] A tiny `writeAuditLog(actorEmail, action, detail)` helper in `src/lib/auditLog.ts`, called from: fraud resolve, hospital stock change (`PUT /api/hospitals/[id]/stock`), role grant/revoke (the two `/api/admin/grants` routes — simpler than threading it through `grantService.ts`'s injected dependencies).
+- [x] Database checks on the throwaway Postgres: signed-out 401 confirmed on all four by curl; the underlying Prisma queries and the race-safe "resolve once" update (`updateMany` with `status: 'pending'` in the `where`) verified directly against seeded data. The "right permission → 200" path needs a real Supabase session to test, same limitation the existing `roles`/`grants` admin routes already have (see `docs/HANDOFF.md` known issues) — not re-litigated here.
+- [x] Commit.
 
 ### Task 3: RTK Query endpoints
 - [ ] `src/store/api.ts`: `getAdminStats`, `getFraudIncidents`, `resolveFraudIncident` (invalidates a new `Fraud` tag), `getAuditLog`.

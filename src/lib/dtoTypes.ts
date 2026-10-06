@@ -75,3 +75,33 @@ export interface RequestDetailResponse {
   responses: ResponseDto[];
   canManage: boolean;
 }
+
+export interface FraudIncidentDto {
+  id: string;
+  type: string;
+  location: string;
+  description: string;
+  targetEntity: string | null;
+  carrierInfo: string | null;
+  evidence: string | null;
+  severity: string;
+  status: string;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+/** Counts for the Admin Panel's Overview tab, one round trip. */
+export interface AdminStatsDto {
+  totalDonors: number;
+  availableDonors: number;
+  requestsByStatus: Record<'PENDING' | 'DONOR_FOUND' | 'COMPLETED' | 'CANCELLED', number>;
+  responses: number;
+}
+
+export interface AuditLogDto {
+  id: string;
+  actorEmail: string | null;
+  action: string;
+  detail: string;
+  createdAt: string;
+}

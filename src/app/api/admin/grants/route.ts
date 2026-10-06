@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { SAMPLE_HOSPITAL_ORGS } from '@/data/mockData';
 import { requirePermission } from '@/lib/adminGuard';
 import { grantErrorResponse } from '@/lib/apiErrors';
+import { writeAuditLog } from '@/lib/auditLog';
 import { toGrantDto } from '@/lib/grantDto';
 import { getGrantService } from '@/lib/grants';
 import { isDatabaseConfigured } from '@/lib/prisma';
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     const email = typeof guard.claims.email === 'string' ? guard.claims.email : null;
     const { grant, status } = await service.grant(parsed.value, { email });
     const role = (await service.listRoles()).find((r) => r.id === grant.roleId);
+    await writeAuditLog(email, 'role.grant', `${grant.email} given "${role?.name ?? grant.roleId}"`);
     return NextResponse.json({ grant: toGrantDto(grant, role?.name), status });
   } catch (error) {
     const known = grantErrorResponse(error);
