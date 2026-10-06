@@ -1,6 +1,15 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { DonorPayload, SosPayload } from '../lib/api.ts';
-import type { DonorListResponse, RequestDetailResponse, RequestDto, RequestListResponse, ResponseDto } from '../lib/dtoTypes.ts';
+import type {
+  AdminStatsDto,
+  AuditLogDto,
+  DonorListResponse,
+  FraudIncidentDto,
+  RequestDetailResponse,
+  RequestDto,
+  RequestListResponse,
+  ResponseDto,
+} from '../lib/dtoTypes.ts';
 import { browserStorage, tokenFor } from '../lib/myRequests.ts';
 import type { RequestStatusValue } from '../lib/requestStatus.ts';
 
@@ -64,7 +73,7 @@ export function createApiSlice({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
     keepUnusedDataFor,
-    tagTypes: ['Donor', 'Request'],
+    tagTypes: ['Donor', 'Request', 'Fraud'],
     endpoints: (build) => ({
       getDonors: build.query<DonorListResponse, DonorQuery | void>({
         query: (args) => {
@@ -133,6 +142,25 @@ export function createApiSlice({
         }),
         invalidatesTags: ['Request'],
       }),
+
+      /** Real counts for the Admin Panel's Overview tab. */
+      getAdminStats: build.query<AdminStatsDto, void>({
+        query: () => 'admin/stats',
+      }),
+
+      getFraudIncidents: build.query<{ incidents: FraudIncidentDto[] }, void>({
+        query: () => 'admin/fraud',
+        providesTags: ['Fraud'],
+      }),
+
+      resolveFraudIncident: build.mutation<{ incident: FraudIncidentDto }, { id: string; status: 'banned' | 'dismissed' }>({
+        query: ({ id, status }) => ({ url: `admin/fraud/${encodeURIComponent(id)}`, method: 'PATCH', body: { status } }),
+        invalidatesTags: ['Fraud'],
+      }),
+
+      getAuditLog: build.query<{ entries: AuditLogDto[] }, void>({
+        query: () => 'admin/logs',
+      }),
     }),
   });
 }
@@ -148,4 +176,8 @@ export const {
   useCreateSosMutation,
   useRespondToRequestMutation,
   useUpdateRequestStatusMutation,
+  useGetAdminStatsQuery,
+  useGetFraudIncidentsQuery,
+  useResolveFraudIncidentMutation,
+  useGetAuditLogQuery,
 } = api;

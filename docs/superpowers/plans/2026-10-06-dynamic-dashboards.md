@@ -85,9 +85,9 @@ endpoints.
 - [x] Commit.
 
 ### Task 3: RTK Query endpoints
-- [ ] `src/store/api.ts`: `getAdminStats`, `getFraudIncidents`, `resolveFraudIncident` (invalidates a new `Fraud` tag), `getAuditLog`.
-- [ ] Tests with a stubbed `fetch`.
-- [ ] Commit.
+- [x] `src/store/api.ts`: `getAdminStats`, `getFraudIncidents`, `resolveFraudIncident` (invalidates a new `Fraud` tag), `getAuditLog`.
+- [x] Tests with a stubbed `fetch`.
+- [x] Commit.
 
 ### Task 4: Admin Panel — Overview, Donors, Requests tabs (parallel agent)
 - [ ] Overview tab: real counts from `useGetAdminStatsQuery` replace the four hardcoded metric cards; the blood-group matrix (`stock`/`demand` per group) can stay sample **only** where marked (no demand/forecast data exists anywhere) — say so in a small note, don't invent a number for "demand".

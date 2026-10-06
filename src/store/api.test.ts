@@ -192,3 +192,32 @@ test('registering a donor refreshes the donor list but not the request lists', a
   donors.unsubscribe();
   requests.unsubscribe();
 });
+
+test('resolving a fraud incident refreshes the fraud list', async () => {
+  const { slice, store, calls } = fakeServer((call) =>
+    call.method === 'PATCH'
+      ? [200, { incident: { id: 'f1', status: 'banned' } }]
+      : [200, { incidents: [{ id: 'f1', status: 'pending' }] }]
+  );
+  const list = store.dispatch(slice.endpoints.getFraudIncidents.initiate());
+  await list;
+  await store.dispatch(slice.endpoints.resolveFraudIncident.initiate({ id: 'f1', status: 'banned' }));
+  await settle();
+  assert.equal(calls.find((call) => call.method === 'PATCH')!.path, '/api/admin/fraud/f1');
+  assert.deepEqual(calls.find((call) => call.method === 'PATCH')!.body, { status: 'banned' });
+  assert.equal(calls.filter((call) => call.method === 'GET').length, 2, 'the fraud list was fetched again');
+  list.unsubscribe();
+});
+
+test('admin stats and the audit log are simple reads', async () => {
+  const { slice, store, calls } = fakeServer((call) =>
+    call.path === '/api/admin/stats'
+      ? [200, { totalDonors: 6, availableDonors: 5, requestsByStatus: { PENDING: 2, DONOR_FOUND: 1, COMPLETED: 1, CANCELLED: 0 }, responses: 3 }]
+      : [200, { entries: [{ id: 'a1', action: 'stock.update', detail: 'x', actorEmail: null, createdAt: 'now' }] }]
+  );
+  const stats = await store.dispatch(slice.endpoints.getAdminStats.initiate());
+  const logs = await store.dispatch(slice.endpoints.getAuditLog.initiate());
+  assert.equal((stats.data as { totalDonors: number }).totalDonors, 6);
+  assert.equal((logs.data as { entries: unknown[] }).entries.length, 1);
+  assert.deepEqual(calls.map((call) => call.path).sort(), ['/api/admin/logs', '/api/admin/stats']);
+});
