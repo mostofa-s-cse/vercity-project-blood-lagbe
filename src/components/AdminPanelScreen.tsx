@@ -1,12 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { ScreenId, EmergencyDemand, Donor, HospitalOrganization, BloodRequest, FraudIncident, BloodGroup } from '../types/blood';
-import { INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS, INITIAL_BLOOD_REQUESTS, FRAUD_INCIDENTS } from '../data/mockData';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ScreenId, HospitalOrganization, BloodGroup } from '../types/blood';
+import { SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
 import { useAuth } from '../context/AuthContext';
 import type { Permission } from '../lib/permissions';
 import { AdminRolesPanel } from './AdminRolesPanel';
+import {
+  useGetAdminStatsQuery,
+  useGetAuditLogQuery,
+  useGetDonorsQuery,
+  useGetFraudIncidentsQuery,
+  useGetRequestsQuery,
+  useLazyGetDonorContactQuery,
+  useResolveFraudIncidentMutation,
+  useUpdateRequestStatusMutation,
+} from '../store/api';
+import { apiStatus, isDatabaseOff } from '../store/errors';
+
+/** No database, or no real sign-in to prove the permission (this sandbox has neither) — show sample data either way. */
+const unavailable = (error: unknown): boolean => isDatabaseOff(error) || apiStatus(error) === 401 || apiStatus(error) === 403;
+import { fetchHospitalStock, type HospitalStockMap } from '../lib/api';
+import { sampleContactPhone, sampleDonors, sampleRequests } from '../data/sample';
+import { canTransition, type RequestStatusValue } from '../lib/requestStatus';
+import type { DonorDto, FraudIncidentDto, RequestDto } from '../lib/dtoTypes';
+
+const initials = (name: string): string =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
+/** The buttons a manager sees for a request, per status, in this order (same rule as Request Tracking). */
+const MANAGE_MOVES: Record<RequestStatusValue, RequestStatusValue[]> = {
+  PENDING: ['DONOR_FOUND', 'COMPLETED', 'CANCELLED'],
+  DONOR_FOUND: ['COMPLETED', 'CANCELLED', 'PENDING'],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+/** Puts saved stock over the sample data (only the groups a hospital has reported) and recomputes the totals. */
+const sumStock = (stock: HospitalOrganization['bloodStock']): number =>
+  Object.values(stock).reduce((total, units) => total + (units || 0), 0);
+const mergeSavedStock = (base: HospitalOrganization[], saved: HospitalStockMap): HospitalOrganization[] =>
+  base.map((h) => {
+    const reported = saved[h.id];
+    if (!reported) return h;
+    const bloodStock = { ...h.bloodStock };
+    for (const group of Object.keys(bloodStock) as BloodGroup[]) {
+      const units = reported[group];
+      if (typeof units === 'number' && Number.isFinite(units)) bloodStock[group] = units;
+    }
+    return { ...h, bloodStock, availableBags: sumStock(bloodStock) };
+  });
 
 interface AdminPanelScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -90,15 +140,20 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setRadiusIsActive(emergencyRadius.isActive);
   }, [emergencyRadius]);
 
-  // Interactive Admin state
-  const [donors, setDonors] = useState<Donor[]>(INITIAL_DONORS);
-  const [requests, setRequests] = useState<BloodRequest[]>(INITIAL_BLOOD_REQUESTS);
+  // Hospitals: sample list, real (seeded) stock merged over it on load — same pattern as HospitalOrgScreen.
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
-  const [fraudList, setFraudList] = useState<FraudIncident[]>(FRAUD_INCIDENTS);
-  
+  useEffect(() => {
+    let active = true;
+    fetchHospitalStock().then((saved) => {
+      if (active && saved) setHospitals((prev) => mergeSavedStock(prev, saved));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Selected detail modal
-  const [selectedDonor, setSelectedDonor] = useState<Donor | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<BloodRequest | null>(null);
+  const [selectedDonor, setSelectedDonor] = useState<DonorDto | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -106,47 +161,75 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Donor actions
-  const handleToggleVerifyDonor = (donorId: string) => {
+  // Donors tab: real data, paged.
+  const [donorPage, setDonorPage] = useState(1);
+  const donorsArgs = useMemo(
+    () => ({
+      bloodGroup: bloodFilter !== 'ALL' ? bloodFilter : undefined,
+      q: searchQuery || undefined,
+      available: statusFilter === 'AVAILABLE' ? true : undefined,
+      page: donorPage,
+      pageSize: 20,
+    }),
+    [bloodFilter, searchQuery, statusFilter, donorPage]
+  );
+  const { currentData: donorsData, error: donorsError } = useGetDonorsQuery(donorsArgs);
+  const donorsDemo = isDatabaseOff(donorsError);
+  const sampleDonorList = useMemo(() => sampleDonors(), []);
+  const donors: DonorDto[] = donorsDemo ? sampleDonorList : (donorsData?.donors ?? []);
+  const donorsTotal = donorsDemo ? sampleDonorList.length : (donorsData?.total ?? 0);
+  const [getDonorContact] = useLazyGetDonorContactQuery();
+  const [revealedPhones, setRevealedPhones] = useState<Record<string, string>>({});
+  const revealDonorPhone = async (donor: DonorDto) => {
     sound.playTap();
-    setDonors(prev => prev.map(d => {
-      if (d.id === donorId) {
-        const nextState = !d.isBdrcsVerified;
-        showToast(
-          t.admin.toasts.donorVerifyToggled(d.name, nextState)
-        );
-        return { ...d, isBdrcsVerified: nextState };
-      }
-      return d;
-    }));
+    if (donorsDemo) {
+      const phone = sampleContactPhone(donor.id);
+      if (phone) setRevealedPhones((prev) => ({ ...prev, [donor.id]: phone }));
+      return;
+    }
+    try {
+      const result = await getDonorContact(donor.id).unwrap();
+      setRevealedPhones((prev) => ({ ...prev, [donor.id]: result.phone }));
+    } catch {
+      showToast(t.admin.donors.callFailed);
+    }
   };
 
-  const handleToggleDonorAvailability = (donorId: string) => {
+  // Requests tab: real data, paged.
+  const [requestPage, setRequestPage] = useState(1);
+  const requestsArgs = useMemo(
+    () => ({
+      bloodGroup: bloodFilter !== 'ALL' ? bloodFilter : undefined,
+      status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      page: requestPage,
+      pageSize: 20,
+    }),
+    [bloodFilter, statusFilter, requestPage]
+  );
+  const { currentData: requestsData, error: requestsError } = useGetRequestsQuery(requestsArgs);
+  const requestsDemo = isDatabaseOff(requestsError);
+  const sampleRequestList = useMemo(() => sampleRequests(), []);
+  const allRequests: RequestDto[] = requestsDemo ? sampleRequestList : (requestsData?.requests ?? []);
+  const requestsTotal = requestsDemo ? sampleRequestList.length : (requestsData?.total ?? 0);
+  // The API has no free-text search; filter the current page only.
+  const filteredRequests = allRequests.filter(
+    (r) =>
+      !searchQuery ||
+      (r.patientName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.place.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const [updateRequestStatus] = useUpdateRequestStatusMutation();
+  const handleUpdateRequestStatus = async (req: RequestDto, next: RequestStatusValue) => {
+    if (next === 'CANCELLED' && !window.confirm(t.tracking.confirmCancel)) return;
+    if (next === 'COMPLETED' && !window.confirm(t.tracking.confirmComplete)) return;
     sound.playTap();
-    setDonors(prev => prev.map(d => {
-      if (d.id === donorId) {
-        const nextState = !d.isAvailable;
-        showToast(
-          t.admin.toasts.donorAvailabilityToggled(d.name, nextState)
-        );
-        return { ...d, isAvailable: nextState, isOnDuty: nextState };
-      }
-      return d;
-    }));
-  };
-
-  // Request actions
-  const handleUpdateRequestStatus = (requestId: string, newStatus: 'pending' | 'donor_found' | 'completed' | 'cancelled') => {
-    sound.playTap();
-    setRequests(prev => prev.map(r => {
-      if (r.id === requestId) {
-        showToast(
-          t.admin.toasts.requestStatusUpdated(requestId, newStatus)
-        );
-        return { ...r, status: newStatus };
-      }
-      return r;
-    }));
+    try {
+      await updateRequestStatus({ id: req.id, status: next }).unwrap();
+      showToast(t.admin.toasts.requestStatusUpdated(req.id, next));
+    } catch {
+      showToast(t.admin.toasts.requestStatusFailed);
+    }
   };
 
   const handleToggleHospitalVerification = (hospitalId: string) => {
@@ -163,41 +246,68 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     }));
   };
 
-  const handleResolveFraud = (id: string, action: 'banned' | 'dismissed') => {
+  // Fraud tab: real data, shared with Ops Command.
+  const { currentData: fraudData, error: fraudError } = useGetFraudIncidentsQuery();
+  const fraudDemo = unavailable(fraudError);
+  const sampleFraudList = useMemo<FraudIncidentDto[]>(
+    () =>
+      FRAUD_INCIDENTS.map((f, i) => ({
+        id: f.id,
+        type: f.type,
+        location: f.location,
+        description: f.description,
+        targetEntity: f.targetEntity,
+        carrierInfo: f.carrierInfo,
+        evidence: f.evidence,
+        severity: f.severity,
+        status: f.status,
+        createdAt: new Date(Date.now() - (i + 1) * 15 * 60_000).toISOString(),
+        resolvedAt: null,
+      })),
+    []
+  );
+  const fraudList: FraudIncidentDto[] = fraudDemo ? sampleFraudList : (fraudData?.incidents ?? []);
+  const [resolveFraud, { isLoading: resolvingFraud }] = useResolveFraudIncidentMutation();
+  const handleResolveFraud = async (id: string, action: 'banned' | 'dismissed') => {
     sound.playTap();
-    setFraudList(prev => prev.map(item => item.id === id ? { ...item, status: action } : item));
-    showToast(
-      action === 'banned'
-        ? t.admin.toasts.fraudBanned
-        : t.admin.toasts.fraudDismissed
-    );
+    if (fraudDemo) {
+      showToast(t.admin.toasts.fraudDemoDisabled);
+      return;
+    }
+    try {
+      await resolveFraud({ id, status: action }).unwrap();
+      showToast(action === 'banned' ? t.admin.toasts.fraudBanned : t.admin.toasts.fraudDismissed);
+    } catch {
+      showToast(t.admin.toasts.fraudResolveFailed);
+    }
   };
 
-  // Filtered donors
-  const filteredDonors = donors.filter(d => {
-    const matchesSearch = 
-      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.phone.includes(searchQuery);
-    const matchesBlood = bloodFilter === 'ALL' || d.bloodGroup === bloodFilter;
-    const matchesStatus = 
-      statusFilter === 'ALL' || 
-      (statusFilter === 'AVAILABLE' && d.isAvailable) ||
-      (statusFilter === 'VERIFIED' && d.isBdrcsVerified) ||
-      (statusFilter === 'RESTING' && !d.isAvailable);
-    return matchesSearch && matchesBlood && matchesStatus;
-  });
+  // Logs tab: real data (an empty list is normal — nothing has happened yet).
+  const { currentData: logsData, error: logsError } = useGetAuditLogQuery();
+  const logsDemo = unavailable(logsError);
+  const auditEntries = logsData?.entries ?? [];
 
-  // Filtered requests
-  const filteredRequests = requests.filter(r => {
-    const matchesSearch = 
-      r.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.hospital.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBlood = bloodFilter === 'ALL' || r.bloodGroup === bloodFilter;
-    const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
-    return matchesSearch && matchesBlood && matchesStatus;
-  });
+  // Overview tab: real counts.
+  const { currentData: statsData, error: statsError } = useGetAdminStatsQuery();
+  const statsDemo = unavailable(statsError);
+  const stats = statsDemo
+    ? {
+        totalDonors: sampleDonorList.length,
+        availableDonors: sampleDonorList.filter((d) => d.isAvailable).length,
+        requestsByStatus: {
+          PENDING: sampleRequestList.filter((r) => r.status === 'PENDING').length,
+          DONOR_FOUND: sampleRequestList.filter((r) => r.status === 'DONOR_FOUND').length,
+          COMPLETED: sampleRequestList.filter((r) => r.status === 'COMPLETED').length,
+          CANCELLED: sampleRequestList.filter((r) => r.status === 'CANCELLED').length,
+        },
+        responses: 0,
+      }
+    : statsData;
+  const totalRequestsForStats = stats
+    ? stats.requestsByStatus.PENDING + stats.requestsByStatus.DONOR_FOUND + stats.requestsByStatus.COMPLETED + stats.requestsByStatus.CANCELLED
+    : 0;
+  const successRatePct = stats && totalRequestsForStats > 0 ? Math.round((stats.requestsByStatus.COMPLETED / totalRequestsForStats) * 100) : 0;
+  const bannedFraudCount = fraudList.filter((f) => f.status === 'banned').length;
 
   const allTabs: { id: AdminTab; label: string; icon: string; count?: number; badgeColor?: string; description?: string }[] = [
     { 
@@ -218,7 +328,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       id: 'donors', 
       label: t.admin.tabs.donors, 
       icon: 'groups', 
-      count: donors.length,
+      count: donorsTotal,
       badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
       description: t.admin.tabs.donorsDesc
     },
@@ -226,7 +336,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       id: 'requests', 
       label: t.admin.tabs.requests, 
       icon: 'emergency', 
-      count: requests.filter(r => r.status === 'pending').length,
+      count: stats?.requestsByStatus.PENDING ?? 0,
       badgeColor: 'bg-red-600 text-white',
       description: t.admin.tabs.requestsDesc
     },
@@ -537,7 +647,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     {t.admin.sidebar.activeDonors}
                   </span>
                   <span className="text-sm font-black text-emerald-400">
-                    {donors.filter(d => d.isAvailable).length}
+                    {stats?.availableDonors ?? 0}
                   </span>
                 </div>
                 <div className="bg-slate-950/80 p-2 rounded-xl border border-slate-800">
@@ -545,7 +655,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     {t.admin.sidebar.pending}
                   </span>
                   <span className="text-sm font-black text-red-400">
-                    {requests.filter(r => r.status === 'pending').length}
+                    {stats?.requestsByStatus.PENDING ?? 0}
                   </span>
                 </div>
               </div>
@@ -652,7 +762,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     {t.admin.sidebar.activeDonors}
                   </span>
                   <span className="text-base font-black text-emerald-400">
-                    {donors.filter(d => d.isAvailable).length} / {donors.length}
+                    {stats?.availableDonors ?? 0} / {stats?.totalDonors ?? 0}
                   </span>
                 </div>
                 <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl text-center shadow-inner">
@@ -660,7 +770,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     {t.admin.workspace.pendingSos}
                   </span>
                   <span className="text-base font-black text-red-500">
-                    {requests.filter(r => r.status === 'pending').length}
+                    {stats?.requestsByStatus.PENDING ?? 0}
                   </span>
                 </div>
                 <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl text-center shadow-inner">
@@ -725,16 +835,22 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           </div>
 
           {/* Key Metric Cards */}
+          {statsDemo && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3 text-xs font-medium">
+              <span className="material-symbols-outlined text-base text-amber-600">info</span>
+              <span>{t.admin.overview.demoNotice}</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                   {t.admin.overview.totalDonors}
                 </span>
-                <span className="text-2xl font-black text-slate-900 mt-1 block">{t.admin.overview.totalDonorsValue}</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block">{stats?.totalDonors ?? 0}</span>
                 <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-sm">trending_up</span>
-                  {t.admin.overview.joinedToday}
+                  {t.admin.overview.availableNow(stats?.availableDonors ?? 0)}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
@@ -747,10 +863,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                   {t.admin.overview.fulfilled}
                 </span>
-                <span className="text-2xl font-black text-slate-900 mt-1 block">{t.admin.overview.fulfilledValue}</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block">{stats?.requestsByStatus.COMPLETED ?? 0}</span>
                 <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-sm">check_circle</span>
-                  {t.admin.overview.successRate}
+                  {t.admin.overview.successRate(successRatePct)}
                 </span>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -760,8 +876,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                   {t.admin.overview.avgEta}
+                  <span className="normal-case font-normal text-slate-400">({t.admin.overview.sampleBadge})</span>
                 </span>
                 <span className="text-2xl font-black text-slate-900 mt-1 block">{t.admin.overview.avgEtaValue}</span>
                 <span className="text-[11px] text-cyan-600 font-bold flex items-center gap-1 mt-1">
@@ -779,7 +896,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
                   {t.admin.overview.syndicatesBlocked}
                 </span>
-                <span className="text-2xl font-black text-red-600 mt-1 block">{t.admin.overview.syndicatesBlockedValue}</span>
+                <span className="text-2xl font-black text-red-600 mt-1 block">{bannedFraudCount}</span>
                 <span className="text-[11px] text-red-600 font-bold flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-sm">block</span>
                   {t.admin.overview.nidBlacklisted}
@@ -793,7 +910,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
           {/* Blood Group Matrix and Shortage Alert */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* National Blood Stock Availability Matrix */}
+            {/* National Blood Stock Availability Matrix — sample: no demand/forecast data exists anywhere yet */}
             <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -806,7 +923,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </p>
                 </div>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-                  {t.admin.overview.liveSynced}
+                  {t.admin.overview.sampleBadge}
                 </span>
               </div>
 
@@ -1437,11 +1554,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               >
                 <option value="ALL">{t.admin.donors.allStatuses}</option>
                 <option value="AVAILABLE">{t.admin.donors.filterAvailable}</option>
-                <option value="VERIFIED">{t.admin.donors.filterVerified}</option>
-                <option value="RESTING">{t.admin.donors.filterResting}</option>
               </select>
             </div>
           </div>
+
+          {donorsDemo && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3 text-xs font-medium">
+              <span className="material-symbols-outlined text-base text-amber-600">info</span>
+              <span>{t.admin.donors.demoNotice}</span>
+            </div>
+          )}
 
           {/* Donors Table */}
           <div className="overflow-x-auto border border-slate-200 rounded-2xl">
@@ -1451,25 +1573,24 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <th className="px-4 py-3">{t.admin.donors.colDonor}</th>
                   <th className="px-3 py-3 text-center">{t.admin.donors.colBlood}</th>
                   <th className="px-3 py-3">{t.admin.donors.colLocation}</th>
-                  <th className="px-3 py-3 text-center">{t.admin.donors.colDonations}</th>
-                  <th className="px-3 py-3">{t.admin.donors.colVerification}</th>
+                  <th className="px-3 py-3">{t.admin.donors.colLastDonation}</th>
                   <th className="px-3 py-3">{t.admin.donors.colAvailability}</th>
                   <th className="px-4 py-3 text-right">{t.admin.donors.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                {filteredDonors.map((donor) => (
+                {donors.map((donor) => (
                   <tr key={donor.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={donor.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                          alt={donor.name}
-                          className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
-                        />
+                        <div className="w-9 h-9 rounded-full bg-red-100 text-red-700 flex items-center justify-center font-black text-xs shrink-0">
+                          {initials(donor.name)}
+                        </div>
                         <div>
                           <span className="font-extrabold text-slate-900 block">{donor.name}</span>
-                          <span className="text-[11px] text-slate-500 font-mono">{donor.phone}</span>
+                          <span className="text-[11px] text-slate-500 font-mono">
+                            {revealedPhones[donor.id] ?? donor.phoneMasked}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -1479,39 +1600,21 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       </span>
                     </td>
                     <td className="px-3 py-3">
-                      <span className="font-semibold block">{donor.location}</span>
-                      <span className="text-[11px] text-slate-500">{donor.division}</span>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className="font-black text-slate-900">{t.admin.donors.donationTimes(donor.donationCount)}</span>
+                      <span className="font-semibold block">{donor.area}</span>
+                      <span className="text-[11px] text-slate-500">{donor.division ?? '—'}</span>
                     </td>
                     <td className="px-3 py-3">
-                      <button
-                        onClick={() => handleToggleVerifyDonor(donor.id)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-all ${
-                          donor.isBdrcsVerified
-                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                            : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[14px]">
-                          {donor.isBdrcsVerified ? 'verified' : 'pending'}
-                        </span>
-                        <span>{donor.isBdrcsVerified ? t.admin.donors.verified : t.admin.donors.unverified}</span>
-                      </button>
+                      {donor.lastDonationMonths === null ? t.admin.donors.neverDonated : t.admin.donors.monthsAgo(donor.lastDonationMonths)}
                     </td>
                     <td className="px-3 py-3">
-                      <button
-                        onClick={() => handleToggleDonorAvailability(donor.id)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-all ${
-                          donor.isAvailable
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-slate-200 text-slate-700'
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                          donor.isAvailable ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-700'
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         <span>{donor.isAvailable ? t.admin.donors.available : t.admin.donors.resting}</span>
-                      </button>
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
@@ -1522,25 +1625,57 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         >
                           <span className="material-symbols-outlined text-base">visibility</span>
                         </button>
-                        <button
-                          onClick={() => {
-                            sound.playSuccessTone();
-                            showToast(
-                              t.admin.toasts.donorPinged(donor.name)
-                            );
-                          }}
-                          title={t.admin.donors.sendPing}
-                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-base">sms</span>
-                        </button>
+                        {revealedPhones[donor.id] ? (
+                          <a
+                            href={`tel:${revealedPhones[donor.id]}`}
+                            title={t.admin.donors.call}
+                            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-base">call</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => revealDonorPhone(donor)}
+                            title={t.admin.donors.call}
+                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-base">call</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
+                {donors.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                      {t.admin.donors.empty}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+
+          {!donorsDemo && donorsTotal > 20 && (
+            <div className="flex items-center justify-between text-xs text-slate-600">
+              <button
+                onClick={() => setDonorPage((p) => Math.max(1, p - 1))}
+                disabled={donorPage <= 1}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
+              >
+                {t.admin.donors.prevPage}
+              </button>
+              <span>{t.admin.donors.pageOf(donorPage, Math.ceil(donorsTotal / 20))}</span>
+              <button
+                onClick={() => setDonorPage((p) => (p * 20 < donorsTotal ? p + 1 : p))}
+                disabled={donorPage * 20 >= donorsTotal}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
+              >
+                {t.admin.donors.nextPage}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1600,18 +1735,27 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
               >
                 <option value="ALL">{t.admin.donors.allStatuses}</option>
-                <option value="pending">{t.admin.requests.filterPending}</option>
-                <option value="donor_found">{t.admin.requests.filterDonorFound}</option>
-                <option value="completed">{t.admin.requests.filterCompleted}</option>
-                <option value="cancelled">{t.admin.requests.filterCancelled}</option>
+                <option value="PENDING">{t.admin.requests.filterPending}</option>
+                <option value="DONOR_FOUND">{t.admin.requests.filterDonorFound}</option>
+                <option value="COMPLETED">{t.admin.requests.filterCompleted}</option>
+                <option value="CANCELLED">{t.admin.requests.filterCancelled}</option>
               </select>
             </div>
           </div>
 
+          {requestsDemo && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3 text-xs font-medium">
+              <span className="material-symbols-outlined text-base text-amber-600">info</span>
+              <span>{t.admin.requests.demoNotice}</span>
+            </div>
+          )}
+
           {/* Request Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredRequests.map((req) => (
-              <div 
+            {filteredRequests.map((req) => {
+              const moves = !requestsDemo ? MANAGE_MOVES[req.status].filter((next) => canTransition(req.status, next)) : [];
+              return (
+              <div
                 key={req.id}
                 className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-red-300 hover:shadow-md transition-all flex flex-col justify-between gap-4"
               >
@@ -1619,42 +1763,38 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="font-mono text-[11px] font-bold text-slate-500">{req.id}</span>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      req.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                      req.status === 'donor_found' ? 'bg-blue-100 text-blue-800' :
-                      req.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
+                      req.status === 'PENDING' ? 'bg-amber-100 text-amber-800' :
+                      req.status === 'DONOR_FOUND' ? 'bg-blue-100 text-blue-800' :
+                      req.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' :
                       'bg-slate-100 text-slate-600'
                     }`}>
-                      {req.status === 'pending' ? t.admin.requests.statusPending :
-                       req.status === 'donor_found' ? t.admin.requests.statusDonorFound :
-                       req.status === 'completed' ? t.admin.requests.statusCompleted :
+                      {req.status === 'PENDING' ? t.admin.requests.statusPending :
+                       req.status === 'DONOR_FOUND' ? t.admin.requests.statusDonorFound :
+                       req.status === 'COMPLETED' ? t.admin.requests.statusCompleted :
                        t.admin.requests.statusCancelled}
                     </span>
                   </div>
 
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h4 className="font-black text-slate-900 text-base">{req.patientName}</h4>
-                      <p className="text-xs text-slate-600 font-medium mt-0.5">{req.condition}</p>
+                      <h4 className="font-black text-slate-900 text-base">{req.patientName || t.admin.requests.defaultPatient}</h4>
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">{req.problem}</p>
                     </div>
                     <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex flex-col items-center justify-center font-black border border-red-200 shrink-0">
                       <span className="text-sm">{req.bloodGroup}</span>
-                      <span className="text-[9px] text-red-700 font-bold">{req.bagsRequired} {t.admin.requests.bags}</span>
+                      <span className="text-[9px] text-red-700 font-bold">{req.bags} {t.admin.requests.bags}</span>
                     </div>
                   </div>
 
                   <div className="mt-3 p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-700">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-slate-400 text-base">local_hospital</span>
-                      <span className="font-semibold">{req.hospital} ({req.wardBed})</span>
+                      <span className="font-semibold">{req.place}{req.area ? ` (${req.area})` : ''}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400 text-base">call</span>
-                      <span>{t.admin.requests.attendant} <strong>{req.attendantName} ({req.attendantPhone})</strong></span>
-                    </div>
-                    {req.doctorName && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                        <span className="material-symbols-outlined text-emerald-600 text-sm">verified_user</span>
-                        <span>{req.doctorName} • {req.bmdcReg}</span>
+                    {req.phones[0] && (
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-slate-400 text-base">call</span>
+                        <span>{t.admin.requests.contact} <strong>{req.phones[0]}</strong></span>
                       </div>
                     )}
                   </div>
@@ -1663,7 +1803,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 {/* Status Toggle & Slip Inspection Buttons */}
                 <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                   <button
-                    onClick={() => onOpenRequisition(req)}
+                    onClick={() => onOpenRequisition({ patientName: req.patientName, hospital: req.place, bloodGroup: req.bloodGroup, bagsRequired: req.bags })}
                     className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">prescriptions</span>
@@ -1671,25 +1811,25 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </button>
 
                   <div className="flex items-center gap-1.5">
-                    {req.status !== 'donor_found' && req.status !== 'completed' && (
+                    {moves.includes('DONOR_FOUND') && (
                       <button
-                        onClick={() => handleUpdateRequestStatus(req.id, 'donor_found')}
+                        onClick={() => handleUpdateRequestStatus(req, 'DONOR_FOUND')}
                         className="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold cursor-pointer"
                       >
                         {t.admin.requests.assign}
                       </button>
                     )}
-                    {req.status !== 'completed' && (
+                    {moves.includes('COMPLETED') && (
                       <button
-                        onClick={() => handleUpdateRequestStatus(req.id, 'completed')}
+                        onClick={() => handleUpdateRequestStatus(req, 'COMPLETED')}
                         className="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold cursor-pointer"
                       >
                         {t.admin.requests.complete}
                       </button>
                     )}
-                    {req.status !== 'cancelled' && (
+                    {moves.includes('CANCELLED') && (
                       <button
-                        onClick={() => handleUpdateRequestStatus(req.id, 'cancelled')}
+                        onClick={() => handleUpdateRequestStatus(req, 'CANCELLED')}
                         className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold cursor-pointer"
                       >
                         {t.admin.requests.cancel}
@@ -1698,8 +1838,32 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
+            {filteredRequests.length === 0 && (
+              <p className="text-sm text-slate-500 col-span-full text-center py-6">{t.admin.requests.empty}</p>
+            )}
           </div>
+
+          {!requestsDemo && requestsTotal > 20 && (
+            <div className="flex items-center justify-between text-xs text-slate-600">
+              <button
+                onClick={() => setRequestPage((p) => Math.max(1, p - 1))}
+                disabled={requestPage <= 1}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
+              >
+                {t.admin.donors.prevPage}
+              </button>
+              <span>{t.admin.donors.pageOf(requestPage, Math.ceil(requestsTotal / 20))}</span>
+              <button
+                onClick={() => setRequestPage((p) => (p * 20 < requestsTotal ? p + 1 : p))}
+                disabled={requestPage * 20 >= requestsTotal}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
+              >
+                {t.admin.donors.nextPage}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1713,7 +1877,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span>{t.admin.hospitals.title}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                {t.admin.hospitals.desc}
+                {t.admin.hospitals.desc} <span className="text-slate-400">({t.admin.hospitals.identitySample})</span>
               </p>
             </div>
 
@@ -1809,25 +1973,32 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </p>
           </div>
 
+          {fraudDemo && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3 text-xs font-medium">
+              <span className="material-symbols-outlined text-base text-amber-600">info</span>
+              <span>{t.admin.fraud.demoNotice}</span>
+            </div>
+          )}
+
           <div className="space-y-4">
             {fraudList.map((incident) => (
-              <div 
+              <div
                 key={incident.id}
                 className="p-5 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 font-black text-[10px] uppercase">
-                      {t.admin.fraud.severity[incident.severity]}
+                      {t.admin.fraud.severity[incident.severity as keyof typeof t.admin.fraud.severity] ?? incident.severity}
                     </span>
                     <span className="font-mono text-xs font-bold text-slate-500">{incident.id}</span>
-                    <span className="text-xs text-slate-400">• {incident.reportedAgo}</span>
+                    <span className="text-xs text-slate-400">• {new Date(incident.createdAt).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       incident.status === 'banned' ? 'bg-red-600 text-white' :
                       incident.status === 'dismissed' ? 'bg-slate-200 text-slate-700' :
                       'bg-amber-100 text-amber-800'
                     }`}>
-                      {t.admin.fraud.status[incident.status]}
+                      {t.admin.fraud.status[incident.status as keyof typeof t.admin.fraud.status] ?? incident.status}
                     </span>
                   </div>
 
@@ -1846,14 +2017,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     <>
                       <button
                         onClick={() => handleResolveFraud(incident.id, 'banned')}
-                        className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm cursor-pointer"
+                        disabled={resolvingFraud}
+                        className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                       >
                         <span className="material-symbols-outlined text-base">block</span>
                         <span>{t.admin.fraud.blacklist}</span>
                       </button>
                       <button
                         onClick={() => handleResolveFraud(incident.id, 'dismissed')}
-                        className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs cursor-pointer"
+                        disabled={resolvingFraud}
+                        className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                       >
                         {t.admin.fraud.dismiss}
                       </button>
@@ -1865,9 +2038,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       <span>{t.admin.fraud.permanentlyBlocked}</span>
                     </span>
                   )}
+                  {incident.status === 'dismissed' && (
+                    <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-base">check</span>
+                      <span>{t.admin.fraud.status.dismissed}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
+            {fraudList.length === 0 && <p className="text-sm text-slate-500 text-center py-6">{t.admin.fraud.empty}</p>}
           </div>
         </div>
       )}
@@ -1882,7 +2062,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 {t.admin.logs.title}
               </span>
             </div>
-            <span className="text-[11px] text-slate-400">{t.admin.logs.throughput}</span>
+            <span className="text-[11px] text-slate-400">{t.admin.logs.sampleBadge}</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-2">
@@ -1901,11 +2081,24 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           </div>
 
           <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-2 max-h-72 overflow-y-auto">
-            <div className="text-slate-400">[10:24:18] <span className="text-emerald-400">[GP-SMS]</span> {t.admin.logs.log1}</div>
-            <div className="text-slate-400">[10:23:45] <span className="text-cyan-400">[BDRCS-AUTH]</span> {t.admin.logs.log2}</div>
-            <div className="text-slate-400">[10:21:02] <span className="text-amber-400">[AUDIT-WARN]</span> {t.admin.logs.log3}</div>
-            <div className="text-slate-400">[10:18:30] <span className="text-red-400">[SECURITY-BLOCK]</span> {t.admin.logs.log4}</div>
-            <div className="text-slate-400">[10:14:12] <span className="text-emerald-400">[HANDSHAKE]</span> {t.admin.logs.log5}</div>
+            {logsDemo ? (
+              <>
+                <div className="text-amber-400 mb-2">{t.admin.logs.demoNotice}</div>
+                <div className="text-slate-400">[10:24:18] <span className="text-emerald-400">[GP-SMS]</span> {t.admin.logs.log1}</div>
+                <div className="text-slate-400">[10:23:45] <span className="text-cyan-400">[BDRCS-AUTH]</span> {t.admin.logs.log2}</div>
+                <div className="text-slate-400">[10:21:02] <span className="text-amber-400">[AUDIT-WARN]</span> {t.admin.logs.log3}</div>
+              </>
+            ) : auditEntries.length === 0 ? (
+              <div className="text-slate-500">{t.admin.logs.empty}</div>
+            ) : (
+              auditEntries.map((entry) => (
+                <div key={entry.id} className="text-slate-400">
+                  [{new Date(entry.createdAt).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'short', timeStyle: 'medium' })}]{' '}
+                  <span className="text-emerald-400">[{entry.action}]</span> {entry.detail}
+                  {entry.actorEmail ? <span className="text-slate-600"> • {entry.actorEmail}</span> : null}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -1934,54 +2127,61 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </div>
 
             <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl mb-4">
-              <img
-                src={selectedDonor.avatarUrl}
-                alt={selectedDonor.name}
-                className="w-14 h-14 rounded-2xl object-cover border border-slate-300 shadow-xs"
-              />
+              <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-700 flex items-center justify-center font-black text-lg shrink-0">
+                {initials(selectedDonor.name)}
+              </div>
               <div>
                 <h4 className="font-black text-slate-900 text-base">{selectedDonor.name}</h4>
-                <p className="text-xs text-slate-500 font-medium">{selectedDonor.location}, {selectedDonor.division}</p>
+                <p className="text-xs text-slate-500 font-medium">{selectedDonor.area}{selectedDonor.division ? `, ${selectedDonor.division}` : ''}</p>
                 <span className="inline-block mt-1 px-2.5 py-0.5 rounded-md bg-red-100 text-red-800 font-black text-xs">
-                  {t.admin.dossier.bloodGroup(selectedDonor.bloodGroup, selectedDonor.rhType)}
+                  {selectedDonor.bloodGroup}
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs mb-4">
               <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.ageWeight}</span>
-                <span className="font-bold text-slate-800">{t.admin.dossier.ageWeightValue(selectedDonor.age, selectedDonor.weightKg)}</span>
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.age}</span>
+                <span className="font-bold text-slate-800">{selectedDonor.age ?? '—'}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.hemoglobin}</span>
-                <span className="font-bold text-emerald-600">{t.admin.dossier.hemoglobinValue(selectedDonor.hbLevel)}</span>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-xl">
-                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.totalDonations}</span>
-                <span className="font-bold text-slate-800">{t.admin.dossier.totalDonationsValue(selectedDonor.donationCount)}</span>
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.gender}</span>
+                <span className="font-bold text-slate-800">{selectedDonor.gender ?? '—'}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">
                 <span className="text-slate-500 block text-[11px]">{t.admin.dossier.lastDonation}</span>
-                <span className="font-bold text-slate-800">{t.admin.dossier.daysAgo(selectedDonor.daysElapsedSinceDonation)}</span>
+                <span className="font-bold text-slate-800">
+                  {selectedDonor.lastDonationMonths === null ? t.admin.donors.neverDonated : t.admin.donors.monthsAgo(selectedDonor.lastDonationMonths)}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.vehicle}</span>
+                <span className="font-bold text-slate-800">{selectedDonor.vehicle ?? '—'}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl col-span-2">
+                <span className="text-slate-500 block text-[11px]">{t.admin.dossier.nearestHospital}</span>
+                <span className="font-bold text-slate-800">{selectedDonor.nearestHospital ?? '—'}</span>
               </div>
             </div>
 
-            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-800 mb-5">
-              <span className="font-bold block mb-1">{t.admin.dossier.serologyTitle}</span>
-              <span>{t.admin.dossier.serologyResults}</span>
-            </div>
-
             <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  handleToggleVerifyDonor(selectedDonor.id);
-                  setSelectedDonor(null);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs cursor-pointer shadow-sm"
-              >
-                {selectedDonor.isBdrcsVerified ? t.admin.dossier.revoke : t.admin.dossier.grant}
-              </button>
+              {revealedPhones[selectedDonor.id] ? (
+                <a
+                  href={`tel:${revealedPhones[selectedDonor.id]}`}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-sm text-center flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-base">call</span>
+                  {revealedPhones[selectedDonor.id]}
+                </a>
+              ) : (
+                <button
+                  onClick={() => revealDonorPhone(selectedDonor)}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-base">call</span>
+                  {t.admin.donors.call}
+                </button>
+              )}
               <button
                 onClick={() => setSelectedDonor(null)}
                 className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"

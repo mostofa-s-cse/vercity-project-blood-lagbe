@@ -90,14 +90,14 @@ endpoints.
 - [x] Commit.
 
 ### Task 4: Admin Panel — all six tabs (one file, do NOT split across parallel agents: Overview, Donors, Requests, Hospitals, Fraud and Logs are all in `AdminPanelScreen.tsx`, and parallel edits to one file merge badly)
-- [ ] Overview tab: real counts from `useGetAdminStatsQuery` replace the four hardcoded metric cards; the blood-group matrix (`stock`/`demand` per group) can stay sample **only** where marked (no demand/forecast data exists anywhere) — say so in a small note, don't invent a number for "demand".
-- [ ] Donors tab: `useGetDonorsQuery`, render `DonorDto` fields only (same rule as M1 Task 7). Drop fields the DTO doesn't have.
-- [ ] Requests tab: `useGetRequestsQuery` + `useUpdateRequestStatusMutation` (admin already has `panel.requests`, which M1's PATCH authorization already accepts — no new server logic needed).
-- [ ] Hospitals tab: same stock merge pattern `HospitalOrgScreen.tsx` already uses (`fetchHospitalStock` over the sample hospital list); hospital identity/verification stays sample (say so), stock numbers are real.
-- [ ] Fraud tab: `useGetFraudIncidentsQuery` + `useResolveFraudIncidentMutation`.
-- [ ] Logs tab: `useGetAuditLogQuery` for the log lines; leave the telecom-gateway health cards as explicitly-labeled sample (per "explicitly out of scope" above).
-- [ ] No database: every tab still shows sample data with the same demo notice style as the user-facing screens.
-- [ ] Gates, browser check (Playwright, `NEXT_PUBLIC_ADMIN_OPEN=true` from `.env.local`), commit.
+- [x] Overview tab: real counts from `useGetAdminStatsQuery` replace the four hardcoded metric cards; the blood-group matrix (`stock`/`demand` per group) stays sample, clearly labeled (no demand/forecast data exists anywhere) — "Syndicates Blocked" is real (counted from the Fraud list), "Avg. Donor Transit ETA" stays sample (no real ETA data anywhere either), labeled.
+- [x] Donors tab: `useGetDonorsQuery`, render `DonorDto` fields only (same rule as M1 Task 7) — dropped donation-count/BDRCS-verification/ping columns the DTO has no backing for; added Call (reveal-on-press, same contract as Donor Directory), paging.
+- [x] Requests tab: `useGetRequestsQuery` + `useUpdateRequestStatusMutation`, buttons gated by `canTransition` (same `MANAGE_MOVES` rule as Request Tracking) — admin's `panel.requests` already satisfies the PATCH's owner/token/permission check, no new server logic needed.
+- [x] Hospitals tab: same `mergeSavedStock` pattern `HospitalOrgScreen.tsx` uses; hospital identity/verification stays sample (labeled), stock numbers are real and match what `HospitalOrgScreen.tsx` saves (same table).
+- [x] Fraud tab: `useGetFraudIncidentsQuery` + `useResolveFraudIncidentMutation`, race-safe resolve-once already covered by the API (Task 2).
+- [x] Logs tab: `useGetAuditLogQuery` for the log lines (empty is normal — nothing has happened yet); telecom-gateway health cards stay sample, labeled (per "explicitly out of scope" above).
+- [x] No database, or no real sign-in to prove a permission (this sandbox has neither for the three permission-gated reads: stats/fraud/logs) — show sample data with a notice either way; Donors/Requests/Hospitals need no permission, so they show real data whenever a database is configured, sample only with no database.
+- [x] Gates clean (`lint`, 151 tests, `build`), browser-checked with Playwright against both no-database and a real seeded Postgres (`NEXT_PUBLIC_ADMIN_OPEN=true`): Donors (real list + masked-until-press Call, verified against the real DB), Requests, Hospitals (real stock numbers), Fraud (resolve blocked with a clear toast in sample mode) all confirmed in both modes; Overview/Fraud/Logs's "real" path could only be confirmed indirectly (the underlying data is the same tables Donors/Requests/Hospitals already proved real) since testing the 200-with-permission response needs a real Supabase session this sandbox doesn't have — same gap Task 2 already noted.
 
 ### Task 6: Ops Command — SOS queue, stock matrix, fraud (parallel agent, separate file: `OpsCommandScreen.tsx`)
 - [ ] "Emergency SOS Queue" tab: `useGetRequestsQuery`/`useUpdateRequestStatusMutation` replace `INITIAL_DEMANDS`; "Manual SOS Intake" posts through the existing `useCreateSosMutation`.
