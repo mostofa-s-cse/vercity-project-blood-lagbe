@@ -6,6 +6,10 @@ Where we are, measured against the spec you gave (see "Starting point"), and the
 
 WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
 
+## Status: Admin dashboard (WP8) in progress, out of milestone order (2026-10-06)
+
+Taken out of order from M3 because the Admin Panel and Ops Command were the two biggest remaining "looks real, isn't" screens. Added `FraudIncident` and `AuditLog` tables/APIs; rewired the Admin Panel's Overview/Donors/Requests/Hospitals/Fraud/Logs tabs and all of Ops Command off hardcoded mock state onto real data wherever a real source exists. Still sample, honestly labeled: hospital identity/verification (needs the `Organization` model, WP7), cold-chain sensor readings and telecom gateway health (no real integration exists or is planned), and Avg Donor Transit ETA / demand forecasting (no such data anywhere). Plan and verification detail: `docs/superpowers/plans/2026-10-06-dynamic-dashboards.md`.
+
 ## Starting point (measured from the code, before M1)
 
 | Lens | Match |
@@ -31,7 +35,7 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 | 6. Donation History | Sample data on the passport | Data model, recording, availability cooldown |
 | 7. Request Tracking | **Real statuses and transitions** (Pending, Donor Found, Completed, Cancelled) from the database, server-enforced (M1) | Priority/urgency beyond emergency-first |
 | 8. Hospital & Organization | Hospital role, own-hospital stock saved | Organization accounts, verification workflow, managing requests |
-| 9. Admin Dashboard | Tabs on sample data; roles are real | Real user list, moderation, reports, activity log |
+| 9. Admin Dashboard | Roles real; donor/request/hospital-stock/fraud-report tabs and the activity log now read the database (Ops Command too) | Real user list, moderation; organization verification (WP7) |
 
 | Spec technology | Today | Missing |
 |---|---|---|
@@ -104,9 +108,9 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 - A person applies for an organization account; an admin approves; approval grants the hospital role tied to that organization.
 - Organizations see and manage the requests addressed to them.
 
-### WP8. Real admin dashboard (M, +6%)
-- Users list (profiles and roles), donor and request moderation, organization verification, and a `Report` model so people can flag inappropriate content.
-- Audit log table written by every admin action and every role change; the logs tab reads it.
+### WP8. Real admin dashboard (M, +6%) — **in progress, started out of order (2026-10-06)**
+- Done: `FraudIncident` model (the `Report`-equivalent people flag) with a real Fraud tab (shared by Admin Panel and Ops Command); `AuditLog` table written by fraud resolution, hospital stock changes and role grant/revoke, read by the Logs tab; Overview/Donors/Requests/Hospitals tabs and Ops Command's SOS queue/stock matrix/fraud tab all read the database instead of `mockData.ts`.
+- Still missing: users list (profiles and roles) as its own tab, donor and request moderation actions, organization verification (needs WP7's `Organization` model first).
 
 ### WP6. Location and maps (L, +7%)
 - Districts and upazilas dataset for Bangladesh; latitude and longitude on donors, requests and organizations.

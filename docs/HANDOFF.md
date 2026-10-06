@@ -22,8 +22,11 @@ Already built (all on the branch chain below):
 |---|---|---|
 | **M1: real data and lifecycle** | WP9 Redux Toolkit + API layer, WP1 real data, WP2 request lifecycle | **Done**, plan: `docs/superpowers/plans/2026-09-29-m1-real-data.md` |
 | M2: donors and notifications | WP3, WP4, WP5 | Not started |
-| M3: organizations, admin, maps | WP7, WP8, WP6 | Not started |
+| M3: organizations, admin, maps | WP7, WP8, WP6 | WP8 (admin dashboard) **in progress** outside the milestone order — see "Dynamic dashboards" below; WP7 and WP6 not started |
 | M4: hardening and launch | WP10, WP11, WP12 | Not started |
+
+### Dynamic dashboards (out-of-order work, not a numbered milestone)
+Plan: `docs/superpowers/plans/2026-10-06-dynamic-dashboards.md` (done). Added `FraudIncident` and `AuditLog` tables/APIs, and rewired the Admin Panel and Ops Command off hardcoded mock state onto real data wherever a real source exists (donors, requests, hospital stock, fraud reports, audit log). Hospital identity/verification, cold-chain sensor readings and telecom gateway health stay sample — no `Organization` model or real sensor/SMS integration exists yet (that part of WP7 and the maps-adjacent WP6 work is still open). See "Known issues" below for exactly which Admin Panel/Ops Command tabs are real vs. sample in this environment (it depends on having a real Supabase session, not just local Postgres).
 
 ## Branches
 Work is a linear chain (each branch contains the previous one). Push the tip.
@@ -33,22 +36,24 @@ Work is a linear chain (each branch contains the previous one). Push the tip.
 Nothing has been merged into `main` yet. The owner decides when to open a pull request.
 
 ## How to resume
-1. `git status`, `git branch --show-current`, `git log --oneline -5`. M1 is done and merged into `main`/`prod`; the next milestone is **M2** (WP3 donors/seeker roles, WP4 matching and notifications, WP5 donation history) — it has no plan file yet, write one first (see `docs/SPEC-MATCH-PLAN.md`).
+1. `git status`, `git branch --show-current`, `git log --oneline -5`. M1 is done and merged into `main`/`prod`. Current work (dynamic dashboards, see above) is on `feat/simplify-ux`, not yet merged anywhere — kept on that branch on purpose until the owner reviews it. Next up: **M2** (WP3 donors/seeker roles, WP4 matching and notifications, WP5 donation history) has no plan file yet, write one first (see `docs/SPEC-MATCH-PLAN.md`); or finish WP7 (`Organization` model, hospital verification) to make the remaining Admin Panel/Ops Command sample parts real.
 2. Read `CLAUDE.md`, this file, and the plan for the current milestone. Find the first unchecked task.
-3. Run the gates before changing anything: `npm run lint && npm test && npm run build`. All should pass with no environment variables.
+3. Run the gates before changing anything: `npm run lint && npm test && npm run build`. All should pass with no environment variables (temporarily move `.env.local` aside to check this for real — `npm run build` loads it automatically otherwise).
 4. Work task by task; after each: gates, browser or database check, commit, tick the plan checkbox, add a line to the progress log.
 
-## Testing against a real Postgres (throwaway)
+## Testing against a real Postgres (persistent, this machine)
+No Docker on this machine. A persistent local Postgres (not throwaway — survives across sessions) already exists at `.dev-db/` (native `postgresql@16`, gitignored data dir, port 55432):
 ```bash
-docker run -d --name bloodlagbe-test-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=postgres -p 127.0.0.1:54329:5432 postgres:16-alpine
-# wait until `docker exec bloodlagbe-test-pg psql -U postgres -tAc "select 1"` answers, then:
-DIRECT_URL=postgresql://postgres:test@127.0.0.1:54329/postgres npx prisma migrate deploy
-DATABASE_URL=postgresql://postgres:test@127.0.0.1:54329/postgres npm run start   # after npm run build
-docker rm -f bloodlagbe-test-pg                                                    # when done
+bash .dev-db/start.sh     # start it (idempotent if already running)
+bash .dev-db/stop.sh      # stop it when done with a work session
 ```
-Ready-made API checks against that database and a running server: `python3 scripts/verify/check_reads.py` (needs a fresh `npm run db:seed`) and `python3 scripts/verify/check_writes.py` (34 checks: manage token, transitions, duplicates, races). Extend them when the API changes.
+`.env.local` (gitignored, not committed) already points `DATABASE_URL`/`DIRECT_URL` at it and sets `NEXT_PUBLIC_ADMIN_OPEN="true"` so the Admin Panel/Ops Command pages open without a real Supabase session (the APIs behind their permission-gated tabs still answer 401 without one — see "Known issues"). Apply migrations and reseed after a schema change: `npx prisma migrate deploy && npm run db:seed` (idempotent, safe to rerun; seeds donors, requests, hospital stock, fraud incidents). The owner will swap this block for a real Supabase project later (see `docs/SETUP-SUPABASE.md`); nothing else should need to change.
+
+If you ever do get a throwaway Docker Postgres instead, the old recipe still works: `docker run -d --name bloodlagbe-test-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=postgres -p 127.0.0.1:54329:5432 postgres:16-alpine`, then point `DATABASE_URL`/`DIRECT_URL` at `postgresql://postgres:test@127.0.0.1:54329/postgres`.
+
+Ready-made API checks against a running server: `python3 scripts/verify/check_reads.py` (needs a fresh `npm run db:seed`) and `python3 scripts/verify/check_writes.py` (34 checks: manage token, transitions, duplicates, races). Extend them when the API changes. These don't cover the permission-gated admin/ops endpoints (`/api/admin/*`) — those need a real signed-in session to test past 401, which nothing in this environment can produce (see "Known issues").
 To check the UI for screens that need an admin session, serve stand-in API responses from the browser (Playwright `page.route`); the server rules are covered by unit tests and database scripts.
-Machine notes for the owner's computer: port 3000 is used by another project (use `--port 3100`); a Supabase stack from another project runs in Docker on ports 5432/6543 and must not be touched; the shell is zsh (an unquoted `$LIST` is not split, run loops with `bash`).
+Machine notes for the owner's computer: port 3000 is used by another project (use `--port 3100` or higher); a Supabase stack from another project runs in Docker on ports 5432/6543 and must not be touched; the shell is zsh (an unquoted `$LIST` is not split, run loops with `bash`).
 
 ## Decisions taken (defaults, change only with the owner)
 - Adopt **Redux Toolkit** (RTK Query for server data) because the spec lists it.
@@ -60,12 +65,11 @@ Machine notes for the owner's computer: port 3000 is used by another project (us
 - Roles are dynamic (created in the Admin Panel); permissions are a fixed list in code.
 
 ## Known issues and things not done
-- Live Tracker always shows one sample mission; the OTP handshake only shows a toast.
 - Hospitals screen: camps are not saved (stock is).
-- Admin panel tabs other than Access work on sample data (local state).
+- Admin Panel: Donor Registry, Blood Requests Desk and Hospitals tabs read real data (same APIs the public screens use, no permission needed). Overview's donor/request counts are real; its blood-group supply/demand matrix and Avg Donor Transit ETA stay sample (no demand/ETA data exists anywhere). Fraud and Logs tabs, and all of Ops Command, need a real Supabase sign-in to pass their permission check — this repo has never run one (see below), so they currently show sample data with a clear notice even though the API and database side is real and tested. Hospital identity/verification (name, licence, verified badge) and cold-chain/telecom-gateway readings stay sample: no `Organization` model or real sensor/SMS integration exists (WP7, out of scope so far).
 - Header ticker makes the page wider than a phone (390px).
 - No rate limiting or CAPTCHA on public POST routes (WP11).
-- Real Google sign-in and the Supabase admin API were never run (no keys); covered by tests with fakes.
+- Real Google sign-in and the Supabase admin API were never run (no keys); covered by tests with fakes. This is also why the Admin Panel's Fraud/Logs tabs and all of Ops Command can't be shown with real data in this environment — their permission check (`panel.fraud`, `panel.logs`, `ops.command`) needs an actual signed-in session with that permission, not just `NEXT_PUBLIC_ADMIN_OPEN=true` (which only opens the *page*, same as it always did for Access/roles management).
 
 ## What the owner will provide
 Supabase project keys and Google OAuth credentials (see `docs/SETUP-SUPABASE.md`); later an email/SMS provider (WP4), Cloudflare Turnstile keys (WP11), a Vercel account (WP12).
