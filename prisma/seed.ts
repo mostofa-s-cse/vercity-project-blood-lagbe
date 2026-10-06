@@ -7,7 +7,7 @@
  */
 import { config } from 'dotenv';
 import type { BloodGroup, RequestStatus } from '../src/generated/prisma/client';
-import { INITIAL_DEMANDS, INITIAL_DONORS } from '../src/data/mockData';
+import { INITIAL_DEMANDS, INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS } from '../src/data/mockData';
 import { getPrisma } from '../src/lib/prisma';
 import { DB_BLOOD_GROUP } from '../src/lib/validation';
 
@@ -91,8 +91,25 @@ async function main() {
     }
   }
 
-  const [donors, requests, responses] = await Promise.all([prisma.donor.count(), prisma.sosRequest.count(), prisma.requestResponse.count()]);
-  console.log(`Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses.`);
+  // Hospital stock: seeded as "already reported" rows, in the same shape saveHospitalStock writes.
+  // HospitalOrgScreen merges these over the sample hospital list by id, so this just pre-fills them.
+  for (const org of SAMPLE_HOSPITAL_ORGS) {
+    for (const [group, units] of Object.entries(org.bloodStock)) {
+      await prisma.hospitalStock.upsert({
+        where: { hospitalId_bloodGroup: { hospitalId: org.id, bloodGroup: dbGroup(group) } },
+        create: { hospitalId: org.id, bloodGroup: dbGroup(group), units },
+        update: {},
+      });
+    }
+  }
+
+  const [donors, requests, responses, stockRows] = await Promise.all([
+    prisma.donor.count(),
+    prisma.sosRequest.count(),
+    prisma.requestResponse.count(),
+    prisma.hospitalStock.count(),
+  ]);
+  console.log(`Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses, ${stockRows} hospital stock rows.`);
   await prisma.$disconnect();
 }
 

@@ -13,3 +13,6 @@ next-env.d.ts
 
 # Generated Prisma client (created by `npm install` / `npm run db:generate`)
 src/generated/
+
+# Local throwaway Postgres data for development (see .dev-db/start.sh); the scripts are tracked
+.dev-db/pgdata/
