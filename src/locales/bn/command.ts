@@ -5,6 +5,8 @@ export const command: Command = {
   toastReportDismissed: 'যাচাইয়ের পর রিপোর্টটি খারিজ হিসেবে চিহ্নিত করা হয়েছে।',
   toastDemandStatusUpdated: (id: string) => `ডিসপ্যাচার রিকোয়েস্ট #${id}-এর স্ট্যাটাস আপডেট করেছেন।`,
   toastRedAlertSent: 'স্ট্যান্ডবাই স্বেচ্ছাসেবী সমন্বয়কারীদের কাছে রেড অ্যালার্ট ব্রডকাস্ট পাঠানো হয়েছে।',
+  actionFailed: 'এই পরিবর্তন সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+  sampleDataNote: 'নমুনা তথ্য — কোনো লাইভ সেন্সর বা SMS গেটওয়ে যুক্ত নেই।',
 
   govBadge: 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার • DGHS',
   liveConsole: 'লাইভ কমান্ড কনসোল (২৪/৭ ট্রান্সফিউশন নিয়ন্ত্রণ)',
@@ -30,6 +32,7 @@ export const command: Command = {
   avgResponseTimeNote: '↓ ২০২৩ বেসলাইনের চেয়ে ৪.২ মিনিট দ্রুত',
   fulfillmentRatio: 'পূরণের হার',
   fulfillmentRatioNote: '১,১৮৮টি জরুরি কেসের মধ্যে ১,১২০টি',
+  fulfillmentRatioReal: (completed: number, total: number) => `${total}টি রিকোয়েস্টের মধ্যে ${completed}টি সম্পন্ন`,
   coldChainAlarms: 'কোল্ড-চেইন অ্যালার্ম',
   coldChainAlarmsValue: '১টি সক্রিয়',
   coldChainAlarmsNote: 'কুর্মিটোলা ইউনিট D-09 (৫.৭°C - পরিদর্শন চলছে)',
@@ -61,6 +64,8 @@ export const command: Command = {
   inspect: 'পরিদর্শন',
   markDispatched: 'প্রেরিত হিসেবে চিহ্নিত করুন',
   active: 'সক্রিয়',
+  markDonorFound: 'ডোনার পাওয়া গেছে হিসেবে চিহ্নিত করুন',
+  backToPending: 'পেন্ডিং-এ ফিরিয়ে নিন',
 
   vaultsTitle: 'IoT কোল্ড-চেইন সংরক্ষণ ভল্ট (লক্ষ্য: +২°C থেকে +৬°C)',
   filled: (pct: number, max: number) => `${pct}% পূর্ণ (সর্বোচ্চ ${max})`,

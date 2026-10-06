@@ -3,6 +3,8 @@ export const command = {
   toastReportDismissed: 'Report flagged as dismissed after verification.',
   toastDemandStatusUpdated: (id: string) => `Dispatcher updated status for demand #${id}.`,
   toastRedAlertSent: 'Red Alert Broadcast sent to standby volunteer coordinators.',
+  actionFailed: 'Could not save that change. Please try again.',
+  sampleDataNote: 'Sample data — no live sensor or SMS gateway is connected.',
 
   govBadge: 'GOVERNMENT OF BANGLADESH • DGHS',
   liveConsole: 'Live Command Console (24/7 Transfusion Control)',
@@ -28,6 +30,7 @@ export const command = {
   avgResponseTimeNote: '↓ 4.2m faster than 2023 baseline',
   fulfillmentRatio: 'Fulfillment Ratio',
   fulfillmentRatioNote: '1,120 of 1,188 emergency cases',
+  fulfillmentRatioReal: (completed: number, total: number) => `${completed} of ${total} requests`,
   coldChainAlarms: 'Cold-Chain Alarms',
   coldChainAlarmsValue: '1 Active',
   coldChainAlarmsNote: 'Kurmitola Unit D-09 (5.7°C - Inspecting)',
@@ -59,6 +62,8 @@ export const command = {
   inspect: 'Inspect',
   markDispatched: 'Mark Dispatched',
   active: 'Active',
+  markDonorFound: 'Mark Donor Found',
+  backToPending: 'Back to Pending',
 
   vaultsTitle: 'IoT Cold-Chain Storage Vaults (Target: +2°C to +6°C)',
   filled: (pct: number, max: number) => `${pct}% Filled (${max} Max)`,

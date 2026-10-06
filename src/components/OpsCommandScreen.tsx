@@ -1,43 +1,146 @@
-import React, { useState } from 'react';
-import { OpsSubTab, ScreenId, EmergencyDemand, FraudIncident } from '../types/blood';
-import { INITIAL_DEMANDS, CHILLER_UNITS, HOSPITAL_STOCKS, FRAUD_INCIDENTS } from '../data/mockData';
+import React, { useEffect, useMemo, useState } from 'react';
+import { OpsSubTab, ScreenId, BloodGroup, HospitalOrganization } from '../types/blood';
+import { CHILLER_UNITS, SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useGetRequestsQuery, useUpdateRequestStatusMutation, useGetFraudIncidentsQuery, useResolveFraudIncidentMutation, useGetDonorsQuery } from '../store/api';
+import { isDatabaseOff, apiErrorCode, apiStatus } from '../store/errors';
+import { sampleRequests } from '../data/sample';
+import { canTransition, type RequestStatusValue } from '../lib/requestStatus';
+import { fetchHospitalStock } from '../lib/api';
+import type { RequestDto, FraudIncidentDto } from '../lib/dtoTypes';
+
+/** Total bags of a hospital: always the sum of its blood groups (same rule as HospitalOrgScreen.tsx). */
+const sumStock = (stock: HospitalOrganization['bloodStock']): number =>
+  Object.values(stock).reduce((total, units) => total + (units || 0), 0);
+
+/** Puts saved stock over the sample data (only the groups a hospital has reported), same as HospitalOrgScreen.tsx. */
+const mergeSavedStock = (base: HospitalOrganization[], saved: Record<string, Record<string, number>>): HospitalOrganization[] =>
+  base.map((h) => {
+    const reported = saved[h.id];
+    if (!reported) return h;
+    const bloodStock = { ...h.bloodStock };
+    for (const group of Object.keys(bloodStock) as BloodGroup[]) {
+      const units = reported[group];
+      if (typeof units === 'number' && Number.isFinite(units)) bloodStock[group] = units;
+    }
+    return { ...h, bloodStock, availableBags: sumStock(bloodStock) };
+  });
+
+/** One row for the Anti-Fraud tab, from either the real API or the sample fallback. */
+interface FraudRow {
+  id: string;
+  type: string;
+  severity: string;
+  location: string;
+  targetEntity: string;
+  carrierInfo: string;
+  description: string;
+  status: string;
+  whenText: string;
+}
 
 interface OpsCommandScreenProps {
   onNavigate: (screen: ScreenId) => void;
-  onOpenRequisition: (demand: EmergencyDemand) => void;
+  onOpenRequisition: (demand: any) => void;
 }
 
 export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
   onNavigate,
   onOpenRequisition,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<OpsSubTab>('overview');
-  const [demands, setDemands] = useState<EmergencyDemand[]>(INITIAL_DEMANDS);
-  const [fraudList, setFraudList] = useState<FraudIncident[]>(FRAUD_INCIDENTS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [stockMap, setStockMap] = useState<Record<string, Record<string, number>> | null>(null);
 
-  const handleResolveFraud = (id: string, action: 'banned' | 'dismissed') => {
+  // Hospital stock hospitals have saved; without a database this stays null and the sample numbers are kept.
+  useEffect(() => {
+    let active = true;
+    fetchHospitalStock().then((saved) => {
+      if (active && saved) setStockMap(saved);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const hospitals = stockMap ? mergeSavedStock(SAMPLE_HOSPITAL_ORGS, stockMap) : SAMPLE_HOSPITAL_ORGS;
+
+  const allRequests = useGetRequestsQuery({ pageSize: 50 });
+  const pendingCount = useGetRequestsQuery({ status: 'PENDING', pageSize: 1 });
+  const donorFoundCount = useGetRequestsQuery({ status: 'DONOR_FOUND', pageSize: 1 });
+  const completedCount = useGetRequestsQuery({ status: 'COMPLETED', pageSize: 1 });
+  const availableDonors = useGetDonorsQuery({ available: true, pageSize: 1 });
+  const fraudQuery = useGetFraudIncidentsQuery();
+  const [updateStatus] = useUpdateRequestStatusMutation();
+  const [resolveFraud] = useResolveFraudIncidentMutation();
+
+  const isRequestsDemo = isDatabaseOff(allRequests.error);
+  // Fraud/stats reads need an admin/ops permission, checked before the database check, so a signed-out
+  // viewer (including in NEXT_PUBLIC_ADMIN_OPEN demo mode, which opens the page but not the API) gets 401
+  // even with no database. Treat that the same as "no live data" here, so the tab still shows the sample
+  // incidents instead of an empty list.
+  const isFraudDemo = isDatabaseOff(fraudQuery.error) || apiStatus(fraudQuery.error) === 401 || apiStatus(fraudQuery.error) === 403;
+
+  const demoRequests = useMemo(() => sampleRequests(), []);
+  const requestsList: RequestDto[] = isRequestsDemo ? demoRequests : (allRequests.data?.requests ?? []);
+
+  const whenText = (iso: string) =>
+    new Date(iso).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+
+  const fraudRows: FraudRow[] = isFraudDemo
+    ? FRAUD_INCIDENTS.map((inc) => ({
+        id: inc.id,
+        type: inc.type,
+        severity: inc.severity,
+        location: inc.location,
+        targetEntity: inc.targetEntity,
+        carrierInfo: inc.carrierInfo,
+        description: inc.description,
+        status: inc.status,
+        whenText: inc.reportedAgo,
+      }))
+    : (fraudQuery.data?.incidents ?? []).map((inc: FraudIncidentDto) => ({
+        id: inc.id,
+        type: inc.type,
+        severity: inc.severity,
+        location: inc.location,
+        targetEntity: inc.targetEntity ?? '—',
+        carrierInfo: inc.carrierInfo ?? '—',
+        description: inc.description,
+        status: inc.status,
+        whenText: whenText(inc.createdAt),
+      }));
+
+  const statusLabel = (status: string) =>
+    ({
+      PENDING: t.tracking.status.pending,
+      DONOR_FOUND: t.tracking.status.donorFound,
+      COMPLETED: t.tracking.status.completed,
+      CANCELLED: t.tracking.status.cancelled,
+    })[status] ?? status;
+
+  const handleResolveFraud = async (id: string, action: 'banned' | 'dismissed') => {
+    if (isFraudDemo) return;
     sound.playTap();
-    setFraudList((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: action } : item))
-    );
-    setToastMessage(
-      action === 'banned'
-        ? t.command.toastEntityBlocked
-        : t.command.toastReportDismissed
-    );
+    try {
+      await resolveFraud({ id, status: action }).unwrap();
+      setToastMessage(action === 'banned' ? t.command.toastEntityBlocked : t.command.toastReportDismissed);
+    } catch {
+      setToastMessage(t.command.actionFailed);
+    }
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleToggleDemandStatus = (id: string) => {
+  const handleChangeRequestStatus = async (req: RequestDto, next: RequestStatusValue) => {
+    if (isRequestsDemo) return;
     sound.playTap();
-    setDemands((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: d.status === 'active' ? 'in-progress' : 'active' } : d))
-    );
-    setToastMessage(t.command.toastDemandStatusUpdated(id));
+    try {
+      await updateStatus({ id: req.id, status: next }).unwrap();
+      setToastMessage(t.command.toastDemandStatusUpdated(req.id));
+    } catch (error) {
+      setToastMessage(apiErrorCode(error) === 'invalid_transition' ? t.tracking.errors.invalidTransition : t.command.actionFailed);
+    }
     setTimeout(() => setToastMessage(null), 3000);
   };
 
@@ -80,11 +183,15 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-center">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">{t.command.activeNationalSos}</span>
-              <span className="text-xl font-black text-red-500">{t.command.activeNationalSosValue}</span>
+              <span className="text-xl font-black text-red-500">
+                {isRequestsDemo ? t.command.activeNationalSosValue : (pendingCount.data?.total ?? 0) + (donorFoundCount.data?.total ?? 0)}
+              </span>
             </div>
             <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-center">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">{t.command.donorsOnStandby}</span>
-              <span className="text-xl font-black text-emerald-400">{t.command.donorsOnStandbyValue}</span>
+              <span className="text-xl font-black text-emerald-400">
+                {isDatabaseOff(availableDonors.error) ? t.command.donorsOnStandbyValue : (availableDonors.data?.total ?? 0)}
+              </span>
             </div>
             <button
               onClick={() => {
@@ -145,8 +252,8 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                   speed
                 </span>
               </div>
-              <span className="text-[11px] text-emerald-600 font-semibold mt-2 block">
-                {t.command.avgResponseTimeNote}
+              <span className="text-[11px] text-slate-500 font-semibold mt-2 block">
+                {t.command.sampleDataNote}
               </span>
             </div>
 
@@ -154,14 +261,20 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
               <div className="flex justify-between items-start">
                 <div>
                   <span className="text-xs font-bold text-slate-600 block">{t.command.fulfillmentRatio}</span>
-                  <span className="text-2xl font-black text-slate-900 mt-1 block">94.2%</span>
+                  <span className="text-2xl font-black text-slate-900 mt-1 block">
+                    {isRequestsDemo || !allRequests.data?.total
+                      ? '—'
+                      : `${Math.round(((completedCount.data?.total ?? 0) / allRequests.data.total) * 100)}%`}
+                  </span>
                 </div>
                 <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center material-symbols-outlined">
                   task_alt
                 </span>
               </div>
               <span className="text-[11px] text-blue-600 font-semibold mt-2 block">
-                {t.command.fulfillmentRatioNote}
+                {isRequestsDemo
+                  ? t.command.fulfillmentRatioNote
+                  : t.command.fulfillmentRatioReal(completedCount.data?.total ?? 0, allRequests.data?.total ?? 0)}
               </span>
             </div>
 
@@ -175,8 +288,8 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                   thermostat
                 </span>
               </div>
-              <span className="text-[11px] text-amber-600 font-semibold mt-2 block">
-                {t.command.coldChainAlarmsNote}
+              <span className="text-[11px] text-slate-500 font-semibold mt-2 block">
+                {t.command.sampleDataNote}
               </span>
             </div>
 
@@ -184,7 +297,9 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
               <div className="flex justify-between items-start">
                 <div>
                   <span className="text-xs font-bold text-slate-600 block">{t.command.syndicatesIntercepted}</span>
-                  <span className="text-2xl font-black text-red-600 mt-1 block">{t.command.syndicatesInterceptedValue}</span>
+                  <span className="text-2xl font-black text-red-600 mt-1 block">
+                    {isFraudDemo ? t.command.syndicatesInterceptedValue : (fraudQuery.data?.incidents.filter((i) => i.status === 'banned').length ?? 0)}
+                  </span>
                 </div>
                 <span className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center material-symbols-outlined">
                   gavel
@@ -207,27 +322,24 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-              {[
-                { grp: 'A+', bags: 412, status: t.command.stockStatus.safe, color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'A-', bags: 64, status: t.command.stockStatus.moderate, color: 'text-amber-600 bg-amber-50' },
-                { grp: 'B+', bags: 580, status: t.command.stockStatus.optimal, color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'B-', bags: 38, status: t.command.stockStatus.low, color: 'text-red-600 bg-red-50' },
-                { grp: 'O+', bags: 840, status: t.command.stockStatus.optimal, color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'O-', bags: 12, status: t.command.stockStatus.critical, color: 'text-red-700 bg-red-100 font-black ring-1 ring-red-400' },
-                { grp: 'AB+', bags: 290, status: t.command.stockStatus.safe, color: 'text-emerald-600 bg-emerald-50' },
-                { grp: 'AB-', bags: 18, status: t.command.stockStatus.critical, color: 'text-red-700 bg-red-100 font-black ring-1 ring-red-400' },
-              ].map((item) => (
-                <div
-                  key={item.grp}
-                  className={`p-3.5 rounded-2xl border border-slate-200/80 text-center flex flex-col items-center justify-between ${item.color}`}
-                >
-                  <span className="text-base font-black">{item.grp}</span>
-                  <span className="text-xl font-extrabold my-1">{item.bags}</span>
-                  <span className="text-[10px] uppercase font-bold tracking-tight">
-                    {item.status}
-                  </span>
-                </div>
-              ))}
+              {(Object.keys(SAMPLE_HOSPITAL_ORGS[0].bloodStock) as BloodGroup[]).map((group) => {
+                const bags = hospitals.reduce((sum, h) => sum + (h.bloodStock[group] || 0), 0);
+                const status =
+                  bags < 50 ? t.command.stockStatus.critical : bags < 150 ? t.command.stockStatus.low : t.command.stockStatus.safe;
+                const color =
+                  bags < 50
+                    ? 'text-red-700 bg-red-100 font-black ring-1 ring-red-400'
+                    : bags < 150
+                      ? 'text-amber-600 bg-amber-50'
+                      : 'text-emerald-600 bg-emerald-50';
+                return (
+                  <div key={group} className={`p-3.5 rounded-2xl border border-slate-200/80 text-center flex flex-col items-center justify-between ${color}`}>
+                    <span className="text-base font-black">{group}</span>
+                    <span className="text-xl font-extrabold my-1">{bags}</span>
+                    <span className="text-[10px] uppercase font-bold tracking-tight">{status}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -266,48 +378,69 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {demands.map((demand) => (
-                  <tr key={demand.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-3 font-mono font-bold text-slate-900">{demand.id}</td>
-                    <td className="py-3.5 px-3">
-                      <strong className="block text-slate-900">{demand.patientName}</strong>
-                      <span className="text-[11px] text-slate-500">{demand.condition}</span>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <span className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 font-black text-xs">
-                        {demand.bloodGroup} ({t.command.bags(demand.bagsRequired)})
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <span className="text-slate-800 font-semibold block">{demand.hospital}</span>
-                      <span className="text-[11px] text-slate-500">{demand.hospitalLocation}</span>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-bold">
-                        {demand.urgencyTag}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <button
-                        onClick={() => onOpenRequisition(demand)}
-                        className="text-red-600 hover:underline font-semibold flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-sm">visibility</span>
-                        <span>{t.command.inspect}</span>
-                      </button>
-                    </td>
-                    <td className="py-3.5 px-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                {requestsList.map((req) => {
+                  const nextStatus: RequestStatusValue | null =
+                    req.status === 'PENDING' && canTransition(req.status, 'DONOR_FOUND')
+                      ? 'DONOR_FOUND'
+                      : req.status === 'DONOR_FOUND' && canTransition(req.status, 'PENDING')
+                        ? 'PENDING'
+                        : null;
+                  return (
+                    <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3.5 px-3 font-mono font-bold text-slate-900">{req.id}</td>
+                      <td className="py-3.5 px-3">
+                        <strong className="block text-slate-900">{req.patientName || t.tracking.defaultPatient}</strong>
+                        <span className="text-[11px] text-slate-500">{req.problem}</span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 font-black text-xs">
+                          {req.bloodGroup} ({t.command.bags(req.bags)})
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="text-slate-800 font-semibold block">{req.place}</span>
+                        <span className="text-[11px] text-slate-500">{req.area}</span>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-bold">
+                          {statusLabel(req.status)}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3">
                         <button
-                          onClick={() => handleToggleDemandStatus(demand.id)}
-                          className="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 text-[11px] font-semibold"
+                          onClick={() =>
+                            onOpenRequisition({
+                              patientName: req.patientName || req.problem || req.place,
+                              hospital: req.place,
+                              bloodGroup: req.bloodGroup,
+                              bagsRequired: req.bags,
+                            })
+                          }
+                          className="text-red-600 hover:underline font-semibold flex items-center gap-1"
                         >
-                          {demand.status === 'active' ? t.command.markDispatched : t.command.active}
+                          <span className="material-symbols-outlined text-sm">visibility</span>
+                          <span>{t.command.inspect}</span>
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {nextStatus ? (
+                            <button
+                              onClick={() => handleChangeRequestStatus(req, nextStatus)}
+                              disabled={isRequestsDemo}
+                              title={isRequestsDemo ? t.command.sampleDataNote : undefined}
+                              className="px-2.5 py-1 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 text-[11px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {nextStatus === 'DONOR_FOUND' ? t.command.markDonorFound : t.command.backToPending}
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 font-semibold">{statusLabel(req.status)}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -319,10 +452,13 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
         <div className="flex flex-col gap-6 animate-in fade-in">
           {/* Cold-Chain IoT Vaults */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-red-600 text-base">ac_unit</span>
-              {t.command.vaultsTitle}
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-red-600 text-base">ac_unit</span>
+                {t.command.vaultsTitle}
+              </h3>
+              <span className="text-[10px] text-slate-400 font-semibold">{t.command.sampleDataNote}</span>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {CHILLER_UNITS.map((unit) => {
@@ -378,38 +514,41 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {HOSPITAL_STOCKS.map((hosp) => (
-                <div
-                  key={hosp.id}
-                  className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-bold text-xs text-slate-900">{hosp.name}</h4>
-                      <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold">
-                        {hosp.code}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">{hosp.district}</span>
-
-                    <div className="grid grid-cols-2 gap-2 my-3 text-xs bg-white p-2.5 rounded-xl border border-slate-100">
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">{t.command.totalBagsStock}</span>
-                        <strong className="text-slate-800 font-black">{t.command.units(hosp.totalBags)}</strong>
+              {hospitals.map((hosp) => {
+                const lowest = (Object.entries(hosp.bloodStock) as [BloodGroup, number][]).sort((a, b) => a[1] - b[1])[0];
+                const stockHealth = lowest && lowest[1] < 20 ? `${lowest[0]} ${t.command.stockStatus.low} (${lowest[1]})` : t.command.stockStatus.safe;
+                return (
+                  <div
+                    key={hosp.id}
+                    className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-bold text-xs text-slate-900">{hosp.name}</h4>
+                        <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold">
+                          {hosp.shortCode}
+                        </span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 block">{t.command.criticalBeds}</span>
-                        <strong className="text-slate-800 font-black">{t.command.beds(hosp.criticalBeds)}</strong>
-                      </div>
-                    </div>
+                      <span className="text-[11px] text-slate-500 block mt-0.5">{hosp.district}</span>
 
-                    <p className="text-[11px] text-slate-600">
-                      <strong>{t.command.triageLead}</strong> {hosp.triageLead}
-                    </p>
-                    <p className="text-[11px] text-slate-600">
-                      <strong>{t.command.stockHealth}</strong> {hosp.stockStatus}
-                    </p>
-                  </div>
+                      <div className="grid grid-cols-2 gap-2 my-3 text-xs bg-white p-2.5 rounded-xl border border-slate-100">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">{t.command.totalBagsStock}</span>
+                          <strong className="text-slate-800 font-black">{t.command.units(hosp.availableBags)}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block">{t.command.criticalBeds}</span>
+                          <strong className="text-slate-800 font-black">{t.command.beds(hosp.icuBeds)}</strong>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-600">
+                        <strong>{t.command.triageLead}</strong> {hosp.directorName}
+                      </p>
+                      <p className="text-[11px] text-slate-600">
+                        <strong>{t.command.stockHealth}</strong> {stockHealth}
+                      </p>
+                    </div>
 
                   <a
                     href={`tel:${hosp.hotline.replace(/[^0-9+]/g, '')}`}
@@ -419,8 +558,9 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                     <span className="material-symbols-outlined text-sm">call</span>
                     <span>{t.command.directHotline(hosp.hotline)}</span>
                   </a>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -445,7 +585,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
           </div>
 
           <div className="space-y-4">
-            {fraudList.map((inc) => (
+            {fraudRows.map((inc) => (
               <div
                 key={inc.id}
                 className="p-5 rounded-2xl border border-red-200 bg-red-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -456,7 +596,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                       {t.command.severity(inc.severity)}
                     </span>
                     <strong className="text-xs text-slate-900">{inc.type}</strong>
-                    <span className="text-[11px] text-slate-400 font-mono">• {inc.reportedAgo}</span>
+                    <span className="text-[11px] text-slate-400 font-mono">• {inc.whenText}</span>
                   </div>
 
                   <p className="text-xs text-slate-800 mt-1 leading-relaxed">{inc.description}</p>
@@ -473,14 +613,18 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                     <>
                       <button
                         onClick={() => handleResolveFraud(inc.id, 'banned')}
-                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm"
+                        disabled={isFraudDemo}
+                        title={isFraudDemo ? t.command.sampleDataNote : undefined}
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <span className="material-symbols-outlined text-sm">block</span>
                         <span>{t.command.permanentBlacklist}</span>
                       </button>
                       <button
                         onClick={() => handleResolveFraud(inc.id, 'dismissed')}
-                        className="px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50"
+                        disabled={isFraudDemo}
+                        title={isFraudDemo ? t.command.sampleDataNote : undefined}
+                        className="px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {t.command.dismiss}
                       </button>
@@ -507,6 +651,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             <p className="text-xs text-slate-500">
               {t.command.gatewaysDesc}
             </p>
+            <p className="text-[11px] text-slate-400 font-semibold mt-1">{t.command.sampleDataNote}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
