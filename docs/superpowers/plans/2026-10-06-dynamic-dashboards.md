@@ -89,20 +89,17 @@ endpoints.
 - [x] Tests with a stubbed `fetch`.
 - [x] Commit.
 
-### Task 4: Admin Panel — Overview, Donors, Requests tabs (parallel agent)
+### Task 4: Admin Panel — all six tabs (one file, do NOT split across parallel agents: Overview, Donors, Requests, Hospitals, Fraud and Logs are all in `AdminPanelScreen.tsx`, and parallel edits to one file merge badly)
 - [ ] Overview tab: real counts from `useGetAdminStatsQuery` replace the four hardcoded metric cards; the blood-group matrix (`stock`/`demand` per group) can stay sample **only** where marked (no demand/forecast data exists anywhere) — say so in a small note, don't invent a number for "demand".
 - [ ] Donors tab: `useGetDonorsQuery`, render `DonorDto` fields only (same rule as M1 Task 7). Drop fields the DTO doesn't have.
 - [ ] Requests tab: `useGetRequestsQuery` + `useUpdateRequestStatusMutation` (admin already has `panel.requests`, which M1's PATCH authorization already accepts — no new server logic needed).
-- [ ] No database: every tab still shows sample data with the same demo notice style as the user-facing screens.
-- [ ] Gates, browser check (Playwright, `NEXT_PUBLIC_ADMIN_OPEN=true` from `.env.local`), commit.
-
-### Task 5: Admin Panel — Hospitals, Fraud, Logs tabs (parallel agent)
 - [ ] Hospitals tab: same stock merge pattern `HospitalOrgScreen.tsx` already uses (`fetchHospitalStock` over the sample hospital list); hospital identity/verification stays sample (say so), stock numbers are real.
 - [ ] Fraud tab: `useGetFraudIncidentsQuery` + `useResolveFraudIncidentMutation`.
 - [ ] Logs tab: `useGetAuditLogQuery` for the log lines; leave the telecom-gateway health cards as explicitly-labeled sample (per "explicitly out of scope" above).
-- [ ] Gates, browser check, commit.
+- [ ] No database: every tab still shows sample data with the same demo notice style as the user-facing screens.
+- [ ] Gates, browser check (Playwright, `NEXT_PUBLIC_ADMIN_OPEN=true` from `.env.local`), commit.
 
-### Task 6: Ops Command — SOS queue, stock matrix, fraud (parallel agent)
+### Task 6: Ops Command — SOS queue, stock matrix, fraud (parallel agent, separate file: `OpsCommandScreen.tsx`)
 - [ ] "Emergency SOS Queue" tab: `useGetRequestsQuery`/`useUpdateRequestStatusMutation` replace `INITIAL_DEMANDS`; "Manual SOS Intake" posts through the existing `useCreateSosMutation`.
 - [ ] "Hospitals & Cold-Chain Stocks" tab: hospital cards' bag counts from the real stock API (same as Task 5); leave the chiller-unit temperatures as sample (out of scope above), labeled.
 - [ ] "Anti-Fraud & Syndicates" tab: same `FraudIncident` API as the Admin Panel's Fraud tab (shared data, two screens).
