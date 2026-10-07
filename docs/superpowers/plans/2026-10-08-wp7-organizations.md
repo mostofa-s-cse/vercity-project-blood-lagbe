@@ -61,11 +61,11 @@ sample ids and any new `Organization.id`, no change needed there.
 - [x] Commit.
 
 ### Task 2: Apply and list endpoints
-- [ ] `src/lib/validation.ts`: `parseOrganizationApplyInput` (failing test first) — name, type (one of the 4), address, licenseNumber required; division/district/hotline/emergencyContact/directorName/totalBeds/icuBeds optional.
-- [ ] `OrganizationDto` in `dtoTypes.ts`, `toOrganizationDto` in `dto.ts`.
-- [ ] `GET /api/organizations`, `POST /api/organizations/apply`.
-- [ ] Database checks on `.dev-db`: apply with a minimal body → `pending`, `isVerified: false`; invalid body → 400; list includes both seeded and newly-applied orgs.
-- [ ] Commit.
+- [x] `src/lib/validation.ts`: `parseOrganizationApplyInput` (failing tests first, 3 tests) — name, type (one of the 4), address, licenseNumber required; division/district/hotline/emergencyContact/directorName/totalBeds/icuBeds optional.
+- [x] `OrganizationDto` in `dtoTypes.ts`, `toOrganizationDto` in `dto.ts`.
+- [x] `GET /api/organizations`, `POST /api/organizations/apply`.
+- [x] Database checks on `.dev-db` (curl): apply with a minimal body → `pending`, `isVerified: false`; bad type → 400; list went from 6 to 7.
+- [x] Commit.
 
 ### Task 3: Admin approve/reject
 - [ ] `PATCH /api/admin/organizations/[id]`: `panel.hospitals` guard, approve grants the Hospital staff role tied to the org (via `getGrantService().grant(...)`, same call the Access tab's grant form makes) to `appliedBy`'s email if there is a `Profile` row for them, else just marks approved without a grant (there is no email to grant to) — `writeAuditLog`.

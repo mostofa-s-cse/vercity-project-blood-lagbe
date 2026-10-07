@@ -117,3 +117,23 @@ export interface DonationDto {
   units: number;
   donatedAt: string;
 }
+
+/** A hospital, blood bank or voluntary organization (WP7), replacing the sample hospital list. */
+export interface OrganizationDto {
+  id: string;
+  name: string;
+  shortCode: string | null;
+  type: string;
+  division: string | null;
+  district: string | null;
+  address: string | null;
+  hotline: string | null;
+  emergencyContact: string | null;
+  directorName: string | null;
+  licenseNumber: string | null;
+  isVerified: boolean;
+  status: string;
+  totalBeds: number | null;
+  icuBeds: number | null;
+  createdAt: string;
+}

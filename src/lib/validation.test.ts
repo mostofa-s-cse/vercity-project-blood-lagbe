@@ -12,6 +12,7 @@ import {
   parseSosInput,
   parseDonorUpdateInput,
   parseFraudStatusInput,
+  parseOrganizationApplyInput,
   parseStatusInput,
   parseStockInput,
 } from './validation.ts';
@@ -246,6 +247,34 @@ test('a donor profile update validates whichever fields are present', () => {
   assert.equal(parseDonorUpdateInput({ nearestHospital: 'x'.repeat(121) }).error, 'nearestHospital');
   assert.equal(parseDonorUpdateInput({ lastDonationMonths: -1 }).error, 'lastDonationMonths');
   assert.equal(parseDonorUpdateInput({ isAvailable: 'yes' }).error, 'isAvailable');
+});
+
+test('an organization application needs name, type, address and licence', () => {
+  const minimal = { name: 'Green Life Blood Bank', type: 'blood_bank', address: 'Uttara, Dhaka', licenseNumber: 'LIC-9001' };
+  const result = parseOrganizationApplyInput(minimal);
+  assert.equal(result.error, null);
+  if (!result.error) {
+    assert.equal(result.value.name, 'Green Life Blood Bank');
+    assert.equal(result.value.type, 'blood_bank');
+    assert.equal(result.value.division, undefined);
+  }
+});
+
+test('an organization application rejects a bad type or a missing required field', () => {
+  const base = { name: 'Green Life', type: 'blood_bank', address: 'Uttara', licenseNumber: 'LIC-9001' };
+  assert.equal(parseOrganizationApplyInput({ ...base, type: 'charity' }).error, 'type');
+  assert.equal(parseOrganizationApplyInput({ ...base, name: undefined }).error, 'name');
+  assert.equal(parseOrganizationApplyInput({ ...base, address: undefined }).error, 'address');
+  assert.equal(parseOrganizationApplyInput({ ...base, licenseNumber: undefined }).error, 'licenseNumber');
+  assert.notEqual(parseOrganizationApplyInput(null).error, null);
+});
+
+test('an organization application keeps valid optional fields and rejects bad ones', () => {
+  const base = { name: 'Green Life', type: 'blood_bank', address: 'Uttara', licenseNumber: 'LIC-9001' };
+  const withOptional = parseOrganizationApplyInput({ ...base, division: 'Dhaka Central', totalBeds: 50, icuBeds: 4 });
+  assert.equal(withOptional.error, null);
+  if (!withOptional.error) assert.deepEqual([withOptional.value.division, withOptional.value.totalBeds, withOptional.value.icuBeds], ['Dhaka Central', 50, 4]);
+  assert.equal(parseOrganizationApplyInput({ ...base, totalBeds: -1 }).error, 'totalBeds');
 });
 
 test('a fraud incident is resolved as banned or dismissed, nothing else', () => {

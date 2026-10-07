@@ -326,6 +326,64 @@ export function parseDonorUpdateInput(raw: unknown): ParseResult<DonorUpdateInpu
   return { error: null, value };
 }
 
+const ORGANIZATION_TYPES = ['government_hospital', 'private_hospital', 'volunteer_org', 'blood_bank'] as const;
+export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
+
+export interface OrganizationApplyInput {
+  name: string;
+  type: OrganizationType;
+  address: string;
+  licenseNumber: string;
+  division?: string;
+  district?: string;
+  hotline?: string;
+  emergencyContact?: string;
+  directorName?: string;
+  totalBeds?: number;
+  icuBeds?: number;
+}
+
+/** A new organization's public application. Starts `pending`; an admin decides (`panel.hospitals`). */
+export function parseOrganizationApplyInput(raw: unknown): ParseResult<OrganizationApplyInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+
+  const name = text(raw.name, 2, 160);
+  if (name === null) return { value: null, error: 'name' };
+  if (typeof raw.type !== 'string' || !(ORGANIZATION_TYPES as readonly string[]).includes(raw.type)) {
+    return { value: null, error: 'type' };
+  }
+  const address = text(raw.address, 5, 200);
+  if (address === null) return { value: null, error: 'address' };
+  const licenseNumber = text(raw.licenseNumber, 2, 80);
+  if (licenseNumber === null) return { value: null, error: 'licenseNumber' };
+
+  const value: OrganizationApplyInput = { name, type: raw.type as OrganizationType, address, licenseNumber };
+
+  const division = optionalText(raw.division, 60);
+  if (division === null) return { value: null, error: 'division' };
+  if (division !== undefined) value.division = division;
+  const district = optionalText(raw.district, 60);
+  if (district === null) return { value: null, error: 'district' };
+  if (district !== undefined) value.district = district;
+  const hotline = optionalText(raw.hotline, 30);
+  if (hotline === null) return { value: null, error: 'hotline' };
+  if (hotline !== undefined) value.hotline = hotline;
+  const emergencyContact = optionalText(raw.emergencyContact, 30);
+  if (emergencyContact === null) return { value: null, error: 'emergencyContact' };
+  if (emergencyContact !== undefined) value.emergencyContact = emergencyContact;
+  const directorName = optionalText(raw.directorName, 80);
+  if (directorName === null) return { value: null, error: 'directorName' };
+  if (directorName !== undefined) value.directorName = directorName;
+  const totalBeds = optionalInt(raw.totalBeds, 0, 20_000);
+  if (totalBeds === null) return { value: null, error: 'totalBeds' };
+  if (totalBeds !== undefined) value.totalBeds = totalBeds;
+  const icuBeds = optionalInt(raw.icuBeds, 0, 5_000);
+  if (icuBeds === null) return { value: null, error: 'icuBeds' };
+  if (icuBeds !== undefined) value.icuBeds = icuBeds;
+
+  return { error: null, value };
+}
+
 const FRAUD_RESOLUTIONS = ['banned', 'dismissed'] as const;
 export type FraudResolution = (typeof FRAUD_RESOLUTIONS)[number];
 
