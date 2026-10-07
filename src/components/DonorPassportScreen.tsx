@@ -1,32 +1,52 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { useGetDonorDonationsQuery, useGetDonorQuery, useGetDonorsQuery } from '../store/api';
+import { DONATION_COOLDOWN_DAYS } from '../lib/eligibility';
+import { browserStorage as donorStorage, readMyDonorProfiles } from '../lib/myDonorProfile';
 
 interface DonorPassportScreenProps {
   onNavigate: (screen: ScreenId) => void;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
-  const [daysElapsed, setDaysElapsed] = useState<number>(94);
-  const [isRestingDemo, setIsRestingDemo] = useState<boolean>(false);
+  const { user } = useAuth();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const cooldownRequiredDays = 90;
-  const currentElapsed = isRestingDemo ? 42 : daysElapsed;
-  const isEligible = currentElapsed >= cooldownRequiredDays;
-  const cooldownPct = Math.min(100, Math.round((currentElapsed / cooldownRequiredDays) * 100));
+  // The donor this browser remembers (from registering, see WP3), read only after mount so hydration
+  // never mismatches; a signed-in person's own profile is the fallback if this browser has none.
+  const [rememberedId, setRememberedId] = useState<string | null>(null);
+  useEffect(() => {
+    setRememberedId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
+  }, []);
+  const mineQuery = useGetDonorsQuery({ mine: true, pageSize: 1 }, { skip: !user });
+  const activeDonorId = rememberedId ?? mineQuery.data?.donors[0]?.id ?? null;
+
+  const donorQuery = useGetDonorQuery(activeDonorId ?? '', { skip: !activeDonorId });
+  const donationsQuery = useGetDonorDonationsQuery(activeDonorId ?? '', { skip: !activeDonorId });
+  const realDonor = activeDonorId ? donorQuery.data?.donor : undefined;
+  const showSampleNotice = !realDonor;
+
+  // Real donor: cooldown counted from their actual last donation (never donated = fully rested).
+  // No real donor identified (or no database): the original fixed sample value.
+  const currentElapsed = realDonor
+    ? realDonor.lastDonationAt
+      ? Math.floor((Date.now() - new Date(realDonor.lastDonationAt).getTime()) / DAY_MS)
+      : DONATION_COOLDOWN_DAYS
+    : 94;
+  const isEligible = realDonor ? realDonor.isEligible : currentElapsed >= DONATION_COOLDOWN_DAYS;
+  const cooldownPct = Math.min(100, Math.round((currentElapsed / DONATION_COOLDOWN_DAYS) * 100));
+  const donations = donationsQuery.data?.donations ?? [];
 
   const handleDownloadCertificate = () => {
     sound.playSuccessChime();
     setToastMessage(t.passport.toastCertificate);
     setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  const handleToggleEligibilityDemo = () => {
-    sound.playTap();
-    setIsRestingDemo(!isRestingDemo);
   };
 
   return (
@@ -62,12 +82,6 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleToggleEligibilityDemo}
-            className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors"
-          >
-            {isRestingDemo ? t.passport.showReady : t.passport.simulateResting}
-          </button>
-          <button
             onClick={handleDownloadCertificate}
             className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
           >
@@ -76,6 +90,13 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
           </button>
         </div>
       </div>
+
+      {showSampleNotice && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-xs font-medium">
+          <span className="material-symbols-outlined text-base text-amber-600">info</span>
+          <span>{t.passport.demoNotice}</span>
+        </div>
+      )}
 
       {/* Smart Card + Biological Readiness Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -120,11 +141,11 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
               </div>
 
               <div>
-                <h2 className="text-xl font-extrabold text-white">{t.passport.donorName}</h2>
+                <h2 className="text-xl font-extrabold text-white">{realDonor?.name ?? t.passport.donorName}</h2>
                 <p className="text-xs text-slate-300 font-mono mt-0.5">NID: 1996269120000492</p>
                 <p className="text-[11px] text-red-300 mt-1 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">location_on</span>
-                  {t.passport.locationLine}
+                  {realDonor?.area ?? t.passport.locationLine}
                 </p>
               </div>
             </div>
@@ -132,9 +153,9 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
             {/* Blood Group & Holographic Emblem */}
             <div className="flex items-center gap-4">
               <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-center min-w-[90px]">
-                <span className="text-3xl font-black text-red-500">O+</span>
+                <span className="text-3xl font-black text-red-500">{realDonor?.bloodGroup ?? 'O+'}</span>
                 <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-300">
-                  {t.passport.rhPositive}
+                  {(realDonor?.bloodGroup ?? 'O+').includes('-') ? t.passport.rhNegative : t.passport.rhPositive}
                 </span>
               </div>
 
@@ -155,11 +176,19 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
             </div>
             <div>
               <span className="text-[10px] text-slate-500 block">{t.passport.totalDonationsLabel}</span>
-              <span className="font-bold text-emerald-400">{t.passport.totalDonationsValue}</span>
+              <span className="font-bold text-emerald-400">
+                {realDonor ? t.passport.totalDonationsCount(donations.length) : t.passport.totalDonationsValue}
+              </span>
             </div>
             <div>
               <span className="text-[10px] text-slate-500 block">{t.passport.lastDonationLabel}</span>
-              <span className="font-semibold text-slate-200">{t.passport.lastDonationValue}</span>
+              <span className="font-semibold text-slate-200">
+                {realDonor
+                  ? donations[0]
+                    ? t.passport.lastDonationDate(new Date(donations[0].donatedAt).toLocaleDateString(), donations[0].hospital)
+                    : t.passport.neverDonated
+                  : t.passport.lastDonationValue}
+              </span>
             </div>
           </div>
         </div>
@@ -225,7 +254,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                 ) : (
                   <p className="text-xs text-amber-700 font-bold flex items-center justify-center gap-1">
                     <span className="material-symbols-outlined text-sm">hourglass_top</span>
-                    {t.passport.daysRemaining(cooldownRequiredDays - currentElapsed)}
+                    {t.passport.daysRemaining(DONATION_COOLDOWN_DAYS - currentElapsed)}
                   </p>
                 )}
                 <span className="text-[11px] text-slate-400 mt-1 block">
@@ -293,59 +322,87 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
           {t.passport.ledgerTitle}
         </h3>
 
-        <div className="space-y-3">
-          {[
-            {
-              date: t.passport.history.h1.date,
-              hospital: t.passport.history.h1.hospital,
-              patient: t.passport.history.h1.patient,
-              volume: t.passport.bagVolume,
-              certNo: 'CERT-DMCH-8812',
-            },
-            {
-              date: t.passport.history.h2.date,
-              hospital: t.passport.history.h2.hospital,
-              patient: t.passport.history.h2.patient,
-              volume: t.passport.bagVolume,
-              certNo: 'CERT-BSMMU-6401',
-            },
-            {
-              date: t.passport.history.h3.date,
-              hospital: t.passport.history.h3.hospital,
-              patient: t.passport.history.h3.patient,
-              volume: t.passport.bagVolume,
-              certNo: 'CERT-NHF-4919',
-            },
-          ].map((item, idx) => (
-            <div
-              key={idx}
-              className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-200 transition-colors"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs shrink-0">
-                  #{3 - idx}
+        {realDonor ? (
+          donations.length > 0 ? (
+            <div className="space-y-3">
+              {donations.map((donation, idx) => (
+                <div
+                  key={donation.id}
+                  className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-200 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs shrink-0">
+                      #{donations.length - idx}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">{donation.hospital}</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{t.passport.bagsVolume(donation.units)}</p>
+                      <span className="text-[10px] font-mono text-slate-400 mt-1 block">
+                        {new Date(donation.donatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">{item.hospital}</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {item.patient} • {item.volume}
-                  </p>
-                  <span className="text-[10px] font-mono text-slate-400 mt-1 block">
-                    {item.date} • {item.certNo}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleDownloadCertificate}
-                className="self-start sm:self-center px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm text-red-600">verified</span>
-                <span>{t.passport.viewCertificate}</span>
-              </button>
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <p className="text-xs text-slate-500">{t.passport.noDonationsYet}</p>
+          )
+        ) : (
+          <div className="space-y-3">
+            {[
+              {
+                date: t.passport.history.h1.date,
+                hospital: t.passport.history.h1.hospital,
+                patient: t.passport.history.h1.patient,
+                volume: t.passport.bagVolume,
+                certNo: 'CERT-DMCH-8812',
+              },
+              {
+                date: t.passport.history.h2.date,
+                hospital: t.passport.history.h2.hospital,
+                patient: t.passport.history.h2.patient,
+                volume: t.passport.bagVolume,
+                certNo: 'CERT-BSMMU-6401',
+              },
+              {
+                date: t.passport.history.h3.date,
+                hospital: t.passport.history.h3.hospital,
+                patient: t.passport.history.h3.patient,
+                volume: t.passport.bagVolume,
+                certNo: 'CERT-NHF-4919',
+              },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-200 transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs shrink-0">
+                    #{3 - idx}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">{item.hospital}</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      {item.patient} • {item.volume}
+                    </p>
+                    <span className="text-[10px] font-mono text-slate-400 mt-1 block">
+                      {item.date} • {item.certNo}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleDownloadCertificate}
+                  className="self-start sm:self-center px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm text-red-600">verified</span>
+                  <span>{t.passport.viewCertificate}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -69,10 +69,10 @@ exists, `lastDonationAt` takes over for eligibility and display.
 - [x] Commit.
 
 ### Task 4: Donor Passport on real data
-- [ ] `DonorPassportScreen.tsx`: for the donor this browser remembers (`myDonorProfile`, same helper WP3 added) or the signed-in person's own (`mine=1`), show their real name, blood group, `isEligible`/`lastDonationAt` (the cooldown dial becomes real), and real donation history (`getDonorDonations`) instead of the fixed 3-entry sample list. The "Simulate Resting" demo toggle is removed (it no longer makes sense once the dial is real).
-- [ ] Vitals (hemoglobin, blood pressure, weight, TTI), the NID number and the QR code stay exactly as before (sample, labeled) — no real source for them exists.
-- [ ] No remembered/signed-in donor, or no database: falls back to the existing sample "Tanvir Ahmed" passport unchanged, with a demo notice.
-- [ ] Locale strings, gates, browser check against `.dev-db` (complete a real request for a real donor, reload the passport, see the real donation appear), commit.
+- [x] `DonorPassportScreen.tsx`: for the donor this browser remembers (`myDonorProfile`, same helper WP3 added) or the signed-in person's own (`mine=1`), shows their real name, area, blood group (with the correct Rh label), `isEligible`/`lastDonationAt`-derived cooldown dial, real donation count/last-donation line, and real donation history (`getDonorDonations`) instead of the fixed 3-entry sample list. The "Simulate Resting" demo toggle is removed.
+- [x] Vitals (hemoglobin, blood pressure, weight, TTI), the NID number and the QR code stay exactly as before (sample, labeled) — no real source for them exists.
+- [x] No remembered/signed-in donor, or no database: falls back to the existing sample "Tanvir Ahmed" passport unchanged, with a demo notice.
+- [x] Locale strings (en/bn), gates (lint, 172 tests, build, true zero-env build re-verified), browser check against `.dev-db`: registered a donor, had them respond to and complete a real request, reloaded the passport — real blood group/Rh label, "1 Unit", real hospital+date in both the summary line and the history list, cooldown dial correctly showing "Resting Period" right after donating. No console errors in either mode. Commit.
 
 ### Task 5: Documentation
 - [ ] `docs/HANDOFF.md` progress log, `docs/SPEC-MATCH-PLAN.md` module table (row 6) and WP5 status.
