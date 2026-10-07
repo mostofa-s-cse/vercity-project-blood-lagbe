@@ -55,10 +55,10 @@ sample ids and any new `Organization.id`, no change needed there.
 ## Tasks
 
 ### Task 1: Schema and seed
-- [ ] `prisma/schema.prisma`: `Organization` model. Migration `0009_organizations` (hand-written).
-- [ ] Verify on `.dev-db`: apply, `prisma migrate diff` empty.
-- [ ] `prisma/seed.ts`: seed from `SAMPLE_HOSPITAL_ORGS` (fixed ids matching the existing `ORG-0x` ids so `HospitalStock` rows keep lining up), `status: 'approved'`, `isVerified: true` (the 6 sample orgs are the "already verified" baseline).
-- [ ] Commit.
+- [x] `prisma/schema.prisma`: `Organization` model. Migration `0009_organizations` (hand-written).
+- [x] Verify on `.dev-db`: apply, `prisma migrate diff` empty.
+- [x] `prisma/seed.ts`: seed from `SAMPLE_HOSPITAL_ORGS` (fixed ids matching the existing `ORG-0x` ids so `HospitalStock` rows keep lining up), `status: 'approved'`, `isVerified: true`.
+- [x] Commit.
 
 ### Task 2: Apply and list endpoints
 - [ ] `src/lib/validation.ts`: `parseOrganizationApplyInput` (failing test first) — name, type (one of the 4), address, licenseNumber required; division/district/hotline/emergencyContact/directorName/totalBeds/icuBeds optional.

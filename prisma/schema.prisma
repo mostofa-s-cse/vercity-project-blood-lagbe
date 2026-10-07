@@ -216,6 +216,33 @@ model Donation {
   @@map("donations")
 }
 
+/// A hospital, blood bank or voluntary organization. Replaces the sample hospital list once seeded/applied.
+model Organization {
+  id               String    @id @default(cuid())
+  name             String
+  shortCode        String?   @map("short_code")
+  /// 'government_hospital' | 'private_hospital' | 'volunteer_org' | 'blood_bank' (src/types/blood.ts)
+  type             String
+  division         String?
+  district         String?
+  address          String?
+  hotline          String?
+  emergencyContact String?   @map("emergency_contact")
+  directorName     String?   @map("director_name")
+  licenseNumber    String?   @map("license_number")
+  isVerified       Boolean   @default(false) @map("is_verified")
+  /// 'pending' | 'approved' | 'rejected'
+  status           String    @default("pending")
+  totalBeds        Int?      @map("total_beds")
+  icuBeds          Int?      @map("icu_beds")
+  appliedBy        String?   @map("applied_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  reviewedAt       DateTime? @map("reviewed_at")
+  reviewedBy       String?   @map("reviewed_by")
+
+  @@map("organizations")
+}
+
 /// Blood units a hospital has told us it holds. Missing rows fall back to the sample data.
 model HospitalStock {
   hospitalId String     @map("hospital_id")

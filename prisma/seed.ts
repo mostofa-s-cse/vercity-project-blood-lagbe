@@ -91,6 +91,32 @@ async function main() {
     }
   }
 
+  // Organizations: the 6 sample hospitals/orgs, already verified and approved (the "known good" baseline
+  // new applications are compared against). Fixed ids so HospitalStock rows above keep lining up.
+  for (const org of SAMPLE_HOSPITAL_ORGS) {
+    await prisma.organization.upsert({
+      where: { id: org.id },
+      create: {
+        id: org.id,
+        name: org.name,
+        shortCode: org.shortCode,
+        type: org.type,
+        division: org.division,
+        district: org.district,
+        address: org.address,
+        hotline: compact(org.hotline),
+        emergencyContact: compact(org.emergencyContact),
+        directorName: org.directorName,
+        licenseNumber: org.licenseNumber,
+        isVerified: org.isVerified,
+        status: 'approved',
+        totalBeds: org.totalBeds,
+        icuBeds: org.icuBeds,
+      },
+      update: {},
+    });
+  }
+
   // Hospital stock: seeded as "already reported" rows, in the same shape saveHospitalStock writes.
   // HospitalOrgScreen merges these over the sample hospital list by id, so this just pre-fills them.
   for (const org of SAMPLE_HOSPITAL_ORGS) {
@@ -123,15 +149,16 @@ async function main() {
     });
   }
 
-  const [donors, requests, responses, stockRows, fraudRows] = await Promise.all([
+  const [donors, requests, responses, stockRows, fraudRows, orgs] = await Promise.all([
     prisma.donor.count(),
     prisma.sosRequest.count(),
     prisma.requestResponse.count(),
     prisma.hospitalStock.count(),
     prisma.fraudIncident.count(),
+    prisma.organization.count(),
   ]);
   console.log(
-    `Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses, ${stockRows} hospital stock rows, ${fraudRows} fraud incidents.`
+    `Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses, ${stockRows} hospital stock rows, ${fraudRows} fraud incidents, ${orgs} organizations.`
   );
   await prisma.$disconnect();
 }
