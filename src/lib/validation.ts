@@ -261,6 +261,71 @@ export function parseStatusInput(raw: unknown): ParseResult<{ status: RequestSta
   return { error: null, value: { status: raw.status as RequestStatusValue } };
 }
 
+export interface DonorUpdateInput {
+  name?: string;
+  area?: string;
+  division?: string;
+  age?: number;
+  gender?: 'Male' | 'Female';
+  vehicle?: string;
+  nearestHospital?: string;
+  isAvailable?: boolean;
+  lastDonationMonths?: number;
+}
+
+/** Any subset of a donor's editable fields. Whether the caller may apply it is `donorAccess.ts`'s job. */
+export function parseDonorUpdateInput(raw: unknown): ParseResult<DonorUpdateInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  const value: DonorUpdateInput = {};
+
+  if (raw.name !== undefined) {
+    const name = text(raw.name, 2, 80);
+    if (name === null) return { value: null, error: 'name' };
+    value.name = name;
+  }
+  if (raw.area !== undefined) {
+    const area = text(raw.area, 2, 120);
+    if (area === null) return { value: null, error: 'area' };
+    value.area = area;
+  }
+  if (raw.division !== undefined) {
+    const division = optionalText(raw.division, 60);
+    if (division === null) return { value: null, error: 'division' };
+    if (division !== undefined) value.division = division;
+  }
+  if (raw.age !== undefined) {
+    const age = optionalInt(raw.age, 16, 80);
+    if (age === null) return { value: null, error: 'age' };
+    if (age !== undefined) value.age = age;
+  }
+  if (raw.gender !== undefined) {
+    if (raw.gender !== 'Male' && raw.gender !== 'Female') return { value: null, error: 'gender' };
+    value.gender = raw.gender;
+  }
+  if (raw.vehicle !== undefined) {
+    const vehicle = optionalText(raw.vehicle, 60);
+    if (vehicle === null) return { value: null, error: 'vehicle' };
+    if (vehicle !== undefined) value.vehicle = vehicle;
+  }
+  if (raw.nearestHospital !== undefined) {
+    const nearestHospital = optionalText(raw.nearestHospital, 120);
+    if (nearestHospital === null) return { value: null, error: 'nearestHospital' };
+    if (nearestHospital !== undefined) value.nearestHospital = nearestHospital;
+  }
+  if (raw.isAvailable !== undefined) {
+    if (typeof raw.isAvailable !== 'boolean') return { value: null, error: 'isAvailable' };
+    value.isAvailable = raw.isAvailable;
+  }
+  if (raw.lastDonationMonths !== undefined) {
+    const lastDonationMonths = optionalInt(raw.lastDonationMonths, 0, 600);
+    if (lastDonationMonths === null) return { value: null, error: 'lastDonationMonths' };
+    if (lastDonationMonths !== undefined) value.lastDonationMonths = lastDonationMonths;
+  }
+
+  if (Object.keys(value).length === 0) return { value: null, error: 'body' };
+  return { error: null, value };
+}
+
 const FRAUD_RESOLUTIONS = ['banned', 'dismissed'] as const;
 export type FraudResolution = (typeof FRAUD_RESOLUTIONS)[number];
 
@@ -297,6 +362,8 @@ export interface DonorQuery {
   bloodGroup: BloodGroupValue | undefined;
   q: string | undefined;
   available: boolean;
+  /** Only the signed-in person's own donor profiles. */
+  mine: boolean;
   page: number;
   pageSize: number;
 }
@@ -312,6 +379,7 @@ export function parseDonorQuery(params: Params): ParseResult<DonorQuery> {
       bloodGroup: group ? (group as BloodGroupValue) : undefined,
       q: q || undefined,
       available: readFlag(params.get('available')),
+      mine: readFlag(params.get('mine')),
       ...readPaging(params),
     },
   };

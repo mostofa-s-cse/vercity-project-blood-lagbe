@@ -64,6 +64,9 @@ model Donor {
   vehicle            String?
   nearestHospital    String?    @map("nearest_hospital")
   isAvailable        Boolean    @default(true) @map("is_available")
+  /// SHA-256 of the manage token given once at registration; lets a person without an account edit
+  /// their own profile later. The token itself is never stored.
+  manageTokenHash    String?    @map("manage_token_hash")
   createdAt          DateTime   @default(now()) @map("created_at")
 
   responses RequestResponse[]

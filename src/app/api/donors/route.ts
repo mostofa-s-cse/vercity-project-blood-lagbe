@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { BloodGroup, Prisma } from '@/generated/prisma/client';
 import { toDonorDto } from '@/lib/dto';
+import { hashToken, newManageToken } from '@/lib/manageToken';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { DB_BLOOD_GROUP, parseDonorInput, parseDonorQuery } from '@/lib/validation';
@@ -19,11 +20,18 @@ export async function GET(request: Request) {
 
   const parsed = parseDonorQuery(new URL(request.url).searchParams);
   if (parsed.error) return NextResponse.json({ error: 'invalid_query', field: parsed.error }, { status: 400 });
-  const { bloodGroup, q, available, page, pageSize } = parsed.value;
+  const { bloodGroup, q, available, mine, page, pageSize } = parsed.value;
+
+  let userId: string | null = null;
+  if (mine) {
+    userId = await getCurrentUserId();
+    if (!userId) return NextResponse.json({ error: 'sign_in_required' }, { status: 401 });
+  }
 
   const where: Prisma.DonorWhereInput = {
     ...(bloodGroup ? { bloodGroup: DB_BLOOD_GROUP[bloodGroup] as BloodGroup } : {}),
     ...(available ? { isAvailable: true } : {}),
+    ...(userId ? { userId } : {}),
     ...(q
       ? {
           OR: [
@@ -53,7 +61,11 @@ export async function GET(request: Request) {
   }
 }
 
-/** Saves a donor registration. Works signed out; when signed in the donor is linked to the person's profile. */
+/**
+ * Saves a donor registration. Works signed out; when signed in the donor is linked to the person's
+ * profile. The answer carries a one-time `manageToken` that lets the person edit their own profile later
+ * without an account; only its hash is stored.
+ */
 export async function POST(request: Request) {
   if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
   if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
@@ -77,9 +89,11 @@ export async function POST(request: Request) {
     // The profile row is made at sign-in; if it is missing, save the donor without the link rather than fail.
     const profile = userId ? await prisma.profile.findUnique({ where: { id: userId }, select: { id: true } }) : null;
 
+    const manageToken = newManageToken();
     const donor = await prisma.donor.create({
       data: {
         userId: profile?.id ?? null,
+        manageTokenHash: hashToken(manageToken),
         name: input.name,
         phone: input.phone,
         bloodGroup: DB_BLOOD_GROUP[input.bloodGroup] as BloodGroup,
@@ -96,7 +110,7 @@ export async function POST(request: Request) {
       },
       select: { id: true },
     });
-    return NextResponse.json({ id: donor.id }, { status: 201 });
+    return NextResponse.json({ id: donor.id, manageToken }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Could not save donor', error);
     return NextResponse.json({ error: 'save_failed' }, { status: 500 });

@@ -36,18 +36,18 @@ Same triad as requests: the manage-token holder (`X-Manage-Token` header), the s
 ## Tasks
 
 ### Task 1: Schema and manage token on registration
-- [ ] `prisma/schema.prisma`: add `manageTokenHash` to `Donor`. Migration `0007_donor_manage_token` (hand-written, RLS already on from the table's creation — no new RLS statement needed, just the column).
-- [ ] Verify on `.dev-db`: apply, `prisma migrate diff` empty.
-- [ ] `POST /api/donors`: generate a manage token (reuse `newManageToken`/`hashToken` from `src/lib/manageToken.ts`), store the hash, return it; link `userId` when signed in (same pattern as `POST /api/sos`).
-- [ ] `src/lib/myDonorProfile.ts` (mirrors `myRequests.ts`): localStorage `{ id, token }` list, capped, tolerant of blocked storage. Test with an in-memory `Storage` stand-in.
-- [ ] Commit.
+- [x] `prisma/schema.prisma`: add `manageTokenHash` to `Donor`. Migration `0007_donor_manage_token` (hand-written).
+- [x] Verify on `.dev-db`: apply, `prisma migrate diff` empty.
+- [x] `POST /api/donors`: generate a manage token, store the hash, return it; links `userId` when signed in (already did, unchanged); also added `mine=1` to `GET /api/donors` (401 if not signed in, same pattern as requests).
+- [x] `src/lib/myDonorProfile.ts` (mirrors `myRequests.ts`): localStorage `{ id, token }` list, capped, tolerant of blocked storage. 8 tests with an in-memory `Storage` stand-in.
+- [x] Commit.
 
 ### Task 2: Validation and the PATCH endpoint
-- [ ] `src/lib/validation.ts`: `parseDonorUpdateInput` (failing test first) — every field optional, same bounds as `parseDonorInput` where they overlap (name 2-80, age 0-120, etc.), rejects an empty body (nothing to update).
-- [ ] `src/lib/donorAccess.ts` (mirrors `src/lib/requestAccess.ts`): `canManageDonor(row, headers)` — token, owner, or `panel.donors`.
-- [ ] `PATCH /api/donors/[id]`: authorise, validate, update, return the DTO.
-- [ ] Database checks on `.dev-db`: creator token can edit, wrong token 403, no token 401, another donor's token 403, signed-in owner can edit without a token, `panel.donors` can edit any donor, unknown id 404.
-- [ ] Commit.
+- [x] `src/lib/validation.ts`: `parseDonorUpdateInput` (failing tests first, 3 tests) — every field optional, same bounds as `parseDonorInput` where they overlap, rejects an empty body (nothing to update).
+- [x] `src/lib/donorAccess.ts` (mirrors `src/lib/requestAccess.ts`): `canManageDonor(row, headers)` — token, owner, or `panel.donors`.
+- [x] `PATCH /api/donors/[id]`: authorise (401 no credentials / 403 wrong credentials, same rule as the requests PATCH), validate, update, return the DTO.
+- [x] Database checks on `.dev-db` (curl, real Postgres): creator token 200 (and the change persisted — `isAvailable` really flipped), no token 401, another donor's token 403, unknown id 404, empty body 400, `mine=1` without sign-in 401. (Signed-in owner / `panel.donors` paths need a real Supabase session, same documented gap as the dashboards work — not re-tested here.)
+- [x] Commit.
 
 ### Task 3: RTK Query and "My Profile"
 - [ ] `src/store/api.ts`: `updateDonor` mutation (invalidates `Donor`), token header same pattern as `updateRequestStatus`.

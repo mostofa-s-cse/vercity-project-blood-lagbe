@@ -10,6 +10,7 @@ import {
   parseRespondInput,
   parseRoleInput,
   parseSosInput,
+  parseDonorUpdateInput,
   parseFraudStatusInput,
   parseStatusInput,
   parseStockInput,
@@ -221,6 +222,32 @@ test('a status change takes one of the four statuses', () => {
   }
 });
 
+test('a donor profile update accepts any subset of its fields', () => {
+  const r1 = parseDonorUpdateInput({ isAvailable: false });
+  assert.equal(r1.error, null);
+  if (!r1.error) assert.deepEqual(r1.value, { isAvailable: false });
+
+  const r2 = parseDonorUpdateInput({ name: 'Tanvir Ahmed', area: 'Dhanmondi 27', lastDonationMonths: 3 });
+  assert.equal(r2.error, null);
+  if (!r2.error) assert.deepEqual(r2.value, { name: 'Tanvir Ahmed', area: 'Dhanmondi 27', lastDonationMonths: 3 });
+});
+
+test('a donor profile update rejects an empty body (nothing to update)', () => {
+  assert.notEqual(parseDonorUpdateInput({}).error, null);
+  assert.notEqual(parseDonorUpdateInput(null).error, null);
+});
+
+test('a donor profile update validates whichever fields are present', () => {
+  assert.equal(parseDonorUpdateInput({ name: 'A' }).error, 'name');
+  assert.equal(parseDonorUpdateInput({ area: 'A' }).error, 'area');
+  assert.equal(parseDonorUpdateInput({ age: 500 }).error, 'age');
+  assert.equal(parseDonorUpdateInput({ gender: 'Other' }).error, 'gender');
+  assert.equal(parseDonorUpdateInput({ vehicle: 'x'.repeat(61) }).error, 'vehicle');
+  assert.equal(parseDonorUpdateInput({ nearestHospital: 'x'.repeat(121) }).error, 'nearestHospital');
+  assert.equal(parseDonorUpdateInput({ lastDonationMonths: -1 }).error, 'lastDonationMonths');
+  assert.equal(parseDonorUpdateInput({ isAvailable: 'yes' }).error, 'isAvailable');
+});
+
 test('a fraud incident is resolved as banned or dismissed, nothing else', () => {
   for (const status of ['banned', 'dismissed']) {
     assert.equal(parseFraudStatusInput({ status }).error, null, status);
@@ -235,13 +262,13 @@ const params = (query: string) => new URLSearchParams(query);
 test('donor query defaults', () => {
   const result = parseDonorQuery(params(''));
   assert.equal(result.error, null);
-  if (!result.error) assert.deepEqual(result.value, { bloodGroup: undefined, q: undefined, available: false, page: 1, pageSize: 20 });
+  if (!result.error) assert.deepEqual(result.value, { bloodGroup: undefined, q: undefined, available: false, mine: false, page: 1, pageSize: 20 });
 });
 
 test('donor query reads its filters', () => {
-  const result = parseDonorQuery(params('bloodGroup=O%2B&q=%20dhanmondi%20&available=true&page=3&pageSize=10'));
+  const result = parseDonorQuery(params('bloodGroup=O%2B&q=%20dhanmondi%20&available=true&mine=1&page=3&pageSize=10'));
   assert.equal(result.error, null);
-  if (!result.error) assert.deepEqual(result.value, { bloodGroup: 'O+', q: 'dhanmondi', available: true, page: 3, pageSize: 10 });
+  if (!result.error) assert.deepEqual(result.value, { bloodGroup: 'O+', q: 'dhanmondi', available: true, mine: true, page: 3, pageSize: 10 });
 });
 
 test('donor query rejects an unknown blood group but clamps paging quietly', () => {
