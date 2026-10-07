@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { BloodGroup, Prisma } from '@/generated/prisma/client';
 import { toDonorDto } from '@/lib/dto';
+import { DONATION_COOLDOWN_DAYS } from '@/lib/eligibility';
 import { hashToken, newManageToken } from '@/lib/manageToken';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/supabase/server';
@@ -28,19 +29,27 @@ export async function GET(request: Request) {
     if (!userId) return NextResponse.json({ error: 'sign_in_required' }, { status: 401 });
   }
 
+  // "Available" means both the manual switch and the automatic 90-day eligibility rule (WP5).
+  const eligibleCutoff = new Date(Date.now() - DONATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+
   const where: Prisma.DonorWhereInput = {
     ...(bloodGroup ? { bloodGroup: DB_BLOOD_GROUP[bloodGroup] as BloodGroup } : {}),
     ...(available ? { isAvailable: true } : {}),
     ...(userId ? { userId } : {}),
-    ...(q
-      ? {
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { area: { contains: q, mode: 'insensitive' } },
-            { division: { contains: q, mode: 'insensitive' } },
-          ],
-        }
-      : {}),
+    AND: [
+      ...(available ? [{ OR: [{ lastDonationAt: null }, { lastDonationAt: { lte: eligibleCutoff } }] }] : []),
+      ...(q
+        ? [
+            {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' as const } },
+                { area: { contains: q, mode: 'insensitive' as const } },
+                { division: { contains: q, mode: 'insensitive' as const } },
+              ],
+            },
+          ]
+        : []),
+    ],
   };
 
   try {

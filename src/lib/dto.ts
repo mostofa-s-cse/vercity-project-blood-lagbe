@@ -1,5 +1,6 @@
-import type { AuditLog, Donor, FraudIncident, RequestResponse, SosRequest } from '../generated/prisma/client';
-import type { AuditLogDto, DonorDto, FraudIncidentDto, RequestDto, ResponseDto } from './dtoTypes';
+import type { AuditLog, Donation, Donor, FraudIncident, RequestResponse, SosRequest } from '../generated/prisma/client';
+import type { AuditLogDto, DonationDto, DonorDto, FraudIncidentDto, RequestDto, ResponseDto } from './dtoTypes';
+import { isEligible } from './eligibility';
 import { maskPhone } from './phoneMask';
 import { BLOOD_GROUP_FROM_DB } from './validation';
 import type { RequestStatusValue } from './requestStatus';
@@ -20,6 +21,8 @@ export function toDonorDto(row: Donor): DonorDto {
     gender: row.gender === 'Male' || row.gender === 'Female' ? row.gender : null,
     isAvailable: row.isAvailable,
     lastDonationMonths: row.lastDonationMonths,
+    lastDonationAt: row.lastDonationAt ? row.lastDonationAt.toISOString() : null,
+    isEligible: isEligible(row.lastDonationAt),
     vehicle: row.vehicle,
     nearestHospital: row.nearestHospital,
     phoneMasked: maskPhone(row.phone),
@@ -86,5 +89,14 @@ export function toAuditLogDto(row: AuditLog): AuditLogDto {
     action: row.action,
     detail: row.detail,
     createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export function toDonationDto(row: Donation): DonationDto {
+  return {
+    id: row.id,
+    hospital: row.hospital,
+    units: row.units,
+    donatedAt: row.donatedAt.toISOString(),
   };
 }

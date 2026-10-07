@@ -54,12 +54,12 @@ exists, `lastDonationAt` takes over for eligibility and display.
 - [x] Commit.
 
 ### Task 2: Write a donation on completion, compute eligibility
-- [ ] `src/lib/eligibility.ts` (+test, failing first): `isEligible(lastDonationAt: Date | null, now: Date): boolean` — pure, 90-day rule.
-- [ ] `PATCH /api/requests/[id]`: inside the same transaction/flow that completes a request, create `Donation` rows for responders with a `donorId`, update `lastDonationAt`.
-- [ ] `src/lib/dto.ts`: `toDonorDto` gains `lastDonationAt`, `isEligible`.
-- [ ] `GET /api/donors` available filter uses both flags.
-- [ ] Database checks on `.dev-db`: complete a request with two responders (one with a `donorId`, one without) → exactly one `Donation` row, the right donor's `lastDonationAt` set, the other donor untouched; `available=true` excludes a donor whose `lastDonationAt` is 10 days ago even with `isAvailable=true`.
-- [ ] Commit.
+- [x] `src/lib/eligibility.ts` (+test, failing first, 6 tests): `isEligible(lastDonationAt, now)` — pure, 90-day rule.
+- [x] `PATCH /api/requests/[id]`: on completion, `recordDonations()` creates `Donation` rows for responders with a `donorId`, updates their `lastDonationAt`.
+- [x] `src/lib/dto.ts`: `toDonorDto` gains `lastDonationAt`, `isEligible`; `sampleMapping.ts` too (so demo mode isn't missing the fields).
+- [x] `GET /api/donors` available filter and `GET /api/admin/stats`'s `availableDonors` both use `isAvailable AND isEligible` now (found and fixed a real bug while wiring this: two `OR` keys in the same `where` object literal silently overwrite each other in JS — the `q` search and the eligibility `OR` are combined under `AND` instead).
+- [x] Database checks on `.dev-db` (curl + a real request lifecycle): registered a donor, posted a request, had that donor's phone respond (auto-links `donorId`) alongside an unregistered phone, completed it — exactly one `Donation` row (the registered donor only), `lastDonationAt` set, `isEligible: false` immediately after, `available=true` correctly excludes them even with `isAvailable: true`.
+- [x] Commit.
 
 ### Task 3: Donation history endpoint and RTK Query
 - [ ] `DonationDto` in `dtoTypes.ts`, `toDonationDto` in `dto.ts`.

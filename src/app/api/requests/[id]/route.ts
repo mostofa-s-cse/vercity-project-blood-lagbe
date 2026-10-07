@@ -1,14 +1,39 @@
 import { NextResponse } from 'next/server';
 import { toRequestDto, toResponseDto } from '@/lib/dto';
-import type { RequestStatus } from '@/generated/prisma/client';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { canManageRequest, MANAGE_TOKEN_HEADER } from '@/lib/requestAccess';
 import { canTransition } from '@/lib/requestStatus';
 import { getClaims } from '@/lib/supabase/server';
 import { parseStatusInput } from '@/lib/validation';
+import type { RequestStatus } from '@/generated/prisma/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/**
+ * Writes a real donation for every responder who is a registered donor (has a `donorId`), and moves
+ * that donor's `lastDonationAt` to now. A responder who only left a name and phone (no account) gets no
+ * donation row — there is no donor profile to attach it to, and inventing one would be dishonest.
+ */
+async function recordDonations(prisma: ReturnType<typeof getPrisma>, requestId: string, headers: Headers): Promise<void> {
+  const [request, responses, claims] = await Promise.all([
+    prisma.sosRequest.findUnique({ where: { id: requestId }, select: { place: true } }),
+    prisma.requestResponse.findMany({ where: { requestId, donorId: { not: null } }, select: { donorId: true } }),
+    getClaims(),
+  ]);
+  if (!request || responses.length === 0) return;
+
+  const confirmedBy = typeof claims?.email === 'string' ? claims.email : null;
+  const donorIds = [...new Set(responses.map((r) => r.donorId as string))];
+  const now = new Date();
+
+  await prisma.$transaction([
+    prisma.donation.createMany({
+      data: donorIds.map((donorId) => ({ donorId, requestId, hospital: request.place, donatedAt: now, confirmedBy })),
+    }),
+    prisma.donor.updateMany({ where: { id: { in: donorIds } }, data: { lastDonationAt: now } }),
+  ]);
+}
 
 /**
  * One request with the people who answered it. Open to everyone; the answerers' phone numbers are only
@@ -78,6 +103,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: { status: target as RequestStatus, ...(target === 'COMPLETED' ? { completedAt: new Date() } : {}) },
     });
     if (changed.count === 0) return NextResponse.json({ error: 'invalid_transition' }, { status: 409 });
+
+    if (target === 'COMPLETED') await recordDonations(prisma, id, request.headers);
 
     const updated = await prisma.sosRequest.findUniqueOrThrow({ where: { id }, include: { _count: { select: { responses: true } } } });
     return NextResponse.json({ request: toRequestDto(updated) });

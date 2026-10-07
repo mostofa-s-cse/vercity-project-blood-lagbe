@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/adminGuard';
 import type { AdminStatsDto } from '@/lib/dtoTypes';
+import { DONATION_COOLDOWN_DAYS } from '@/lib/eligibility';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { REQUEST_STATUSES } from '@/lib/requestStatus';
 
@@ -15,9 +16,12 @@ export async function GET() {
 
   try {
     const prisma = getPrisma();
+    const eligibleCutoff = new Date(Date.now() - DONATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
     const [totalDonors, availableDonors, requestCounts, responses] = await Promise.all([
       prisma.donor.count(),
-      prisma.donor.count({ where: { isAvailable: true } }),
+      prisma.donor.count({
+        where: { isAvailable: true, OR: [{ lastDonationAt: null }, { lastDonationAt: { lte: eligibleCutoff } }] },
+      }),
       prisma.sosRequest.groupBy({ by: ['status'], _count: { _all: true } }),
       prisma.requestResponse.count(),
     ]);

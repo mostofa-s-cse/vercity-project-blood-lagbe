@@ -16,6 +16,10 @@ export interface DonorDto {
   gender: 'Male' | 'Female' | null;
   isAvailable: boolean;
   lastDonationMonths: number | null;
+  /** From a real `Donation` row, if one exists yet (see WP5). `null` for a donor with none. */
+  lastDonationAt: string | null;
+  /** The 90-day cooldown rule (`src/lib/eligibility.ts`), computed from `lastDonationAt`. */
+  isEligible: boolean;
   vehicle: string | null;
   nearestHospital: string | null;
   /** For example "017••••4315". The full number is only given by `GET /api/donors/[id]/contact`. */
@@ -104,4 +108,12 @@ export interface AuditLogDto {
   action: string;
   detail: string;
   createdAt: string;
+}
+
+/** One real donation (WP5), from the Donor Passport's history list. */
+export interface DonationDto {
+  id: string;
+  hospital: string;
+  units: number;
+  donatedAt: string;
 }

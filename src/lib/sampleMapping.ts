@@ -1,5 +1,6 @@
 import type { Donor, EmergencyDemand } from '../types/blood';
 import type { DonorDto, RequestDto } from './dtoTypes.ts';
+import { isEligible } from './eligibility.ts';
 import { maskPhone } from './phoneMask.ts';
 import type { RequestStatusValue } from './requestStatus.ts';
 
@@ -15,21 +16,26 @@ const HOUR = 3_600_000;
 const MINUTE = 60_000;
 
 export function toSampleDonorDtos(donors: readonly Donor[], now: Date = new Date()): DonorDto[] {
-  return donors.map((donor, index) => ({
-    id: `sample-${donor.id}`,
-    name: donor.name,
-    bloodGroup: donor.bloodGroup,
-    area: donor.location,
-    division: donor.division,
-    age: donor.age,
-    gender: donor.gender,
-    isAvailable: donor.isAvailable,
-    lastDonationMonths: Math.round(donor.daysElapsedSinceDonation / 30),
-    vehicle: donor.vehicle,
-    nearestHospital: donor.nearestHospital,
-    phoneMasked: maskPhone(donor.phone),
-    createdAt: new Date(now.getTime() - (index + 1) * HOUR).toISOString(),
-  }));
+  return donors.map((donor, index) => {
+    const lastDonationAt = new Date(now.getTime() - donor.daysElapsedSinceDonation * 24 * HOUR);
+    return {
+      id: `sample-${donor.id}`,
+      name: donor.name,
+      bloodGroup: donor.bloodGroup,
+      area: donor.location,
+      division: donor.division,
+      age: donor.age,
+      gender: donor.gender,
+      isAvailable: donor.isAvailable,
+      lastDonationMonths: Math.round(donor.daysElapsedSinceDonation / 30),
+      lastDonationAt: lastDonationAt.toISOString(),
+      isEligible: isEligible(lastDonationAt, now),
+      vehicle: donor.vehicle,
+      nearestHospital: donor.nearestHospital,
+      phoneMasked: maskPhone(donor.phone),
+      createdAt: new Date(now.getTime() - (index + 1) * HOUR).toISOString(),
+    };
+  });
 }
 
 /** The full number of a sample donor, for the "call" button in demo mode. */
