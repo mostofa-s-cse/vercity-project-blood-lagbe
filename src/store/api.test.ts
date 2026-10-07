@@ -204,6 +204,13 @@ test('getDonor fetches one donor by id', async () => {
   assert.equal((result.data as { donor: { name: string } }).donor.name, 'Tanvir');
 });
 
+test('getDonorDonations fetches a donor\'s history', async () => {
+  const { slice, store, calls } = fakeServer(() => [200, { donations: [{ id: 'd1', hospital: 'DMCH', units: 1, donatedAt: 'now' }] }]);
+  const result = await store.dispatch(slice.endpoints.getDonorDonations.initiate('donor1'));
+  assert.equal(calls[0].path, '/api/donors/donor1/donations');
+  assert.equal((result.data as { donations: unknown[] }).donations.length, 1);
+});
+
 test('updateDonor sends only the given fields, with the donor manage token', async () => {
   const { slice, store, calls } = fakeServer(
     () => [200, { donor: { id: 'd1' } }],

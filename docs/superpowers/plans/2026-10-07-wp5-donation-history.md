@@ -62,11 +62,11 @@ exists, `lastDonationAt` takes over for eligibility and display.
 - [x] Commit.
 
 ### Task 3: Donation history endpoint and RTK Query
-- [ ] `DonationDto` in `dtoTypes.ts`, `toDonationDto` in `dto.ts`.
-- [ ] `GET /api/donors/[id]/donations`.
-- [ ] `src/store/api.ts`: `getDonorDonations` query.
-- [ ] Tests (stubbed fetch).
-- [ ] Commit.
+- [x] `DonationDto` in `dtoTypes.ts`, `toDonationDto` in `dto.ts`.
+- [x] `GET /api/donors/[id]/donations` (public, 404 for an unknown donor, 503 with no database).
+- [x] `src/store/api.ts`: `getDonorDonations` query.
+- [x] Tests (stubbed fetch).
+- [x] Commit.
 
 ### Task 4: Donor Passport on real data
 - [ ] `DonorPassportScreen.tsx`: for the donor this browser remembers (`myDonorProfile`, same helper WP3 added) or the signed-in person's own (`mine=1`), show their real name, blood group, `isEligible`/`lastDonationAt` (the cooldown dial becomes real), and real donation history (`getDonorDonations`) instead of the fixed 3-entry sample list. The "Simulate Resting" demo toggle is removed (it no longer makes sense once the dial is real).

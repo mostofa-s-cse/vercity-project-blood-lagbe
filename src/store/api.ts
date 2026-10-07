@@ -3,6 +3,7 @@ import type { DonorPayload, SosPayload } from '../lib/api.ts';
 import type {
   AdminStatsDto,
   AuditLogDto,
+  DonationDto,
   DonorDto,
   DonorListResponse,
   FraudIncidentDto,
@@ -130,6 +131,12 @@ export function createApiSlice({
         providesTags: ['Donor'],
       }),
 
+      /** A donor's real donation history, newest first. */
+      getDonorDonations: build.query<{ donations: DonationDto[] }, string>({
+        query: (id) => `donors/${encodeURIComponent(id)}/donations`,
+        providesTags: ['Donor'],
+      }),
+
       /** Edits a donor's own profile. Sends this browser's manage token for it, same pattern as requests. */
       updateDonor: build.mutation<{ donor: DonorDto }, { id: string; token?: string } & DonorUpdatePayload>({
         query: ({ id, token, ...body }) => ({
@@ -224,4 +231,5 @@ export const {
   useGetAuditLogQuery,
   useGetDonorQuery,
   useUpdateDonorMutation,
+  useGetDonorDonationsQuery,
 } = api;
