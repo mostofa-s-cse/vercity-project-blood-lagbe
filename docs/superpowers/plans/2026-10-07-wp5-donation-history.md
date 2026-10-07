@@ -75,5 +75,5 @@ exists, `lastDonationAt` takes over for eligibility and display.
 - [x] Locale strings (en/bn), gates (lint, 172 tests, build, true zero-env build re-verified), browser check against `.dev-db`: registered a donor, had them respond to and complete a real request, reloaded the passport — real blood group/Rh label, "1 Unit", real hospital+date in both the summary line and the history list, cooldown dial correctly showing "Resting Period" right after donating. No console errors in either mode. Commit.
 
 ### Task 5: Documentation
-- [ ] `docs/HANDOFF.md` progress log, `docs/SPEC-MATCH-PLAN.md` module table (row 6) and WP5 status.
-- [ ] Tick every box above. Final commit.
+- [x] `docs/HANDOFF.md` progress log, `docs/SPEC-MATCH-PLAN.md` module table (row 6) and WP5 status.
+- [x] Tick every box above. Final commit.

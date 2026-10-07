@@ -6,6 +6,15 @@ Where we are, measured against the spec you gave (see "Starting point"), and the
 
 WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
 
+## Status: WP5 done, out of milestone order (2026-10-08)
+
+A completed request now writes a real `Donation` row (donor, request, hospital, units, date) for every
+responder who is a registered donor, and sets that donor's `lastDonationAt`. Availability is now
+automatic where the spec asked for it: `isEligible` (90-day rule) combines with the manual `isAvailable`
+switch everywhere "available" is checked. The Donor Passport shows a real donor's real blood group,
+cooldown and history instead of the fixed sample. Clinical vitals, NID and QR code are not invented —
+no real measurement or verification system exists for them. Plan: `docs/superpowers/plans/2026-10-07-wp5-donation-history.md`.
+
 ## Status: WP3 done, out of milestone order (2026-10-07)
 
 A donor can now edit their own profile (availability, last donation, contact) whether they registered
@@ -40,7 +49,7 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 | 3. Blood Request Management | SOS saved and **read back**; list, view, cancel/complete my requests with a manage token; patient information (M1) | Edit a posted request |
 | 4. Emergency Request | Emergency and open requests **rank first** from the API; a "within 1 hour"/"within 4 hours" countdown (M1) | Alerts donors (WP4) |
 | 5. Donor Notifications | Bell with sample items | Matching by group and location; stored notifications; email/SMS/push |
-| 6. Donation History | Sample data on the passport | Data model, recording, availability cooldown |
+| 6. Donation History | A completed request writes a real `Donation`; the Passport shows real history and the automatic 90-day cooldown (WP5) | Clinical vitals/NID/QR stay sample on purpose (no real source) |
 | 7. Request Tracking | **Real statuses and transitions** (Pending, Donor Found, Completed, Cancelled) from the database, server-enforced (M1) | Priority/urgency beyond emergency-first |
 | 8. Hospital & Organization | Hospital role, own-hospital stock saved | Organization accounts, verification workflow, managing requests |
 | 9. Admin Dashboard | Roles real; donor/request/hospital-stock/fraud-report tabs and the activity log now read the database (Ops Command too) | Real user list, moderation; organization verification (WP7) |
@@ -105,10 +114,10 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 - Done when: creating an emergency request creates notifications for exactly the matching donors (unit-tested), and the bell shows them after a reload.
 - Needs from you: email and SMS provider accounts, if you want those channels.
 
-### WP5. Donation history and availability (S to M, +4%)
+### WP5. Donation history and availability (S to M, +4%) — **Done (2026-10-08)**
 - `Donation` model (donor, request, hospital, date, units, confirmed by).
-- A request marked `COMPLETED` writes the donation; the donor's history page reads it.
-- Availability is derived from `lastDonationAt + 90 days`, not a manually flipped switch.
+- A request marked `COMPLETED` writes the donation; the donor's history page (Donor Passport) reads it.
+- Availability is derived from `lastDonationAt + 90 days` (`isEligible`), combined with — not replacing — the manual `isAvailable` switch (a donor can still pause themselves even while eligible).
 
 ### WP7. Hospital and organization accounts (M, +6%)
 - `Organization` table (hospital, blood bank, organization; licence; verified flag), replacing the hospital sample data; stock moves onto it.
@@ -141,7 +150,7 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 | Milestone | Packages | Realistic match after |
 |---|---|---|
 | **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% — **done** |
-| **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3 **done**, WP4/WP5 remain |
+| **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3 and WP5 **done**, WP4 remains |
 | **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% |
 | **M4: hardening and launch** | WP10, WP11, WP12 | matches the spec |
 
