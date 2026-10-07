@@ -49,9 +49,9 @@ exists, `lastDonationAt` takes over for eligibility and display.
 ## Tasks
 
 ### Task 1: Schema
-- [ ] `prisma/schema.prisma`: `Donation` model, `Donor.lastDonationAt`. Migration `0008_donation_history` (hand-written).
-- [ ] Verify on `.dev-db`: apply, `prisma migrate diff` empty.
-- [ ] Commit.
+- [x] `prisma/schema.prisma`: `Donation` model, `Donor.lastDonationAt`. Migration `0008_donation_history` (hand-written).
+- [x] Verify on `.dev-db`: apply, `prisma migrate diff` empty.
+- [x] Commit.
 
 ### Task 2: Write a donation on completion, compute eligibility
 - [ ] `src/lib/eligibility.ts` (+test, failing first): `isEligible(lastDonationAt: Date | null, now: Date): boolean` — pure, 90-day rule.

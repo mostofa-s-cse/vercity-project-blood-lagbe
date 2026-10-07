@@ -67,9 +67,14 @@ model Donor {
   /// SHA-256 of the manage token given once at registration; lets a person without an account edit
   /// their own profile later. The token itself is never stored.
   manageTokenHash    String?    @map("manage_token_hash")
+  /// Set from a real `Donation` row when a completed request is linked to this donor. Drives the
+  /// automatic 90-day eligibility rule (src/lib/eligibility.ts), replacing the static `lastDonationMonths`
+  /// guess once a real donation exists.
+  lastDonationAt     DateTime?  @map("last_donation_at")
   createdAt          DateTime   @default(now()) @map("created_at")
 
   responses RequestResponse[]
+  donations Donation[]
 
   @@index([bloodGroup, area])
   @@index([isAvailable, createdAt])
@@ -101,6 +106,7 @@ model SosRequest {
   updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at")
   completedAt     DateTime?         @map("completed_at")
   responses       RequestResponse[]
+  donations       Donation[]
 
   @@index([status, createdAt])
   @@index([isCritical, status, createdAt])
@@ -192,6 +198,22 @@ model AuditLog {
 
   @@index([createdAt])
   @@map("audit_log")
+}
+
+/// One real donation, written when a request a donor responded to is marked `COMPLETED`.
+model Donation {
+  id          String      @id @default(cuid())
+  donorId     String      @map("donor_id")
+  donor       Donor       @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  requestId   String?     @map("request_id")
+  request     SosRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  hospital    String
+  units       Int         @default(1)
+  donatedAt   DateTime    @default(now()) @map("donated_at")
+  confirmedBy String?     @map("confirmed_by")
+
+  @@index([donorId, donatedAt])
+  @@map("donations")
 }
 
 /// Blood units a hospital has told us it holds. Missing rows fall back to the sample data.
