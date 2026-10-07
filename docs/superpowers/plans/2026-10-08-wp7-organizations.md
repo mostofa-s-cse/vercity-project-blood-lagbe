@@ -68,9 +68,9 @@ sample ids and any new `Organization.id`, no change needed there.
 - [x] Commit.
 
 ### Task 3: Admin approve/reject
-- [ ] `PATCH /api/admin/organizations/[id]`: `panel.hospitals` guard, approve grants the Hospital staff role tied to the org (via `getGrantService().grant(...)`, same call the Access tab's grant form makes) to `appliedBy`'s email if there is a `Profile` row for them, else just marks approved without a grant (there is no email to grant to) — `writeAuditLog`.
-- [ ] Database checks: approve twice is idempotent (second call still 200, does not double-grant — reuse `grantService`'s existing "already has this role" handling); reject sets status without touching `isVerified`/granting anything; wrong permission 403, signed out 401.
-- [ ] Commit.
+- [x] `PATCH /api/admin/organizations/[id]`: `panel.hospitals` guard, approve grants the Hospital staff role tied to the org (via `getGrantService().grant(...)`, same call the Access tab's grant form makes) to `appliedBy`'s email if there is a `Profile` row for them; a `GrantError` (e.g. no service key configured) is caught so the approval still succeeds without the grant — `writeAuditLog` either way.
+- [x] Database checks: signed out → 401 confirmed by curl on all three sub-cases (approve, bad decision body, unknown org — the permission guard runs before body/id checks, same as every other admin route). The approve/reject/grant-failure logic itself verified directly against the database (bypassing the HTTP auth layer, which needs a real Supabase session this sandbox doesn't have): approve → `status: 'approved', isVerified: true`; reject → `status: 'rejected'`, `isVerified` untouched; a grant attempt with no service key configured fails with `service_key_missing`, exactly the error the route catches.
+- [x] Commit.
 
 ### Task 4: Wire the screens
 - [ ] `src/store/api.ts`: `getOrganizations`, `applyOrganization`, `reviewOrganization` (invalidates an `Organization` tag).

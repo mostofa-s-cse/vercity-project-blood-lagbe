@@ -384,6 +384,18 @@ export function parseOrganizationApplyInput(raw: unknown): ParseResult<Organizat
   return { error: null, value };
 }
 
+const ORGANIZATION_DECISIONS = ['approve', 'reject'] as const;
+export type OrganizationDecision = (typeof ORGANIZATION_DECISIONS)[number];
+
+/** An admin's decision on a pending organization application. */
+export function parseOrganizationDecisionInput(raw: unknown): ParseResult<{ decision: OrganizationDecision }> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  if (typeof raw.decision !== 'string' || !(ORGANIZATION_DECISIONS as readonly string[]).includes(raw.decision)) {
+    return { value: null, error: 'decision' };
+  }
+  return { error: null, value: { decision: raw.decision as OrganizationDecision } };
+}
+
 const FRAUD_RESOLUTIONS = ['banned', 'dismissed'] as const;
 export type FraudResolution = (typeof FRAUD_RESOLUTIONS)[number];
 

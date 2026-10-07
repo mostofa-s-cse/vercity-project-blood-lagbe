@@ -13,6 +13,7 @@ import {
   parseDonorUpdateInput,
   parseFraudStatusInput,
   parseOrganizationApplyInput,
+  parseOrganizationDecisionInput,
   parseStatusInput,
   parseStockInput,
 } from './validation.ts';
@@ -275,6 +276,15 @@ test('an organization application keeps valid optional fields and rejects bad on
   assert.equal(withOptional.error, null);
   if (!withOptional.error) assert.deepEqual([withOptional.value.division, withOptional.value.totalBeds, withOptional.value.icuBeds], ['Dhaka Central', 50, 4]);
   assert.equal(parseOrganizationApplyInput({ ...base, totalBeds: -1 }).error, 'totalBeds');
+});
+
+test('an organization decision is approve or reject, nothing else', () => {
+  for (const decision of ['approve', 'reject']) {
+    assert.equal(parseOrganizationDecisionInput({ decision }).error, null, decision);
+  }
+  for (const bad of [{ decision: 'pending' }, { decision: 'APPROVE' }, { decision: 7 }, {}, null]) {
+    assert.notEqual(parseOrganizationDecisionInput(bad).error, null, JSON.stringify(bad));
+  }
 });
 
 test('a fraud incident is resolved as banned or dismissed, nothing else', () => {
