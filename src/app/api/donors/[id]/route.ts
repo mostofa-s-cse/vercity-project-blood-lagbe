@@ -8,6 +8,20 @@ import { parseDonorUpdateInput } from '@/lib/validation';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** One donor, `DonorDto` fields only (never the full phone — see `GET /api/donors/[id]/contact`). Public. */
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
+  const { id } = await params;
+  try {
+    const donor = await getPrisma().donor.findUnique({ where: { id } });
+    if (!donor) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    return NextResponse.json({ donor: toDonorDto(donor) }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    console.error('Could not load donor', error);
+    return NextResponse.json({ error: 'load_failed' }, { status: 500 });
+  }
+}
+
 /**
  * Edits a donor's own profile (availability, last donation, contact details). Allowed for the holder of
  * its manage token, the signed-in person who registered it, or an admin-panel user with `panel.donors`.

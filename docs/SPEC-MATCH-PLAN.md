@@ -6,6 +6,14 @@ Where we are, measured against the spec you gave (see "Starting point"), and the
 
 WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
 
+## Status: WP3 done, out of milestone order (2026-10-07)
+
+A donor can now edit their own profile (availability, last donation, contact) whether they registered
+signed in or with a manage token (same pattern M1 built for requests). `POST /api/donors` returns the
+token; `PATCH /api/donors/[id]` applies edits; `GET /api/donors?mine=1` lists a signed-in person's own
+profiles. Availability stays a manual toggle — the automatic 90-day eligibility calculation from a real
+`lastDonationAt` is WP5's job, not duplicated here. Plan: `docs/superpowers/plans/2026-10-07-wp3-donor-profiles.md`.
+
 ## Status: Admin dashboard (WP8) in progress, out of milestone order (2026-10-06)
 
 Taken out of order from M3 because the Admin Panel and Ops Command were the two biggest remaining "looks real, isn't" screens. Added `FraudIncident` and `AuditLog` tables/APIs; rewired the Admin Panel's Overview/Donors/Requests/Hospitals/Fraud/Logs tabs and all of Ops Command off hardcoded mock state onto real data wherever a real source exists. Still sample, honestly labeled: hospital identity/verification (needs the `Organization` model, WP7), cold-chain sensor readings and telecom gateway health (no real integration exists or is planned), and Avg Donor Transit ETA / demand forecasting (no such data anywhere). Plan and verification detail: `docs/superpowers/plans/2026-10-06-dynamic-dashboards.md`.
@@ -27,7 +35,7 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 
 | Spec module | Today | Missing |
 |---|---|---|
-| 1. Donor Registry | Registration form saves to the database and is **read back** in the directory (M1) | Edit own profile, last donation date and availability management (WP3) |
+| 1. Donor Registry | Registration form saves to the database and is **read back** in the directory (M1); a donor can **edit their own profile** (availability, last donation, contact) with a manage token or signed in (WP3) | Automatic eligibility from a real last-donation date (WP5) |
 | 2. Smart Donor Search | Filters (group, availability, text) search the **real database**, server-paged (M1) | Real location; blood-group compatibility; eligibility ranking (WP6) |
 | 3. Blood Request Management | SOS saved and **read back**; list, view, cancel/complete my requests with a manage token; patient information (M1) | Edit a posted request |
 | 4. Emergency Request | Emergency and open requests **rank first** from the API; a "within 1 hour"/"within 4 hours" countdown (M1) | Alerts donors (WP4) |
@@ -84,10 +92,9 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 - Emergency and still-open requests sort first.
 - Done when: the whole path Pending, Donor Found, Completed works for real users and every transition is permission-checked. Verified with 34 scripted checks (`scripts/verify/check_writes.py`) plus a real-browser run of the full lifecycle.
 
-### WP3. Donor and Blood Seeker roles, profiles (M, +6%)
-- Every signed-in person is a Blood Seeker automatically; becoming a Donor is registering a donor profile linked to the account.
-- Built-in permissions for both (`requests.own`, `donor.profile`) added to the permission catalogue; assigned at sign-in.
-- "My profile" (edit donor info, availability switch, last donation date) and "My requests".
+### WP3. Donor and Blood Seeker roles, profiles (M, +6%) — **Done (2026-10-07)**
+- Every signed-in person is a Blood Seeker automatically (already true — SOS/search are open to everyone since M1); becoming a Donor is registering a donor profile, linked to the account when signed in, or managed with a one-time manage token when not (no separate `requests.own`/`donor.profile` permissions needed — this isn't an admin-panel permission, it's request/donor ownership, same triad as M1's request manage tokens).
+- "My profile" (edit donor info, availability switch, last donation date) in `DonorRegistrationScreen.tsx`; "My requests" was already done in M1.
 - Done when: a donor can update their own profile and cannot touch anyone else's (server-tested).
 
 ### WP4. Matching and notifications (L, +8%)
@@ -134,7 +141,7 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 | Milestone | Packages | Realistic match after |
 |---|---|---|
 | **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% — **done** |
-| **M2: donors and notifications** | WP3, WP4, WP5 | ~80% |
+| **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3 **done**, WP4/WP5 remain |
 | **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% |
 | **M4: hardening and launch** | WP10, WP11, WP12 | matches the spec |
 

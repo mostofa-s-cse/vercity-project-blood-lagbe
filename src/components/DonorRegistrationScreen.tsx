@@ -1,8 +1,10 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { ScreenId, Donor, BloodGroup } from '../types/blood';
 import { sound } from '../utils/audio';
 import { isValidBdPhone } from '../utils/phone';
-import { useRegisterDonorMutation } from '../store/api';
+import { useGetDonorQuery, useRegisterDonorMutation, useUpdateDonorMutation } from '../store/api';
+import { isDatabaseOff } from '../store/errors';
+import { browserStorage as donorStorage, readMyDonorProfiles, rememberDonor } from '../lib/myDonorProfile';
 import type { DonorRegisteredInfo } from '../context/AppStateContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -39,6 +41,14 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   const { t } = useLanguage();
   const uid = useId();
   const fieldId = (name: string) => `${uid}-${name}`;
+
+  // A donor this browser already registered (if any), so returning visitors see "My profile" instead
+  // of a blank form. Starts null (matches the server-rendered markup) and is read from localStorage
+  // only after mount, so hydration does not mismatch; `null` again once they press "Register someone else".
+  const [rememberedId, setRememberedId] = useState<string | null>(null);
+  useEffect(() => {
+    setRememberedId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
+  }, []);
 
   // Required fields
   const [registerDonor] = useRegisterDonorMutation();
@@ -125,6 +135,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       isAvailable,
     })
       .unwrap()
+      .then((saved) => rememberDonor(donorStorage(), { id: saved.id, token: saved.manageToken }))
       .catch(() => undefined);
 
     onRegisterDonor({ name: createdDonor.name, bloodGroup });
@@ -150,7 +161,12 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
         </button>
       </div>
 
-      {submittedDonor ? (
+      {!submittedDonor && rememberedId ? (
+        <MyDonorProfilePanel
+          id={rememberedId}
+          onRegisterAnother={() => setRememberedId(null)}
+        />
+      ) : submittedDonor ? (
         /* Success Screen */
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-lg text-center flex flex-col items-center gap-4 animate-in zoom-in-95" role="status">
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
@@ -484,6 +500,128 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
           </div>
         </form>
       )}
+    </div>
+  );
+};
+
+/**
+ * Shown instead of the blank form to a returning visitor whose browser remembers a donor profile.
+ * Only ever one instance on the page, so plain static ids are fine here — `useId()` is for repeated or
+ * SSR-matched elements, and this component itself only ever mounts after hydration (never server-rendered).
+ */
+const MyDonorProfilePanel: React.FC<{ id: string; onRegisterAnother: () => void }> = ({ id, onRegisterAnother }) => {
+  const { t } = useLanguage();
+  const fieldId = (name: string) => `donor-profile-${name}`;
+  const { data, error, isLoading } = useGetDonorQuery(id);
+  const [updateDonor, { isLoading: isSaving }] = useUpdateDonorMutation();
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [lastDonationMonths, setLastDonationMonths] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  const donor = data?.donor;
+  useEffect(() => {
+    if (!donor) return;
+    setIsAvailable(donor.isAvailable);
+    setLastDonationMonths(donor.lastDonationMonths != null ? String(donor.lastDonationMonths) : '');
+  }, [donor]);
+
+  const isDemo = isDatabaseOff(error);
+
+  const handleSave = () => {
+    setSaveState('idle');
+    const months = parseInt(lastDonationMonths, 10);
+    void updateDonor({
+      id,
+      isAvailable,
+      ...(Number.isFinite(months) ? { lastDonationMonths: months } : {}),
+    })
+      .unwrap()
+      .then(() => {
+        sound.playSuccessTone();
+        setSaveState('saved');
+      })
+      .catch(() => setSaveState('error'));
+  };
+
+  return (
+    <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-xs flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg font-black text-slate-900">{t.register.myProfileTitle}</h2>
+        <p className="text-sm text-slate-600 mt-1">{t.register.myProfileDesc}</p>
+      </div>
+
+      {isLoading && <p className="text-sm text-slate-500">{t.register.loadingProfile}</p>}
+      {isDemo && <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">{t.register.profileLoadError}</p>}
+      {error && !isDemo && <p className="text-sm text-red-700">{t.register.profileLoadError}</p>}
+
+      {donor && (
+        <>
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div className="w-12 h-12 shrink-0 rounded-full bg-red-600 text-white font-black flex items-center justify-center">
+              {donor.bloodGroup}
+            </div>
+            <div className="min-w-0">
+              <p className="font-black text-slate-900 truncate">{donor.name}</p>
+              <p className="text-xs text-slate-500 truncate">{donor.area}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span id={fieldId('available')} className="text-sm font-bold text-slate-900">
+              {t.register.editAvailable}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isAvailable}
+              aria-labelledby={fieldId('available')}
+              onClick={() => setIsAvailable((v) => !v)}
+              className={`relative shrink-0 w-14 h-8 rounded-full transition-colors cursor-pointer ${isAvailable ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow transition-transform ${isAvailable ? 'translate-x-6' : 'translate-x-0'}`}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+
+          <div>
+            <label htmlFor={fieldId('last-donation')} className={labelClass}>
+              {t.register.editLastDonation}
+            </label>
+            <input
+              id={fieldId('last-donation')}
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={lastDonationMonths}
+              onChange={(e) => setLastDonationMonths(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md shadow-red-600/30 cursor-pointer disabled:opacity-60"
+            >
+              {t.register.saveChanges}
+            </button>
+            {saveState === 'saved' && <span className="text-sm font-semibold text-emerald-700">{t.register.saved}</span>}
+            {saveState === 'error' && <span className="text-sm font-semibold text-red-700">{t.register.saveError}</span>}
+          </div>
+        </>
+      )}
+
+      <button
+        type="button"
+        onClick={onRegisterAnother}
+        className="text-sm font-bold text-slate-600 hover:text-slate-900 cursor-pointer text-left"
+      >
+        {t.register.registerAnother}
+      </button>
     </div>
   );
 };

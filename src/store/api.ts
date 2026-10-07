@@ -3,6 +3,7 @@ import type { DonorPayload, SosPayload } from '../lib/api.ts';
 import type {
   AdminStatsDto,
   AuditLogDto,
+  DonorDto,
   DonorListResponse,
   FraudIncidentDto,
   RequestDetailResponse,
@@ -10,6 +11,7 @@ import type {
   RequestListResponse,
   ResponseDto,
 } from '../lib/dtoTypes.ts';
+import { browserStorage as donorStorage, tokenFor as donorTokenFor } from '../lib/myDonorProfile.ts';
 import { browserStorage, tokenFor } from '../lib/myRequests.ts';
 import type { RequestStatusValue } from '../lib/requestStatus.ts';
 
@@ -18,8 +20,23 @@ export interface DonorQuery {
   /** Text searched in the donor's name and area. */
   q?: string;
   available?: boolean;
+  /** Only the signed-in person's own donor profiles. */
+  mine?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+/** A donor profile's editable fields, any subset (server validates with `parseDonorUpdateInput`). */
+export interface DonorUpdatePayload {
+  name?: string;
+  area?: string;
+  division?: string;
+  age?: number;
+  gender?: 'Male' | 'Female';
+  vehicle?: string;
+  nearestHospital?: string;
+  isAvailable?: boolean;
+  lastDonationMonths?: number;
 }
 
 export interface RequestsQuery {
@@ -55,6 +72,8 @@ interface ApiOptions {
   keepUnusedDataFor?: number;
   /** The manage token this browser holds for a request, if any. Defaults to the browser's own list. */
   getToken?: (requestId: string) => string | undefined;
+  /** The manage token this browser holds for a donor profile, if any. Defaults to the browser's own list. */
+  getDonorToken?: (donorId: string) => string | undefined;
 }
 
 /** The client data layer: one RTK Query slice for every server call the screens make. */
@@ -63,9 +82,14 @@ export function createApiSlice({
   fetchFn,
   keepUnusedDataFor = 60,
   getToken = (id) => tokenFor(browserStorage(), id),
+  getDonorToken = (id) => donorTokenFor(donorStorage(), id),
 }: ApiOptions = {}) {
   const tokenHeaders = (id: string, explicit?: string) => {
     const token = explicit ?? getToken(id);
+    return token ? { [MANAGE_TOKEN_HEADER]: token } : undefined;
+  };
+  const donorTokenHeaders = (id: string, explicit?: string) => {
+    const token = explicit ?? getDonorToken(id);
     return token ? { [MANAGE_TOKEN_HEADER]: token } : undefined;
   };
 
@@ -82,6 +106,7 @@ export function createApiSlice({
             ['bloodGroup', a.bloodGroup],
             ['q', a.q],
             ['available', a.available],
+            ['mine', a.mine],
             ['page', a.page],
             ['pageSize', a.pageSize],
           ])}`;
@@ -94,8 +119,25 @@ export function createApiSlice({
         query: (id) => `donors/${encodeURIComponent(id)}/contact`,
       }),
 
-      registerDonor: build.mutation<{ id: string }, DonorPayload>({
+      registerDonor: build.mutation<{ id: string; manageToken: string }, DonorPayload>({
         query: (body) => ({ url: 'donors', method: 'POST', body }),
+        invalidatesTags: ['Donor'],
+      }),
+
+      /** One donor's `DonorDto` fields (never the phone). */
+      getDonor: build.query<{ donor: DonorDto }, string>({
+        query: (id) => `donors/${encodeURIComponent(id)}`,
+        providesTags: ['Donor'],
+      }),
+
+      /** Edits a donor's own profile. Sends this browser's manage token for it, same pattern as requests. */
+      updateDonor: build.mutation<{ donor: DonorDto }, { id: string; token?: string } & DonorUpdatePayload>({
+        query: ({ id, token, ...body }) => ({
+          url: `donors/${encodeURIComponent(id)}`,
+          method: 'PATCH',
+          body,
+          headers: donorTokenHeaders(id, token),
+        }),
         invalidatesTags: ['Donor'],
       }),
 
@@ -180,4 +222,6 @@ export const {
   useGetFraudIncidentsQuery,
   useResolveFraudIncidentMutation,
   useGetAuditLogQuery,
+  useGetDonorQuery,
+  useUpdateDonorMutation,
 } = api;

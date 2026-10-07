@@ -62,7 +62,11 @@ interface Call {
 }
 
 /** A fake server: `answer` gets each call and returns [status, json]. */
-function fakeServer(answer: (call: Call) => [number, unknown], getToken?: (id: string) => string | undefined) {
+function fakeServer(
+  answer: (call: Call) => [number, unknown],
+  getToken?: (id: string) => string | undefined,
+  getDonorToken?: (id: string) => string | undefined
+) {
   const calls: Call[] = [];
   const fetchFn = async (request: Request) => {
     const url = new URL(request.url);
@@ -77,7 +81,7 @@ function fakeServer(answer: (call: Call) => [number, unknown], getToken?: (id: s
     const [status, json] = answer(call);
     return new Response(JSON.stringify(json), { status, headers: { 'Content-Type': 'application/json' } });
   };
-  const slice = createApiSlice({ baseUrl: 'http://localhost/api', fetchFn: fetchFn as typeof fetch, keepUnusedDataFor: 0, getToken });
+  const slice = createApiSlice({ baseUrl: 'http://localhost/api', fetchFn: fetchFn as typeof fetch, keepUnusedDataFor: 0, getToken, getDonorToken });
   const store = configureStore({
     reducer: { [slice.reducerPath]: slice.reducer },
     middleware: (getDefault) => getDefault().concat(slice.middleware),
@@ -191,6 +195,39 @@ test('registering a donor refreshes the donor list but not the request lists', a
   assert.equal(calls.filter((call) => call.method === 'GET' && call.path.startsWith('/api/requests')).length, 1);
   donors.unsubscribe();
   requests.unsubscribe();
+});
+
+test('getDonor fetches one donor by id', async () => {
+  const { slice, store, calls } = fakeServer(() => [200, { donor: { id: 'd1', name: 'Tanvir' } }]);
+  const result = await store.dispatch(slice.endpoints.getDonor.initiate('d1'));
+  assert.equal(calls[0].path, '/api/donors/d1');
+  assert.equal((result.data as { donor: { name: string } }).donor.name, 'Tanvir');
+});
+
+test('updateDonor sends only the given fields, with the donor manage token', async () => {
+  const { slice, store, calls } = fakeServer(
+    () => [200, { donor: { id: 'd1' } }],
+    undefined,
+    (id) => (id === 'd1' ? 'donor-secret' : undefined)
+  );
+  await store.dispatch(slice.endpoints.updateDonor.initiate({ id: 'd1', isAvailable: false }));
+  assert.equal(calls[0].method, 'PATCH');
+  assert.equal(calls[0].path, '/api/donors/d1');
+  assert.deepEqual(calls[0].body, { isAvailable: false });
+  assert.equal(calls[0].headers['x-manage-token'], 'donor-secret');
+});
+
+test('updateDonor refreshes the donor list and an explicit token wins', async () => {
+  const { slice, store, calls } = fakeServer((call) =>
+    call.method === 'PATCH' ? [200, { donor: { id: 'd1' } }] : [200, { donors: [], total: 0, page: 1, pageSize: 20 }]
+  );
+  const list = store.dispatch(slice.endpoints.getDonors.initiate());
+  await list;
+  await store.dispatch(slice.endpoints.updateDonor.initiate({ id: 'd1', token: 'explicit', lastDonationMonths: 1 }));
+  await settle();
+  assert.equal(calls.find((call) => call.method === 'PATCH')!.headers['x-manage-token'], 'explicit');
+  assert.equal(calls.filter((call) => call.method === 'GET').length, 2, 'the donor list was fetched again');
+  list.unsubscribe();
 });
 
 test('resolving a fraud incident refreshes the fraud list', async () => {

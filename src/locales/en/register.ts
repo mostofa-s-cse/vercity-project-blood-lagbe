@@ -55,5 +55,15 @@ export const register = {
   statusUnavailable: 'Not available right now',
   viewPassport: 'View Donor Passport',
   openDirectory: 'Open Donor Directory',
+  myProfileTitle: 'My donor profile',
+  myProfileDesc: 'This browser remembers the donor profile you registered, so you can update it here.',
+  editAvailable: 'Available to donate now',
+  editLastDonation: 'Months since last donation',
+  saveChanges: 'Save changes',
+  saved: 'Saved',
+  saveError: 'Could not save. Please try again.',
+  registerAnother: 'Register someone else',
+  loadingProfile: 'Loading your profile…',
+  profileLoadError: 'Could not load your profile on this browser.',
 };
 export type Register = typeof register;

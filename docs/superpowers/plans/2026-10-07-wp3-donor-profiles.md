@@ -50,11 +50,12 @@ Same triad as requests: the manage-token holder (`X-Manage-Token` header), the s
 - [x] Commit.
 
 ### Task 3: RTK Query and "My Profile"
-- [ ] `src/store/api.ts`: `updateDonor` mutation (invalidates `Donor`), token header same pattern as `updateRequestStatus`.
-- [ ] A "My Profile" section reachable from the Donor Directory / Register nav for someone who already has a `myDonorProfile` entry (signed out) or `mine=1` (signed in): shows their info, an Available Now toggle, last-donation update, edit fields. Reuse `DonorRegistrationScreen.tsx`'s form pattern rather than building a new one from scratch — an edit mode of the same form is simplest.
-- [ ] No database: falls back to a "demo" notice like everywhere else; nothing to edit.
-- [ ] Locale strings (en/bn), gates, browser check (Playwright against `.dev-db`), commit.
+- [x] `src/store/api.ts`: `getDonor` query and `updateDonor` mutation (invalidates `Donor`), token header same pattern as `updateRequestStatus` (new `getDonorToken` option, defaults to `myDonorProfile.ts`). Also added `GET /api/donors/[id]` (public, `DonorDto` only) to back `getDonor`.
+- [x] `DonorRegistrationScreen.tsx`: a returning visitor (browser has a `myDonorProfile` entry) sees a "My Profile" panel instead of the blank form — real donor card, Available Now toggle, last-donation months, Save (via `updateDonor`), "Register someone else" to dismiss for this visit. A fresh registration now remembers its id+token via `rememberDonor`.
+- [x] No database: the panel shows the same demo notice style (`isDatabaseOff`) as everywhere else.
+- [x] Locale strings (en/bn, `register.ts`), gates, browser check (Playwright against `.dev-db`, fresh registration → reload → edit → save → confirmed in the database), commit.
+- Found and fixed along the way: a transient React hydration console error (#418) traced to Playwright's browser disk cache serving a stale JS chunk across repeated server restarts on the same port in this sandbox, not a real bug — confirmed clean on a fresh origin/port with the exact same code and real data. Also simplified `MyDonorProfilePanel` to plain string ids instead of `useId()` (it only ever mounts once per page, so `useId()` added nothing).
 
 ### Task 4: Documentation
-- [ ] `docs/HANDOFF.md` progress log, `docs/SPEC-MATCH-PLAN.md` module table (row 1) and WP3 status.
-- [ ] Tick every box above. Final commit.
+- [x] `docs/HANDOFF.md` progress log, `docs/SPEC-MATCH-PLAN.md` module table (row 1) and WP3 status.
+- [x] Tick every box above. Final commit.
