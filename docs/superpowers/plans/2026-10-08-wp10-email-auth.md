@@ -164,7 +164,7 @@ pre-commit to a file that might end up being two trivial one-liners.
 - [x] Commit.
 
 ### Task 5: Documentation
-- [ ] `docs/HANDOFF.md` progress log (including plainly what could and couldn't be verified without a
+- [x] `docs/HANDOFF.md` progress log (including plainly what could and couldn't be verified without a
       real Supabase project); `docs/SPEC-MATCH-PLAN.md` module table ("Secure authentication" row),
-      WP10 section, milestone table (M4).
-- [ ] Tick every box above. Final commit.
+      WP10 section, milestone table (M4), realistic match ~90% → ~97%.
+- [x] Tick every box above. Final commit.

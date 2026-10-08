@@ -6,6 +6,18 @@ Where we are, measured against the spec you gave (see "Starting point"), and the
 
 WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
 
+## Status: WP10 done, out of milestone order (2026-10-08)
+
+Email + password sign-in now sits next to Google, same session and `Profile` row, nothing downstream
+changed. `AuthContext.tsx` gained `signUpWithEmail`/`signInWithEmail`/`requestPasswordReset`/
+`updatePassword`; new dedicated `sign-in`/`forgot-password`/`reset-password` screens (this app's
+form-screen convention, not a header popover). Email verification and password-reset emails are
+Supabase Auth's own built-in flow — no bespoke token system was built. This sandbox has no real
+Supabase project (same standing limitation as Google sign-in never being run here): the
+auth-method-agnostic `/auth/callback` route was confirmed at the code level and the demo-mode fallback
+was browser-checked; the actual signed-in flows were not verified against a live project. Realistic
+overall match: **~97%**. Plan: `docs/superpowers/plans/2026-10-08-wp10-email-auth.md`.
+
 ## Status: WP4 done (2026-10-08)
 
 Posting an emergency request now matches and notifies real compatible donors: the full ABO/Rh
@@ -92,7 +104,7 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 |---|---|---|
 | Redux Toolkit | **Adopted (M1)**: store + RTK Query is the client data layer | Auth slice beyond the existing `AuthContext` |
 | REST API | **Read/update endpoints added (M1)**: donors, requests, respond, status, pagination | Delete; district/radius filters |
-| Secure authentication | Google | Email and password, password reset |
+| Secure authentication | Google + **email/password, password reset (WP10)**, both through Supabase Auth | Rate limiting/CAPTCHA on sign-up and reset (WP11) |
 | Roles: Donor, Blood Seeker, Hospital/Org, Admin | Hospital and Admin (as dynamic roles) | Donor and Blood Seeker |
 | Protected API | Admin and hospital routes | Rate limiting and CAPTCHA on public routes |
 | Notification system | **Real (WP4)**: a `Notification` table, matching and in-app delivery | Email/SMS provider accounts (switch is wired, provider isn't) |
@@ -189,8 +201,17 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
   job, not duplicated here; turn-by-turn routing/ETA, address autocomplete and boundary polygons stay
   out of scope (plan: `docs/superpowers/plans/2026-10-08-wp6-location-maps.md`).
 
-### WP10. Email and password (S, +2%)
-- Sign up, sign in and password reset with Supabase Auth next to Google; email verification.
+### WP10. Email and password (S, +2%) — **Done (2026-10-08)**
+- Sign up, sign in and password reset with Supabase Auth next to Google; email verification is
+  Supabase's own built-in confirmation flow (no bespoke token system built — never roll your own).
+  `AuthContext.tsx` gained `signUpWithEmail`/`signInWithEmail`/`requestPasswordReset`/`updatePassword`;
+  new dedicated `sign-in`/`forgot-password`/`reset-password` screens, same session/`Profile`/roles as
+  Google — nothing downstream needed to change.
+- This sandbox has no real Supabase project (same standing limitation as Google sign-in never being run
+  here): the auth-method-agnostic `/auth/callback` route was confirmed at the code level, and the
+  demo-mode fallback (hides everything without Supabase keys, exactly like the Google button) was
+  browser-checked; the actual signed-in flows were not verified against a live project — said so
+  plainly rather than overclaiming.
 
 ### WP11. Security, quality and responsiveness (M, +3%)
 - Rate limiting and CAPTCHA (Cloudflare Turnstile) on the public POST routes; origin checks; a Row-Level-Security review.
@@ -207,7 +228,7 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 | **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% — **done** |
 | **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3, WP4 and WP5 **done** |
 | **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% — WP7 and WP6 **done**, WP8 in progress |
-| **M4: hardening and launch** | WP10, WP11, WP12 | matches the spec |
+| **M4: hardening and launch** | WP10, WP11, WP12 | ~97% — WP10 **done** (out of milestone order), WP11/WP12 remain |
 
 Each package ends with tests, a build, a browser check, and a commit, as before.
 
