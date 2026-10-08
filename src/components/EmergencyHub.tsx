@@ -10,6 +10,7 @@ import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { MapView } from './MapView';
+import { TurnstileWidget } from './TurnstileWidget';
 
 const NEAR_ME_RADIUS_KM = 50;
 
@@ -112,6 +113,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   const [respondDone, setRespondDone] = useState(false);
   const [respondedIds, setRespondedIds] = useState<Set<string>>(() => new Set());
   const [respond, { isLoading: isSending }] = useRespondToRequestMutation();
+  const [respondTurnstileToken, setRespondTurnstileToken] = useState<string | null>(null);
 
   const queryArgs = useMemo<RequestsQuery>(
     () => ({
@@ -247,7 +249,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
     if (!isValidBdPhone(phone)) return setFormError(t.hub.errInvalidPhone);
     setFormError(null);
     try {
-      await respond({ id: respondTarget.id, name, phone }).unwrap();
+      await respond({ id: respondTarget.id, name, phone, turnstileToken: respondTurnstileToken ?? undefined }).unwrap();
       saveResponder({ name, phone });
       markResponded(respondTarget.id);
       sound.playSuccessTone();
@@ -780,6 +782,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
                     {formError}
                   </p>
                 )}
+                <TurnstileWidget onVerify={setRespondTurnstileToken} />
                 <div className="flex gap-2 justify-end pt-1">
                   <button
                     type="button"

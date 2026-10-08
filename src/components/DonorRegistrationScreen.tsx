@@ -8,6 +8,7 @@ import { browserStorage as donorStorage, readMyDonorProfiles, rememberDonor } fr
 import type { DonorRegisteredInfo } from '../context/AppStateContext';
 import { useLanguage } from '../context/LanguageContext';
 import { BD_DIVISIONS, districtsByDivision } from '../data/bdGeo.ts';
+import { TurnstileWidget } from './TurnstileWidget';
 
 const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -71,6 +72,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   const [nearestHospital, setNearestHospital] = useState('Dhaka Medical College Hospital');
 
   const [submittedDonor, setSubmittedDonor] = useState<Donor | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const phoneValid = isValidBdPhone(phone);
   const showPhoneError = phoneTouched && !phoneValid;
@@ -133,6 +135,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       vehicle,
       nearestHospital,
       isAvailable,
+      turnstileToken: turnstileToken ?? undefined,
     })
       .unwrap()
       .then((saved) => rememberDonor(donorStorage(), { id: saved.id, token: saved.manageToken }))
@@ -499,6 +502,8 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
               </div>
             </div>
           </details>
+
+          <TurnstileWidget onVerify={setTurnstileToken} />
 
           <div>
             <button

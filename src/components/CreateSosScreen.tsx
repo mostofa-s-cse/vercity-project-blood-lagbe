@@ -7,6 +7,7 @@ import { isValidBdPhone } from '../utils/phone';
 import { useCreateSosMutation } from '../store/api';
 import { browserStorage, rememberRequest } from '../lib/myRequests';
 import type { SosCreatedInfo } from '../context/AppStateContext';
+import { TurnstileWidget } from './TurnstileWidget';
 
 interface CreateSosScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -72,6 +73,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [postedText, setPostedText] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const submitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -150,6 +152,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
       isCritical: within1Hour,
       language,
       postText: finalPost,
+      turnstileToken: turnstileToken ?? undefined,
     })
       .unwrap()
       .then((created) => rememberRequest(browserStorage(), { id: created.id, token: created.manageToken }))
@@ -680,6 +683,8 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
 
         {/* Live preview */}
         {postCard(postText, t.sos.previewTitle, t.sos.previewHint)}
+
+        <TurnstileWidget onVerify={setTurnstileToken} />
 
         {/* Submit */}
         <div className="flex flex-col gap-2">

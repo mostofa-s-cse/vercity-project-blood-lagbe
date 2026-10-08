@@ -52,6 +52,7 @@ export interface OrganizationApplyPayload {
   icuBeds?: number;
   latitude?: number;
   longitude?: number;
+  turnstileToken?: string;
 }
 
 /** A donor profile's editable fields, any subset (server validates with `parseDonorUpdateInput`). */
@@ -228,8 +229,15 @@ export function createApiSlice({
       }),
 
       /** "I can donate". */
-      respondToRequest: build.mutation<{ response: ResponseDto; status: RequestStatusValue }, { id: string; name: string; phone: string }>({
-        query: ({ id, name, phone }) => ({ url: `requests/${encodeURIComponent(id)}/respond`, method: 'POST', body: { name, phone } }),
+      respondToRequest: build.mutation<
+        { response: ResponseDto; status: RequestStatusValue },
+        { id: string; name: string; phone: string; turnstileToken?: string }
+      >({
+        query: ({ id, name, phone, turnstileToken }) => ({
+          url: `requests/${encodeURIComponent(id)}/respond`,
+          method: 'POST',
+          body: { name, phone, turnstileToken },
+        }),
         invalidatesTags: ['Request'],
       }),
 

@@ -4,6 +4,7 @@ import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { checkRateLimit, clientKey } from '@/lib/rateLimit';
 import { getCurrentUserId } from '@/lib/supabase/server';
+import { turnstileTokenFromBody, verifyTurnstileToken } from '@/lib/turnstile';
 import { parseOrganizationApplyInput } from '@/lib/validation';
 
 export const runtime = 'nodejs';
@@ -36,6 +37,9 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
+  }
+  if (!(await verifyTurnstileToken(turnstileTokenFromBody(body)))) {
+    return NextResponse.json({ error: 'captcha_failed' }, { status: 403 });
   }
   const parsed = parseOrganizationApplyInput(body);
   if (parsed.error) return NextResponse.json({ error: 'invalid_input', field: parsed.error }, { status: 400 });

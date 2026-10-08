@@ -11,6 +11,7 @@ import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
 import { haversineDistanceKm } from '../lib/geo.ts';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { MapView } from './MapView';
+import { TurnstileWidget } from './TurnstileWidget';
 
 /** Total bags of a hospital: always the sum of its blood groups. */
 const sumStock = (stock: HospitalOrganization['bloodStock']): number =>
@@ -148,6 +149,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const [applyDirectorName, setApplyDirectorName] = useState('');
   const [applyTotalBeds, setApplyTotalBeds] = useState('');
   const [applyIcuBeds, setApplyIcuBeds] = useState('');
+  const [applyTurnstileToken, setApplyTurnstileToken] = useState<string | null>(null);
 
   const handleApplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +168,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
         directorName: applyDirectorName.trim() || undefined,
         totalBeds: applyTotalBeds ? Number(applyTotalBeds) : undefined,
         icuBeds: applyIcuBeds ? Number(applyIcuBeds) : undefined,
+        turnstileToken: applyTurnstileToken ?? undefined,
       }).unwrap();
       setApplyName('');
       setApplyAddress('');
@@ -968,6 +971,8 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
               </div>
             </div>
           </div>
+
+          <TurnstileWidget onVerify={setApplyTurnstileToken} />
 
           <button
             type="submit"

@@ -134,29 +134,48 @@ No code changes — a documented confirmation (see "What exists today") plus a s
 ### Task 1: Rate limiting and origin checks
 - [x] `src/lib/rateLimit.ts` (6 tests, test-first — allows under the limit, blocks over it, resets after
       the window, independent per key, `clientKey` combines route + IP).
-- [x] `src/lib/originCheck.ts` (4 tests, test-first — same-origin allowed, cross-origin blocked, missing
-      header allowed, scheme/host/port sensitive).
+- [x] `src/lib/originCheck.ts` — **real bug found and fixed during Task 2's browser verification, not
+      Task 1's own curl check**: the first version compared `Origin` against
+      `new URL(request.url).origin`. That works for a forged origin or a missing one (exactly the two
+      cases Task 1's curl check covered), but **not for a genuine matching same-origin request** — this
+      project's own `npm run dev -- -p PORT` binds `--hostname 0.0.0.0`, so Next.js's `request.url`
+      inside the handler reports `http://0.0.0.0:PORT/...`, which never equals a real browser's
+      `Origin: http://localhost:PORT`. The donor-registration form 403'd in the browser even with no
+      forged anything. Fixed by comparing `Origin`'s host against the `Host` (or `X-Forwarded-Host`)
+      request header instead of reconstructing an origin from `request.url` — robust behind a proxy too,
+      where the public scheme (`https`) and the internal one (`http`) legitimately differ, which is why
+      this intentionally checks host only, not full origin. 6 tests now (was 4), including one that
+      reproduces the exact `0.0.0.0` bind scenario.
 - [x] Wired both into `POST /api/donors` (5/10min), `POST /api/sos` (5/10min),
       `POST /api/organizations/apply` (5/10min), `POST /api/requests/[id]/respond` (10/10min);
       `isSameOrigin` also into `PATCH /api/donors/[id]` and `PATCH /api/requests/[id]`. A blocked
       request: `429` with `Retry-After` (rate limit) or `403` (`forbidden_origin`), same JSON error shape
       as the rest of this app.
-- [x] Added the new test files to `package.json`'s `test` script (233 tests total). Database checks on
-      `.dev-db` (curl): a forged `Origin: https://evil.example` correctly 403s on `POST /api/donors` and
-      `PATCH /api/donors/[id]`; a normal request (no `Origin` header, as curl sends) passes through;
+- [x] Added the new test files to `package.json`'s `test` script. Database checks on `.dev-db` (curl,
+      re-run after the origin-check fix): a forged `Origin: https://evil.example` correctly 403s on
+      `POST /api/donors` and `PATCH /api/donors/[id]`; a **genuinely matching** `Origin` (same host as
+      the `Host` header) now correctly passes — the case the first pass's verification had missed;
       requests 1-5 in a 10-minute window succeed, the 6th and 7th both 429 with `retry-after: 593`
       (sensible, ~10 minutes). Test rows removed afterwards.
 - [x] Gates clean (`lint`, 233 tests). Commit.
 
 ### Task 2: CAPTCHA switch
-- [ ] `src/lib/turnstile.ts`, `src/components/TurnstileWidget.tsx` per Contracts.
-- [ ] Wire into the same four public forms; server-side verification added to the matching POST routes,
-      skipped (not failed) when unconfigured.
-- [ ] Locale strings if the widget needs any visible text; gates (`lint`/`test`/`build`). Browser check
-      without a real Turnstile key: confirm the forms work exactly as before (widget doesn't render,
-      verification is skipped, nothing is blocked) — the "runs with zero environment variables" promise
-      must keep holding for this too.
-- [ ] Commit.
+- [x] `src/lib/turnstile.ts` (7 tests, test-first — skips the network call entirely with no secret
+      configured, skips it with no token sent, resolves per Cloudflare's reported success/failure, never
+      throws on a network error, sends the right form-encoded fields, `turnstileTokenFromBody` helper).
+      `src/components/TurnstileWidget.tsx` per Contracts (renders nothing without
+      `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; loads Cloudflare's script once and reuses it across multiple
+      widget instances on the page).
+- [x] Wired into the four public forms (`DonorRegistrationScreen.tsx`, `CreateSosScreen.tsx`,
+      `HospitalOrgScreen.tsx`'s apply form, `EmergencyHub.tsx`'s "I can donate" modal) and their matching
+      POST routes (`turnstileToken` added to `DonorPayload`/`SosPayload`/`OrganizationApplyPayload`/the
+      `respondToRequest` mutation); server-side verification skipped, not failed, when unconfigured.
+- [x] Gates clean (`lint`, 242 tests, `build`). Browser-checked without a real Turnstile key end to end:
+      no widget renders anywhere, a full donor registration (fill form, pick blood group, tick the
+      pledge, submit) succeeds exactly as before, no console errors — the "runs with zero environment
+      variables" promise holds for this too. This is also where the real `originCheck.ts` host-comparison
+      bug (Task 1, above) was actually caught — the first attempt at this exact browser check 403'd.
+- [x] Commit.
 
 ### Task 3: Row-Level-Security review
 - [ ] No code change expected (see "What exists today"); if the review turns up an actual gap, fix the

@@ -14,6 +14,7 @@ export interface DonorPayload {
   isAvailable: boolean;
   latitude?: number;
   longitude?: number;
+  turnstileToken?: string;
 }
 
 export interface SosPayload {
@@ -31,6 +32,7 @@ export interface SosPayload {
   postText: string;
   latitude?: number;
   longitude?: number;
+  turnstileToken?: string;
 }
 
 /** Saved blood stock per hospital: `{ hospitalId: { "O+": units } }`, only the groups hospitals have reported. */
