@@ -112,16 +112,15 @@ by donor id, authorised the same triad as everywhere else (manage token, signed-
 - [x] Commit.
 
 ### Task 2: Pure logic — compatibility and matching
-- [ ] `src/lib/bloodCompatibility.ts`: `COMPATIBLE_DONORS`, `isCompatibleDonor` (failing tests first —
-      assert the full 8×8 table explicitly, including `O-` → all 8 and `AB+` receiving from all 8, not
-      just a couple of spot checks).
-- [ ] `src/lib/donorMatching.ts`: `findMatchingDonors` (failing tests first — compatible-but-excluded
-      cases: wrong group, unavailable, ineligible (within 90 days), the requester themself, too far with
-      real coordinates, no location data at all on either side).
-- [ ] `src/lib/notifyChannels.ts`: `sendEmail`/`sendSms` stubs (tests: resolve without throwing whether
-      or not the environment variable is set; never actually call `fetch`/a real SDK in this package).
-- [ ] Add the new test files to the `test` script in `package.json`.
-- [ ] Commit.
+- [x] `src/lib/bloodCompatibility.ts`: `COMPATIBLE_DONORS`, `isCompatibleDonor` (7 tests, test-first —
+      the full 8×8 table explicitly, `O-` → all 8, `AB+` receiving from all 8, Rh mismatch rejected).
+- [x] `src/lib/donorMatching.ts`: `findMatchingDonors` (13 tests, test-first — wrong group, unavailable,
+      ineligible (within 90 days), the requester themself, too far with real coordinates, area/division
+      text fallback (case-insensitive, trimmed), an under-specified request matching nobody).
+- [x] `src/lib/notifyChannels.ts`: `sendEmail`/`sendSms` stubs (4 tests: resolve without throwing whether
+      or not the environment variable is set; no real provider call is ever made in this package).
+- [x] Added the new test files to the `test` script in `package.json`.
+- [x] Gates clean (`lint`, 223 tests). Commit.
 
 ### Task 3: Endpoints
 - [ ] `src/lib/dtoTypes.ts`/`dto.ts`: `NotificationDto`, `toNotificationDto`.
