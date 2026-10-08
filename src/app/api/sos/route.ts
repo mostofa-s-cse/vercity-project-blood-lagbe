@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { BloodGroup } from '@/generated/prisma/client';
+import { COMPATIBLE_DONORS } from '@/lib/bloodCompatibility';
+import { DONATION_COOLDOWN_DAYS } from '@/lib/eligibility';
+import { findMatchingDonors, type MatchDonor } from '@/lib/donorMatching';
 import { hashToken, newManageToken } from '@/lib/manageToken';
+import { sendEmail, sendSms } from '@/lib/notifyChannels';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/supabase/server';
-import { DB_BLOOD_GROUP, parseSosInput } from '@/lib/validation';
+import { BLOOD_GROUP_FROM_DB, DB_BLOOD_GROUP, parseSosInput } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
@@ -58,6 +62,61 @@ export async function POST(request: Request) {
       },
       select: { id: true },
     });
+
+    // Notifying compatible donors is best-effort: the request is already saved, so a problem here is
+    // logged, never turned into a failed response (no job queue in this project — see the WP4 plan).
+    try {
+      const compatibleDbGroups = COMPATIBLE_DONORS[input.bloodGroup].map((group) => DB_BLOOD_GROUP[group] as BloodGroup);
+      const eligibleCutoff = new Date(Date.now() - DONATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+      const candidates = await prisma.donor.findMany({
+        where: {
+          bloodGroup: { in: compatibleDbGroups },
+          isAvailable: true,
+          OR: [{ lastDonationAt: null }, { lastDonationAt: { lte: eligibleCutoff } }],
+        },
+      });
+      const matchDonors: MatchDonor[] = candidates.map((donor) => ({
+        id: donor.id,
+        bloodGroup: BLOOD_GROUP_FROM_DB[donor.bloodGroup],
+        area: donor.area,
+        division: donor.division,
+        latitude: donor.latitude,
+        longitude: donor.longitude,
+        isAvailable: donor.isAvailable,
+        lastDonationAt: donor.lastDonationAt,
+        userId: donor.userId,
+      }));
+      const matched = findMatchingDonors(matchDonors, {
+        bloodGroup: input.bloodGroup,
+        area: input.area ?? null,
+        division: null, // SosRequest has no division column; area is the only location text it carries.
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        userId: profile?.id ?? null,
+      });
+
+      if (matched.length > 0) {
+        await prisma.notification.createMany({
+          data: matched.map((donor) => ({
+            donorId: donor.id,
+            requestId: sos.id,
+            bloodGroup: DB_BLOOD_GROUP[input.bloodGroup] as BloodGroup,
+          })),
+        });
+        await Promise.all(
+          matched.map((donor) => {
+            const matchedRow = candidates.find((c) => c.id === donor.id)!;
+            return Promise.all([
+              matchedRow.email ? sendEmail(matchedRow.email, 'Blood needed nearby', input.postText) : undefined,
+              sendSms(matchedRow.phone, input.postText),
+            ]);
+          })
+        );
+      }
+    } catch (notifyError) {
+      console.error('Could not notify matching donors', notifyError);
+    }
+
     return NextResponse.json({ id: sos.id, manageToken }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Could not save SOS request', error);

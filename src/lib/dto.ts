@@ -1,5 +1,5 @@
-import type { AuditLog, Donation, Donor, FraudIncident, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
-import type { AuditLogDto, DonationDto, DonorDto, FraudIncidentDto, OrganizationDto, RequestDto, ResponseDto } from './dtoTypes';
+import type { AuditLog, Donation, Donor, FraudIncident, Notification, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
+import type { AuditLogDto, DonationDto, DonorDto, FraudIncidentDto, NotificationDto, OrganizationDto, RequestDto, ResponseDto } from './dtoTypes';
 import { isEligible } from './eligibility';
 import { maskPhone } from './phoneMask';
 import { BLOOD_GROUP_FROM_DB } from './validation';
@@ -103,6 +103,20 @@ export function toDonationDto(row: Donation): DonationDto {
     hospital: row.hospital,
     units: row.units,
     donatedAt: row.donatedAt.toISOString(),
+  };
+}
+
+type NotificationRow = Notification & { request: { place: string } };
+
+export function toNotificationDto(row: NotificationRow): NotificationDto {
+  return {
+    id: row.id,
+    requestId: row.requestId,
+    type: row.type,
+    bloodGroup: BLOOD_GROUP_FROM_DB[row.bloodGroup],
+    place: row.request.place,
+    isRead: row.isRead,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 

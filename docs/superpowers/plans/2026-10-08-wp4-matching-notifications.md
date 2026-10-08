@@ -123,17 +123,23 @@ by donor id, authorised the same triad as everywhere else (manage token, signed-
 - [x] Gates clean (`lint`, 223 tests). Commit.
 
 ### Task 3: Endpoints
-- [ ] `src/lib/dtoTypes.ts`/`dto.ts`: `NotificationDto`, `toNotificationDto`.
-- [ ] `GET /api/donors/[id]/notifications`, `PATCH /api/donors/[id]/notifications/[notificationId]`.
-- [ ] `POST /api/sos`: after creating the request, run the real matching against donor rows (bounding
-      box pre-filter when the request has a coordinate, same pattern as WP6's `near`) and
-      `createMany` the `Notification` rows; call `sendEmail`/`sendSms` per match (best-effort, logged on
-      failure, never blocking the response).
-- [ ] Database checks on `.dev-db` (curl/script): seed a couple of compatible and incompatible donors
-      (varied group/availability/eligibility/location), post an SOS, confirm exactly the matching donors
-      got a `Notification` row; confirm the donor-notifications endpoint's permission triad (401/403/200)
-      matches `GET /api/donors/[id]/donations`'s already-proven behaviour.
-- [ ] Commit.
+- [x] `src/lib/dtoTypes.ts`/`dto.ts`: `NotificationDto` (also carries the request's `place`, joined, for
+      a readable notification), `toNotificationDto`.
+- [x] `GET /api/donors/[id]/notifications`, `PATCH /api/donors/[id]/notifications/[notificationId]`.
+- [x] `POST /api/sos`: after creating the request, pre-filters candidate donors in SQL (compatible
+      blood groups via `COMPATIBLE_DONORS`, `isAvailable`, the 90-day eligibility cutoff) then runs the
+      real `findMatchingDonors` in application code for the exact nearby/area logic, `createMany`s the
+      `Notification` rows, and calls `sendEmail`/`sendSms` per match — all inside its own try/catch so a
+      notify failure never turns an already-saved SOS into a failed response.
+- [x] Database checks on `.dev-db` (curl): registered 5 real donors covering every exclusion case
+      (compatible+available+eligible+same-area, wrong group, unavailable, ineligible (recent donation),
+      compatible-but-wrong-area) plus one real SOS request; confirmed **exactly** the one correct donor
+      got a `Notification` row, no others. Confirmed the notifications endpoint's permission triad
+      (401 no credentials / 403 wrong token / 200 correct token) matches the already-proven
+      `GET /api/donors/[id]/donations` pattern exactly; confirmed `PATCH .../[notificationId]` marks read
+      (unread count drops to 0) and 404s for a notification that belongs to a different donor. Test rows
+      removed afterwards (cascade correctly cleaned up the notification rows with the request).
+- [x] Gates clean (`lint`, 223 tests, `build`). Commit.
 
 ### Task 4: Client and the bell
 - [ ] `src/store/api.ts`: `getDonorNotifications`, `markNotificationRead`, tagged for invalidation.

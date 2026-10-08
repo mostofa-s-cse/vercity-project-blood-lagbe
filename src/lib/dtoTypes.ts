@@ -126,6 +126,18 @@ export interface DonationDto {
   donatedAt: string;
 }
 
+/** One compatible-request alert for a donor (WP4), from the bell. */
+export interface NotificationDto {
+  id: string;
+  requestId: string;
+  type: string;
+  bloodGroup: BloodGroupValue;
+  /** The request's `place` (hospital/location text), for a readable notification. */
+  place: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 /** A hospital, blood bank or voluntary organization (WP7), replacing the sample hospital list. */
 export interface OrganizationDto {
   id: string;
