@@ -35,6 +35,13 @@ interface AuthContextType {
   /** `next` is the same-site path to return to after signing in (default: the current page). */
   signInWithGoogle: (next?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** `error` is a short Supabase error code (e.g. `user_already_exists`), or null. Never throws. */
+  signUpWithEmail: (email: string, password: string, next?: string) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  /** Always resolves the same way whether or not the email has an account (Supabase's own anti-enumeration behaviour). */
+  requestPasswordReset: (email: string, next?: string) => Promise<{ error: string | null }>;
+  /** Only works while the browser holds the short-lived recovery session the reset-password link's callback created. */
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -97,6 +104,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   }, [supabase]);
 
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string, next?: string) => {
+      if (!supabase) return { error: 'not_configured', needsEmailConfirmation: false };
+      const target = encodeURIComponent(next ?? `${window.location.pathname}${window.location.search}`);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${target}` },
+      });
+      if (error) return { error: error.code ?? 'sign_up_failed', needsEmailConfirmation: false };
+      // Email confirmations on (the project default): the session comes back null even on success.
+      if (data.session) setUser(toAuthUser(data.session.user));
+      return { error: null, needsEmailConfirmation: !data.session };
+    },
+    [supabase]
+  );
+
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      if (!supabase) return { error: 'not_configured' };
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: error.code ?? 'sign_in_failed' };
+      setUser(toAuthUser(data.user));
+      return { error: null };
+    },
+    [supabase]
+  );
+
+  const requestPasswordReset = useCallback(
+    async (email: string, next?: string) => {
+      if (!supabase) return { error: 'not_configured' };
+      const target = encodeURIComponent(next ?? '/reset-password');
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=${target}`,
+      });
+      // Never surface whether the email has an account — same anti-enumeration behaviour Supabase itself applies.
+      return { error: null };
+    },
+    [supabase]
+  );
+
+  const updatePassword = useCallback(
+    async (newPassword: string) => {
+      if (!supabase) return { error: 'not_configured' };
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.code ?? 'update_password_failed' };
+      setUser(toAuthUser(data.user));
+      return { error: null };
+    },
+    [supabase]
+  );
+
   const configured = supabase !== null;
   const adminOpen = process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true';
   const claims = user ? { sub: user.id, app_metadata: user.appMetadata } : null;
@@ -111,7 +170,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider
-      value={{ configured, loading, user, can, canManageHospital: canManage, signInWithGoogle, signOut }}
+      value={{
+        configured,
+        loading,
+        user,
+        can,
+        canManageHospital: canManage,
+        signInWithGoogle,
+        signOut,
+        signUpWithEmail,
+        signInWithEmail,
+        requestPasswordReset,
+        updatePassword,
+      }}
     >
       {children}
     </AuthContext.Provider>

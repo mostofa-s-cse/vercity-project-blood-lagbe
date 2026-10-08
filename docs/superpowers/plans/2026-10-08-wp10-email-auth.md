@@ -113,10 +113,15 @@ pre-commit to a file that might end up being two trivial one-liners.
 - [x] Gates clean (`lint`). Commit.
 
 ### Task 2: `AuthContext.tsx` and pure validation
-- [ ] Add `signUpWithEmail`/`signInWithEmail`/`requestPasswordReset`/`updatePassword` per Contracts.
-- [ ] Decide and build the email-format / passwords-match check per Contracts (module + failing tests
-      first if it earns a module; inline otherwise — note which was chosen and why in the progress log).
-- [ ] Commit.
+- [x] Added `signUpWithEmail`/`signInWithEmail`/`requestPasswordReset`/`updatePassword` per Contracts.
+      Errors surface as Supabase's own short `error.code` (e.g. `user_already_exists`,
+      `email_not_confirmed`, `invalid_credentials`) rather than its English `message`, so the screen can
+      localise them; an unrecognised/missing code falls back to a generic `*_failed` code per method.
+- [x] Decided **inline, no separate module**: the only real logic is an email-format check (reusing
+      `src/lib/validation.ts`'s existing `@`-and-dot regex pattern, not inventing a second one) and
+      "do the two password fields match" — two one-line checks, not enough real logic to justify a
+      module + test file over just writing them directly in the sign-up/reset-password screens (Task 3).
+- [x] Gates clean (`lint`, 223 tests). Commit.
 
 ### Task 3: Screens
 - [ ] New `ScreenId`s/`SCREEN_PATHS` entries (`sign-in`, `forgot-password`, `reset-password`); page.tsx
