@@ -77,8 +77,9 @@ model Donor {
   longitude          Float?
   createdAt          DateTime   @default(now()) @map("created_at")
 
-  responses RequestResponse[]
-  donations Donation[]
+  responses     RequestResponse[]
+  donations     Donation[]
+  notifications Notification[]
 
   @@index([bloodGroup, area])
   @@index([isAvailable, createdAt])
@@ -114,11 +115,30 @@ model SosRequest {
   completedAt     DateTime?         @map("completed_at")
   responses       RequestResponse[]
   donations       Donation[]
+  notifications   Notification[]
 
   @@index([status, createdAt])
   @@index([isCritical, status, createdAt])
   @@index([userId])
   @@map("sos_requests")
+}
+
+/// One compatible-donor alert for a request. Belongs to a Donor row (not a Profile) — same ownership
+/// model as donor-profile editing (WP3): works whether or not that donor is linked to a signed-in account.
+model Notification {
+  id         String     @id @default(cuid())
+  donorId    String     @map("donor_id")
+  donor      Donor      @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  requestId  String     @map("request_id")
+  request    SosRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  /// Only kind this package creates; room for more later, not invented now.
+  type       String     @default("compatible_request")
+  bloodGroup BloodGroup @map("blood_group")
+  isRead     Boolean    @default(false) @map("is_read")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([donorId, isRead])
+  @@map("notifications")
 }
 
 /// Someone who said "I can donate" for a request.
