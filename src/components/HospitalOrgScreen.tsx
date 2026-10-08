@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScreenId, HospitalOrganization, DonationCamp, BloodGroup } from '../types/blood';
 import { SAMPLE_HOSPITAL_ORGS, SAMPLE_CAMPS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { fetchHospitalStock, saveHospitalStock, type HospitalStockMap } from '../lib/api';
+import { useApplyOrganizationMutation, useGetOrganizationsQuery, type OrganizationApplyPayload } from '../store/api';
+import { isDatabaseOff } from '../store/errors';
+import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
 
 /** Total bags of a hospital: always the sum of its blood groups. */
 const sumStock = (stock: HospitalOrganization['bloodStock']): number =>
@@ -51,7 +54,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
   const [camps, setCamps] = useState<DonationCamp[]>(SAMPLE_CAMPS);
   const [activeTab, setActiveTab] = useState<'inventory' | 'requisitions' | 'camps' | 'dispatch'>('inventory');
-  
+
   // New Camp Modal state
   const [isCampModalOpen, setIsCampModalOpen] = useState(false);
   const [newCampTitle, setNewCampTitle] = useState('');
@@ -66,20 +69,84 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   // Camps are not saved yet, so only admin and hospital accounts may create them (everyone in demo mode).
   const canCreateCamp = can('camps.create');
 
+  // Real organizations replace the sample list once they load; without a database this stays the sample.
+  const { currentData: orgsData, error: orgsError } = useGetOrganizationsQuery();
+  const orgsDemo = isDatabaseOff(orgsError);
+  const stockRef = useRef<HospitalStockMap | null>(null);
+
   // Load the stock hospitals have saved; without a database this stays null and the sample data is kept.
   useEffect(() => {
     let active = true;
     fetchHospitalStock().then(saved => {
-      if (active && saved) setHospitals(prev => mergeSavedStock(prev, saved));
+      if (!active) return;
+      stockRef.current = saved;
+      if (saved) setHospitals(prev => mergeSavedStock(prev, saved));
     });
     return () => {
       active = false;
     };
   }, []);
 
+  // Rejected applications aren't a usable facility here; everything else (pending + approved) is.
+  useEffect(() => {
+    if (orgsDemo || !orgsData) return;
+    const real = orgsData.organizations.filter(o => o.status !== 'rejected');
+    if (real.length === 0) return;
+    const base = toHospitalOrganizations(real);
+    setHospitals(stockRef.current ? mergeSavedStock(base, stockRef.current) : base);
+  }, [orgsDemo, orgsData]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // "Apply to register your organization": public, no login required.
+  const [applyOrganization, { isLoading: applying }] = useApplyOrganizationMutation();
+  const [applyName, setApplyName] = useState('');
+  const [applyType, setApplyType] = useState<OrganizationApplyPayload['type']>('private_hospital');
+  const [applyAddress, setApplyAddress] = useState('');
+  const [applyLicense, setApplyLicense] = useState('');
+  const [applyDivision, setApplyDivision] = useState('');
+  const [applyDistrict, setApplyDistrict] = useState('');
+  const [applyHotline, setApplyHotline] = useState('');
+  const [applyEmergencyContact, setApplyEmergencyContact] = useState('');
+  const [applyDirectorName, setApplyDirectorName] = useState('');
+  const [applyTotalBeds, setApplyTotalBeds] = useState('');
+  const [applyIcuBeds, setApplyIcuBeds] = useState('');
+
+  const handleApplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!applyName.trim() || !applyAddress.trim() || !applyLicense.trim()) return;
+    sound.playTap();
+    try {
+      await applyOrganization({
+        name: applyName.trim(),
+        type: applyType,
+        address: applyAddress.trim(),
+        licenseNumber: applyLicense.trim(),
+        division: applyDivision.trim() || undefined,
+        district: applyDistrict.trim() || undefined,
+        hotline: applyHotline.trim() || undefined,
+        emergencyContact: applyEmergencyContact.trim() || undefined,
+        directorName: applyDirectorName.trim() || undefined,
+        totalBeds: applyTotalBeds ? Number(applyTotalBeds) : undefined,
+        icuBeds: applyIcuBeds ? Number(applyIcuBeds) : undefined,
+      }).unwrap();
+      setApplyName('');
+      setApplyAddress('');
+      setApplyLicense('');
+      setApplyDivision('');
+      setApplyDistrict('');
+      setApplyHotline('');
+      setApplyEmergencyContact('');
+      setApplyDirectorName('');
+      setApplyTotalBeds('');
+      setApplyIcuBeds('');
+      showToast(t.hospitals.applySuccess);
+    } catch {
+      showToast(t.hospitals.applyFailed);
+    }
   };
 
   // Adjust stock
@@ -169,7 +236,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 text-[10px] font-bold border border-emerald-800/60 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                {selectedOrg.verifiedBadge}
+                {selectedOrg.verifiedBadge || (selectedOrg.isVerified ? t.hospitals.verifiedBadgeDefault : t.hospitals.pendingVerificationBadge)}
               </span>
             </div>
 
@@ -673,6 +740,176 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
           </div>
         </div>
       )}
+
+      {/* Apply to register a new organization: public, no login required. */}
+      <details className="group rounded-2xl border border-slate-200 bg-white">
+        <summary className="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <span>
+            <span className="block text-sm font-bold text-slate-900">{t.hospitals.applyTitle}</span>
+            <span className="block text-xs text-slate-500 mt-0.5">{t.hospitals.applyHint}</span>
+          </span>
+          <span className="material-symbols-outlined text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true">
+            expand_more
+          </span>
+        </summary>
+
+        <form onSubmit={handleApplySubmit} className="px-5 pb-5 pt-1 flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyNameLabel}
+              </label>
+              <input
+                type="text"
+                required
+                placeholder={t.hospitals.applyNamePlaceholder}
+                value={applyName}
+                onChange={(e) => setApplyName(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyTypeLabel}
+              </label>
+              <select
+                value={applyType}
+                onChange={(e) => setApplyType(e.target.value as OrganizationApplyPayload['type'])}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500 bg-white"
+              >
+                <option value="government_hospital">{t.hospitals.applyTypeOptions.government_hospital}</option>
+                <option value="private_hospital">{t.hospitals.applyTypeOptions.private_hospital}</option>
+                <option value="volunteer_org">{t.hospitals.applyTypeOptions.volunteer_org}</option>
+                <option value="blood_bank">{t.hospitals.applyTypeOptions.blood_bank}</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyAddressLabel}
+              </label>
+              <input
+                type="text"
+                required
+                placeholder={t.hospitals.applyAddressPlaceholder}
+                value={applyAddress}
+                onChange={(e) => setApplyAddress(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyLicenseLabel}
+              </label>
+              <input
+                type="text"
+                required
+                placeholder={t.hospitals.applyLicensePlaceholder}
+                value={applyLicense}
+                onChange={(e) => setApplyLicense(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyDivisionLabel} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                type="text"
+                value={applyDivision}
+                onChange={(e) => setApplyDivision(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyDistrictLabel} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                type="text"
+                value={applyDistrict}
+                onChange={(e) => setApplyDistrict(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyHotlineLabel} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                type="text"
+                value={applyHotline}
+                onChange={(e) => setApplyHotline(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyEmergencyContactLabel} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                type="text"
+                value={applyEmergencyContact}
+                onChange={(e) => setApplyEmergencyContact(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                {t.hospitals.applyDirectorNameLabel} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+              </label>
+              <input
+                type="text"
+                value={applyDirectorName}
+                onChange={(e) => setApplyDirectorName(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {t.hospitals.applyTotalBedsLabel} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={applyTotalBeds}
+                  onChange={(e) => setApplyTotalBeds(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {t.hospitals.applyIcuBedsLabel} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={applyIcuBeds}
+                  onChange={(e) => setApplyIcuBeds(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={applying}
+            className="self-start px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold text-xs cursor-pointer shadow-sm"
+          >
+            {t.hospitals.applySubmit}
+          </button>
+        </form>
+      </details>
     </div>
   );
 };

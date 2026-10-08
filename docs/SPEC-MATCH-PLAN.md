@@ -6,6 +6,17 @@ Where we are, measured against the spec you gave (see "Starting point"), and the
 
 WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
 
+## Status: WP7 done, out of milestone order (2026-10-08)
+
+Hospital/organization identity and verification is now a real `Organization` table instead of
+`SAMPLE_HOSPITAL_ORGS`: anyone can apply (no login) from `HospitalOrgScreen.tsx`'s collapsed apply
+form; an admin approves or rejects from the Admin Panel's Hospitals tab, which also grants the
+Hospital staff role tied to that organization when the applicant is a known signed-in profile.
+Blood stock keeps working exactly as before (same `HospitalStock` table, now keyed against real
+organization ids). Organizations managing the requests addressed to them stays explicitly out of
+scope (no foreign key links a request to an organization — see the WP7 section below). Realistic
+overall match: **~78%**. Plan: `docs/superpowers/plans/2026-10-08-wp7-organizations.md`.
+
 ## Status: WP5 done, out of milestone order (2026-10-08)
 
 A completed request now writes a real `Donation` row (donor, request, hospital, units, date) for every
@@ -51,8 +62,8 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 | 5. Donor Notifications | Bell with sample items | Matching by group and location; stored notifications; email/SMS/push |
 | 6. Donation History | A completed request writes a real `Donation`; the Passport shows real history and the automatic 90-day cooldown (WP5) | Clinical vitals/NID/QR stay sample on purpose (no real source) |
 | 7. Request Tracking | **Real statuses and transitions** (Pending, Donor Found, Completed, Cancelled) from the database, server-enforced (M1) | Priority/urgency beyond emergency-first |
-| 8. Hospital & Organization | Hospital role, own-hospital stock saved | Organization accounts, verification workflow, managing requests |
-| 9. Admin Dashboard | Roles real; donor/request/hospital-stock/fraud-report tabs and the activity log now read the database (Ops Command too) | Real user list, moderation; organization verification (WP7) |
+| 8. Hospital & Organization | Hospital role, own-hospital stock saved; **real `Organization` accounts, apply + admin approve/reject (WP7)** | Organizations managing the requests addressed to them (out of scope, see WP7) |
+| 9. Admin Dashboard | Roles real; donor/request/hospital-stock/fraud-report tabs and the activity log now read the database (Ops Command too); **organization verification now real (WP7)** | Real user list, moderation |
 
 | Spec technology | Today | Missing |
 |---|---|---|
@@ -119,14 +130,14 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 - A request marked `COMPLETED` writes the donation; the donor's history page (Donor Passport) reads it.
 - Availability is derived from `lastDonationAt + 90 days` (`isEligible`), combined with — not replacing — the manual `isAvailable` switch (a donor can still pause themselves even while eligible).
 
-### WP7. Hospital and organization accounts (M, +6%)
-- `Organization` table (hospital, blood bank, organization; licence; verified flag), replacing the hospital sample data; stock moves onto it.
-- A person applies for an organization account; an admin approves; approval grants the hospital role tied to that organization.
-- Organizations see and manage the requests addressed to them.
+### WP7. Hospital and organization accounts (M, +6%) — **Done (2026-10-08)**
+- `Organization` table (hospital, blood bank, organization; licence; verified flag), replacing the hospital sample data; stock moves onto it (same `HospitalStock` table as before, keyed the same way).
+- A person applies for an organization account (`HospitalOrgScreen.tsx`'s collapsed apply form, no login required); an admin approves or rejects from the Admin Panel's Hospitals tab; approval grants the hospital role tied to that organization (caught and skipped gracefully when no Supabase service key is configured, same rule as every other "needs the service key" action).
+- Explicitly out of scope, documented rather than faked: organizations seeing/managing the requests addressed to them (`SosRequest.place` is free text, not a foreign key to `Organization`); cold-chain sensor readings and licence-document upload stay sample, same reasoning as WP8.
 
 ### WP8. Real admin dashboard (M, +6%) — **in progress, started out of order (2026-10-06)**
-- Done: `FraudIncident` model (the `Report`-equivalent people flag) with a real Fraud tab (shared by Admin Panel and Ops Command); `AuditLog` table written by fraud resolution, hospital stock changes and role grant/revoke, read by the Logs tab; Overview/Donors/Requests/Hospitals tabs and Ops Command's SOS queue/stock matrix/fraud tab all read the database instead of `mockData.ts`.
-- Still missing: users list (profiles and roles) as its own tab, donor and request moderation actions, organization verification (needs WP7's `Organization` model first).
+- Done: `FraudIncident` model (the `Report`-equivalent people flag) with a real Fraud tab (shared by Admin Panel and Ops Command); `AuditLog` table written by fraud resolution, hospital stock changes and role grant/revoke, read by the Logs tab; Overview/Donors/Requests/Hospitals tabs and Ops Command's SOS queue/stock matrix/fraud tab all read the database instead of `mockData.ts`; hospital identity/verification is now real too (WP7).
+- Still missing: users list (profiles and roles) as its own tab, donor and request moderation actions.
 
 ### WP6. Location and maps (L, +7%)
 - Districts and upazilas dataset for Bangladesh; latitude and longitude on donors, requests and organizations.
@@ -151,7 +162,7 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 |---|---|---|
 | **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% — **done** |
 | **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3 and WP5 **done**, WP4 remains |
-| **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% |
+| **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% — WP7 **done**, WP8 in progress, WP6 remains |
 | **M4: hardening and launch** | WP10, WP11, WP12 | matches the spec |
 
 Each package ends with tests, a build, a browser check, and a commit, as before.

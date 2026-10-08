@@ -3,11 +3,12 @@ import { OpsSubTab, ScreenId, BloodGroup, HospitalOrganization } from '../types/
 import { CHILLER_UNITS, SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
-import { useGetRequestsQuery, useUpdateRequestStatusMutation, useGetFraudIncidentsQuery, useResolveFraudIncidentMutation, useGetDonorsQuery } from '../store/api';
+import { useGetRequestsQuery, useUpdateRequestStatusMutation, useGetFraudIncidentsQuery, useResolveFraudIncidentMutation, useGetDonorsQuery, useGetOrganizationsQuery } from '../store/api';
 import { isDatabaseOff, apiErrorCode, apiStatus } from '../store/errors';
 import { sampleRequests } from '../data/sample';
 import { canTransition, type RequestStatusValue } from '../lib/requestStatus';
 import { fetchHospitalStock } from '../lib/api';
+import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
 import type { RequestDto, FraudIncidentDto } from '../lib/dtoTypes';
 
 /** Total bags of a hospital: always the sum of its blood groups (same rule as HospitalOrgScreen.tsx). */
@@ -64,7 +65,16 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
       active = false;
     };
   }, []);
-  const hospitals = stockMap ? mergeSavedStock(SAMPLE_HOSPITAL_ORGS, stockMap) : SAMPLE_HOSPITAL_ORGS;
+  // Real organizations once they load (sample until then); rejected applications aren't a usable facility here.
+  const { currentData: orgsData, error: orgsError } = useGetOrganizationsQuery();
+  const orgsDemo = isDatabaseOff(orgsError);
+  const realHospitals = useMemo(() => {
+    if (!orgsData) return null;
+    const real = orgsData.organizations.filter((o) => o.status !== 'rejected');
+    return real.length > 0 ? toHospitalOrganizations(real) : null;
+  }, [orgsData]);
+  const baseHospitals = !orgsDemo && realHospitals ? realHospitals : SAMPLE_HOSPITAL_ORGS;
+  const hospitals = stockMap ? mergeSavedStock(baseHospitals, stockMap) : baseHospitals;
 
   const allRequests = useGetRequestsQuery({ pageSize: 50 });
   const pendingCount = useGetRequestsQuery({ status: 'PENDING', pageSize: 1 });

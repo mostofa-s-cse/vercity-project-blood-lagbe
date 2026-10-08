@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScreenId, HospitalOrganization, BloodGroup } from '../types/blood';
 import { SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../data/mockData';
 import { sound } from '../utils/audio';
@@ -12,9 +12,11 @@ import {
   useGetAuditLogQuery,
   useGetDonorsQuery,
   useGetFraudIncidentsQuery,
+  useGetOrganizationsQuery,
   useGetRequestsQuery,
   useLazyGetDonorContactQuery,
   useResolveFraudIncidentMutation,
+  useReviewOrganizationMutation,
   useUpdateRequestStatusMutation,
 } from '../store/api';
 import { apiStatus, isDatabaseOff } from '../store/errors';
@@ -22,6 +24,7 @@ import { apiStatus, isDatabaseOff } from '../store/errors';
 /** No database, or no real sign-in to prove the permission (this sandbox has neither) — show sample data either way. */
 const unavailable = (error: unknown): boolean => isDatabaseOff(error) || apiStatus(error) === 401 || apiStatus(error) === 403;
 import { fetchHospitalStock, type HospitalStockMap } from '../lib/api';
+import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
 import { sampleContactPhone, sampleDonors, sampleRequests } from '../data/sample';
 import { canTransition, type RequestStatusValue } from '../lib/requestStatus';
 import type { DonorDto, FraudIncidentDto, RequestDto } from '../lib/dtoTypes';
@@ -140,17 +143,29 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setRadiusIsActive(emergencyRadius.isActive);
   }, [emergencyRadius]);
 
-  // Hospitals: sample list, real (seeded) stock merged over it on load — same pattern as HospitalOrgScreen.
+  // Hospitals tab: real organizations once they load (sample until then), real (seeded) stock merged
+  // over it on load — same pattern as HospitalOrgScreen.
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
+  const hospitalStockRef = useRef<HospitalStockMap | null>(null);
   useEffect(() => {
     let active = true;
     fetchHospitalStock().then((saved) => {
-      if (active && saved) setHospitals((prev) => mergeSavedStock(prev, saved));
+      if (!active) return;
+      hospitalStockRef.current = saved;
+      if (saved) setHospitals((prev) => mergeSavedStock(prev, saved));
     });
     return () => {
       active = false;
     };
   }, []);
+  const { currentData: orgsData, error: orgsError } = useGetOrganizationsQuery();
+  const hospitalsDemo = isDatabaseOff(orgsError);
+  useEffect(() => {
+    if (hospitalsDemo || !orgsData || orgsData.organizations.length === 0) return;
+    const base = toHospitalOrganizations(orgsData.organizations);
+    setHospitals(hospitalStockRef.current ? mergeSavedStock(base, hospitalStockRef.current) : base);
+  }, [hospitalsDemo, orgsData]);
+  const [reviewOrganization, { isLoading: reviewingOrganization }] = useReviewOrganizationMutation();
 
   // Selected detail modal
   const [selectedDonor, setSelectedDonor] = useState<DonorDto | null>(null);
@@ -232,18 +247,22 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     }
   };
 
-  const handleToggleHospitalVerification = (hospitalId: string) => {
+  const handleToggleHospitalVerification = async (hospitalId: string) => {
     sound.playTap();
-    setHospitals(prev => prev.map(h => {
-      if (h.id === hospitalId) {
-        const nextState = !h.isVerified;
-        showToast(
-          t.admin.toasts.hospitalVerifyUpdated(h.name)
-        );
-        return { ...h, isVerified: nextState };
-      }
-      return h;
-    }));
+    const hospital = hospitals.find((h) => h.id === hospitalId);
+    if (!hospital) return;
+    const nextState = !hospital.isVerified;
+
+    if (hospitalsDemo) {
+      showToast(t.admin.toasts.hospitalVerifyDemoDisabled);
+      return;
+    }
+    try {
+      await reviewOrganization({ id: hospitalId, decision: nextState ? 'approve' : 'reject' }).unwrap();
+      showToast(t.admin.toasts.hospitalVerifyUpdated(hospital.name));
+    } catch {
+      showToast(t.admin.toasts.hospitalVerifyFailed);
+    }
   };
 
   // Fraud tab: real data, shared with Ops Command.
@@ -1877,7 +1896,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span>{t.admin.hospitals.title}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                {t.admin.hospitals.desc} <span className="text-slate-400">({t.admin.hospitals.identitySample})</span>
+                {t.admin.hospitals.desc}{' '}
+                <span className="text-slate-400">
+                  ({hospitalsDemo ? t.admin.hospitals.identitySample : t.admin.hospitals.identityReal})
+                </span>
               </p>
             </div>
 
@@ -1903,7 +1925,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     </span>
                     <button
                       onClick={() => handleToggleHospitalVerification(hosp.id)}
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase cursor-pointer ${
+                      disabled={reviewingOrganization}
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                         hosp.isVerified
                           ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
                           : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
