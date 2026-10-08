@@ -6,12 +6,14 @@ The app runs without any of this (as a demo with sample data). Each group of set
 
 | You set | You get |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | A "Sign in with Google" button in the header |
+| `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | A "Sign in" button in the header, offering Google and (once step 6a is done in your Supabase dashboard) email + password |
 | `DATABASE_URL` + `DIRECT_URL` | New donors and SOS requests are saved to your database |
 | `SUPABASE_SERVICE_ROLE_KEY` (+ the database) and `ADMIN_EMAILS` | You can create roles in the Admin Panel and give them to people by email (step 8) |
 | `NEXT_PUBLIC_ADMIN_OPEN="true"` | Opens the Admin Panel and Ops Command to everyone, for local demos only (see step 8) |
 
-Sign-in uses **Supabase Auth with its built-in Google provider**. Auth0 is not used and is not needed.
+Sign-in uses **Supabase Auth**, with its built-in Google provider and its built-in email + password
+provider side by side. Auth0 is not used and is not needed; email confirmation and password reset use
+Supabase's own built-in flow, not a bespoke one.
 
 ## 1. Create the Supabase project
 
@@ -71,6 +73,38 @@ This creates the tables (`profiles`, `donors`, `sos_requests`, `request_response
 2. **Authentication > URL Configuration**:
    - **Site URL**: your production URL (for local work, `http://localhost:3000`).
    - **Redirect URLs**: add `http://localhost:3000/auth/callback` and `https://YOUR-DOMAIN/auth/callback`.
+
+## 6a. Turn on email + password sign-in (optional, next to Google)
+
+The app's code already supports email + password sign-up, sign-in and password reset
+(`src/context/AuthContext.tsx`, the `/sign-in`, `/forgot-password` and `/reset-password` pages) — this
+step is purely configuring your Supabase project, the same "needs your own keys" boundary as everything
+else here. Skip it if Google alone is enough for you.
+
+1. Supabase dashboard > **Authentication > Sign In / Providers > Email**: make sure it is enabled (it
+   usually is by default).
+2. **Authentication > Emails**: the **Confirm signup** and **Reset password** templates already point
+   their link at `{{ .SiteURL }}/auth/callback?...` by default — leave them as Supabase's default unless
+   you have a reason to change the wording; the link destination does not need editing.
+3. **Authentication > URL Configuration**: the same **Redirect URLs** you added for Google in step 6.2
+   (`http://localhost:3000/auth/callback` and `https://YOUR-DOMAIN/auth/callback`) already cover email
+   confirmation and password-reset links too — `/auth/callback` is the same route for every sign-in
+   method (`src/app/auth/callback/route.ts` only reads `code` and `next`, it never branches on how the
+   code was produced). Nothing new to add here.
+4. Optional: **Authentication > Sign In / Providers > Email** has a toggle for "Confirm email" (require
+   clicking the confirmation link before the account can sign in) and a minimum-password-length setting.
+   Supabase enforces whatever you set here; this app does not duplicate password rules of its own.
+
+That's it — no extra environment variable. Email + password uses the same
+`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` pair as Google sign-in (step 2); if
+those are unset, `/sign-in` and the other new pages render nothing, exactly like the Google button does
+today (demo mode).
+
+**Note on verification:** this app's own test environment has no real Supabase project, so the
+confirmation/recovery-link flow was only confirmed by reading `/auth/callback`'s code (it is genuinely
+auth-method-agnostic), not by actually clicking a real confirmation or reset email. If something in this
+section turns out not to match your project's defaults, it is likely a Supabase dashboard default that
+changed after this was written, not a bug in the app's code.
 
 ## 7. Run it
 
@@ -177,3 +211,6 @@ A role's permissions are copied into the person's Supabase **`app_metadata`** (`
 | I edited a role but people do not see the change | Their login only picks it up at their next sign-in or when it renews (about hourly). The Access tab tells you how many people were updated; if some failed, edit the role again. |
 | A hospital account can see the buttons but saving fails | The API answers `403` if the account's hospital is not the one being edited, `401` if the login expired, and `503` without a database. |
 | Saving a donor does nothing | The API answers `503` when `DATABASE_URL` is not set. Set it and restart. Errors are logged in the terminal running `npm run dev`. |
+| No confirmation/reset email arrives | Check Supabase dashboard > **Authentication > Logs** first — Supabase's default email sending has a low rate limit meant for testing only; for real traffic, configure a custom SMTP provider under **Authentication > Emails > SMTP Settings**. |
+| Sign-up succeeds but sign-in says "email not confirmed" | Expected if "Confirm email" is on (step 6a.4) — the person must click the confirmation link first. Turn it off in the Supabase dashboard if you don't want this requirement. |
+| The password-reset link lands on the home page instead of the reset-password form | The Redirect URL allowlist (step 6.2) is missing an entry, or `next=/reset-password` was stripped somewhere — check the link's full URL in the email. |

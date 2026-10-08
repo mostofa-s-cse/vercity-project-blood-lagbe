@@ -155,11 +155,13 @@ pre-commit to a file that might end up being two trivial one-liners.
 - [x] Commit.
 
 ### Task 4: Setup documentation
-- [ ] `docs/SETUP-SUPABASE.md`: a new section next to the Google one — enabling the Email provider,
-      what the Confirm-signup and Reset-password email templates need to point at
-      (`{site_url}/auth/callback?next=...`), and the redirect-URL allowlist entries Supabase requires
-      for this to work in each of local/preview/production.
-- [ ] Commit.
+- [x] `docs/SETUP-SUPABASE.md`: new "6a. Turn on email + password sign-in" section next to the Google
+      one — enabling the Email provider, confirming the Confirm-signup/Reset-password templates and the
+      redirect-URL allowlist already cover it (same `/auth/callback` route as Google, nothing new to
+      add), the "Confirm email" toggle, the honest note that this couldn't be verified against a real
+      project. Updated the top summary table, the opening "Sign-in uses Supabase Auth" line, and added
+      three email-auth troubleshooting rows.
+- [x] Commit.
 
 ### Task 5: Documentation
 - [ ] `docs/HANDOFF.md` progress log (including plainly what could and couldn't be verified without a
