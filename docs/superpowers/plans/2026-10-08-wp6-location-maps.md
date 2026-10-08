@@ -123,9 +123,11 @@ distance-sorted or placed on the map; it still works exactly as it does today ev
 - [x] Commit.
 
 ### Task 2: Schema
-- [ ] `prisma/schema.prisma`: `latitude`/`longitude` on `Donor`, `SosRequest`, `Organization`. Migration
-      `0010_location` (hand-written). Verify on `.dev-db`: apply, `prisma migrate diff` empty.
-- [ ] Commit.
+- [x] `prisma/schema.prisma`: `latitude`/`longitude` on `Donor`, `SosRequest`, `Organization`. Migration
+      `0010_location` (hand-written). Verified on `.dev-db`: applied clean, `prisma migrate diff
+      --from-config-datasource prisma.config.ts --to-schema prisma/schema.prisma --script` reports
+      "This is an empty migration" (no drift). `prisma generate` re-run, `lint`/`test` (187) clean.
+- [x] Commit.
 
 ### Task 3: Distance, pure logic
 - [ ] `src/lib/geo.ts`: `haversineDistanceKm`, `boundingBox` (failing tests first — known city-pair

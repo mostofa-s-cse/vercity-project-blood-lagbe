@@ -71,6 +71,10 @@ model Donor {
   /// automatic 90-day eligibility rule (src/lib/eligibility.ts), replacing the static `lastDonationMonths`
   /// guess once a real donation exists.
   lastDonationAt     DateTime?  @map("last_donation_at")
+  /// A real coordinate (browser geolocation or a picked district's centroid), used for "near me" sort
+  /// and distance (src/lib/geo.ts). Null until the donor shares one; nothing about the app breaks without it.
+  latitude           Float?
+  longitude          Float?
   createdAt          DateTime   @default(now()) @map("created_at")
 
   responses RequestResponse[]
@@ -102,6 +106,9 @@ model SosRequest {
   /// SHA-256 of the manage token given once to whoever made the request; lets a person without an account
   /// complete or cancel it later. The token itself is never stored.
   manageTokenHash String?           @map("manage_token_hash")
+  /// Same rule as Donor.latitude/longitude: a real coordinate for "near me" sort and distance, null until shared.
+  latitude        Float?
+  longitude       Float?
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at")
   completedAt     DateTime?         @map("completed_at")
@@ -235,6 +242,9 @@ model Organization {
   status           String    @default("pending")
   totalBeds        Int?      @map("total_beds")
   icuBeds          Int?      @map("icu_beds")
+  /// Same rule as Donor.latitude/longitude: a real coordinate for "near me" sort and distance, null until shared.
+  latitude         Float?
+  longitude        Float?
   appliedBy        String?   @map("applied_by") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at")
   reviewedAt       DateTime? @map("reviewed_at")
