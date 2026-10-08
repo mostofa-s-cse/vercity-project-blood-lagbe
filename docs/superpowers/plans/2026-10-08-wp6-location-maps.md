@@ -130,14 +130,17 @@ distance-sorted or placed on the map; it still works exactly as it does today ev
 - [x] Commit.
 
 ### Task 3: Distance, pure logic
-- [ ] `src/lib/geo.ts`: `haversineDistanceKm`, `boundingBox` (failing tests first — known city-pair
-      distances as fixtures, e.g. Dhaka↔Chattogram, so the numbers are checkable by hand).
-- [ ] `src/lib/validation.ts`: optional `latitude`/`longitude` added to `parseDonorInput`,
-      `parseSosInput`, `parseOrganizationApplyInput`, `parseDonorUpdateInput`; optional `lat`/`lng`/
-      `radiusKm` added to `parseDonorQuery`/`parseRequestQuery` (new organizations-query parser if one
-      doesn't already exist) (failing tests first).
-- [ ] Add the new test files to the `test` script in `package.json`.
-- [ ] Commit.
+- [x] `src/lib/geo.ts`: `haversineDistanceKm`, `boundingBox` (6 tests, test-first — Dhaka↔Chattogram
+      (~211km) and Dhaka↔Sylhet (~198km) as checkable-by-hand fixtures, using `bdGeo.ts`'s real
+      district centroids, not invented coordinates).
+- [x] `src/lib/validation.ts`: optional `latitude`/`longitude` (both-or-neither, range-checked) added
+      to `parseDonorInput`, `parseSosInput`, `parseOrganizationApplyInput`, `parseDonorUpdateInput`
+      (shared `optionalLatLng` helper); new `NearQuery`/`readNear` (`lat`/`lng` required together,
+      `radiusKm` optional, defaults to 50km, max 2000km) added to `parseDonorQuery`/`parseRequestQuery`
+      and a new `parseOrganizationQuery` (the `GET /api/organizations` endpoint had no query parser at
+      all before this). 9 new tests, test-first.
+- [x] Added `src/lib/geo.test.ts` and `src/lib/validation.ts`'s new tests to the `test` script.
+- [x] Gates clean (`lint`, 197 tests, `build`). Commit.
 
 ### Task 4: Endpoints and client
 - [ ] `GET /api/donors`, `GET /api/requests`, `GET /api/organizations`: `near` support per Contracts;

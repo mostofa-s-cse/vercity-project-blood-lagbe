@@ -6,6 +6,7 @@ import {
   parseDonorInput,
   parseDonorQuery,
   parseGrantInput,
+  parseOrganizationQuery,
   parseRequestQuery,
   parseRespondInput,
   parseRoleInput,
@@ -301,13 +302,13 @@ const params = (query: string) => new URLSearchParams(query);
 test('donor query defaults', () => {
   const result = parseDonorQuery(params(''));
   assert.equal(result.error, null);
-  if (!result.error) assert.deepEqual(result.value, { bloodGroup: undefined, q: undefined, available: false, mine: false, page: 1, pageSize: 20 });
+  if (!result.error) assert.deepEqual(result.value, { bloodGroup: undefined, q: undefined, available: false, mine: false, near: undefined, page: 1, pageSize: 20 });
 });
 
 test('donor query reads its filters', () => {
   const result = parseDonorQuery(params('bloodGroup=O%2B&q=%20dhanmondi%20&available=true&mine=1&page=3&pageSize=10'));
   assert.equal(result.error, null);
-  if (!result.error) assert.deepEqual(result.value, { bloodGroup: 'O+', q: 'dhanmondi', available: true, mine: true, page: 3, pageSize: 10 });
+  if (!result.error) assert.deepEqual(result.value, { bloodGroup: 'O+', q: 'dhanmondi', available: true, mine: true, near: undefined, page: 3, pageSize: 10 });
 });
 
 test('donor query rejects an unknown blood group but clamps paging quietly', () => {
@@ -329,10 +330,10 @@ test('donor query rejects an unknown blood group but clamps paging quietly', () 
 test('request query defaults and filters', () => {
   const none = parseRequestQuery(params(''));
   assert.equal(none.error, null);
-  if (!none.error) assert.deepEqual(none.value, { status: undefined, emergency: false, bloodGroup: undefined, ids: undefined, mine: false, page: 1, pageSize: 20 });
+  if (!none.error) assert.deepEqual(none.value, { status: undefined, emergency: false, bloodGroup: undefined, ids: undefined, mine: false, near: undefined, page: 1, pageSize: 20 });
   const some = parseRequestQuery(params('status=DONOR_FOUND&emergency=true&bloodGroup=AB-&mine=1&page=2'));
   assert.equal(some.error, null);
-  if (!some.error) assert.deepEqual(some.value, { status: 'DONOR_FOUND', emergency: true, bloodGroup: 'AB-', ids: undefined, mine: true, page: 2, pageSize: 20 });
+  if (!some.error) assert.deepEqual(some.value, { status: 'DONOR_FOUND', emergency: true, bloodGroup: 'AB-', ids: undefined, mine: true, near: undefined, page: 2, pageSize: 20 });
 });
 
 test('request query rejects unknown status and blood group', () => {
@@ -350,4 +351,49 @@ test('request query ids are cleaned, de-duplicated and capped', () => {
   if (!empty.error) assert.equal(empty.value.ids, undefined);
   const long = parseRequestQuery(params(`ids=${'x'.repeat(70)},ok`));
   if (!long.error) assert.deepEqual(long.value.ids, ['ok']);
+});
+
+test('"near" is absent unless lat/lng are both given, and defaults radiusKm to 50', () => {
+  const absent = parseDonorQuery(params(''));
+  if (!absent.error) assert.equal(absent.value.near, undefined);
+  const given = parseDonorQuery(params('lat=23.81&lng=90.41'));
+  assert.equal(given.error, null);
+  if (!given.error) assert.deepEqual(given.value.near, { lat: 23.81, lng: 90.41, radiusKm: 50 });
+  const withRadius = parseDonorQuery(params('lat=23.81&lng=90.41&radiusKm=10'));
+  if (!withRadius.error) assert.equal(withRadius.value.near?.radiusKm, 10);
+});
+
+test('"near" rejects an out-of-range or malformed lat/lng/radiusKm', () => {
+  assert.equal(parseDonorQuery(params('lat=200&lng=90')).error, 'lat');
+  assert.equal(parseDonorQuery(params('lat=abc&lng=90')).error, 'lat');
+  assert.equal(parseDonorQuery(params('lat=23&lng=200')).error, 'lng');
+  assert.equal(parseDonorQuery(params('lat=23&lng=90&radiusKm=0')).error, 'radiusKm');
+  assert.equal(parseDonorQuery(params('lat=23&lng=90&radiusKm=99999')).error, 'radiusKm');
+});
+
+test('"near" also works for request and organization queries', () => {
+  const request = parseRequestQuery(params('lat=23.81&lng=90.41'));
+  if (!request.error) assert.deepEqual(request.value.near, { lat: 23.81, lng: 90.41, radiusKm: 50 });
+  const org = parseOrganizationQuery(params('lat=23.81&lng=90.41&radiusKm=25'));
+  assert.equal(org.error, null);
+  if (!org.error) assert.deepEqual(org.value.near, { lat: 23.81, lng: 90.41, radiusKm: 25 });
+  const orgNone = parseOrganizationQuery(params(''));
+  if (!orgNone.error) assert.equal(orgNone.value.near, undefined);
+});
+
+test('an optional latitude/longitude on donor, SOS and organization-apply input: both or neither', () => {
+  assert.equal(parseDonorInput({ ...donor, latitude: 23.81, longitude: 90.41 }).error, null);
+  assert.equal(parseDonorInput({ ...donor, latitude: 23.81 }).error, 'latitude');
+  assert.equal(parseDonorInput({ ...donor, latitude: 200, longitude: 90.41 }).error, 'latitude');
+  assert.equal(parseDonorInput({ ...donor, latitude: 23.81, longitude: 'nope' }).error, 'latitude');
+
+  assert.equal(parseSosInput({ ...sos, latitude: 23.81, longitude: 90.41 }).error, null);
+  assert.equal(parseSosInput({ ...sos, longitude: 90.41 }).error, 'latitude');
+
+  const org = { name: 'City Hospital', type: 'private_hospital', address: '1 Road, Dhaka', licenseNumber: 'LIC-1' };
+  assert.equal(parseOrganizationApplyInput({ ...org, latitude: 23.81, longitude: 90.41 }).error, null);
+  assert.equal(parseOrganizationApplyInput({ ...org, latitude: 23.81, longitude: 200 }).error, 'latitude');
+
+  assert.equal(parseDonorUpdateInput({ latitude: 23.81, longitude: 90.41 }).error, null);
+  assert.equal(parseDonorUpdateInput({ latitude: 23.81 }).error, 'latitude');
 });

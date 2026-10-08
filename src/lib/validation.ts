@@ -34,6 +34,8 @@ export interface DonorInput {
   vehicle?: string;
   nearestHospital?: string;
   isAvailable: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface SosInput {
@@ -49,6 +51,8 @@ export interface SosInput {
   isCritical: boolean;
   language: 'bn' | 'en';
   postText: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 type Raw = Record<string, unknown>;
@@ -81,6 +85,21 @@ function optionalInt(value: unknown, min: number, max: number): number | undefin
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max ? value : null;
 }
 
+/**
+ * `latitude`/`longitude` from a POST body: both present and valid, or both absent. Never one without
+ * the other (a lone coordinate isn't a usable point). `null` means invalid input, not "absent".
+ */
+function optionalLatLng(raw: Raw): { latitude?: number; longitude?: number } | null {
+  const hasLat = raw.latitude !== undefined && raw.latitude !== null;
+  const hasLng = raw.longitude !== undefined && raw.longitude !== null;
+  if (!hasLat && !hasLng) return {};
+  if (hasLat !== hasLng) return null;
+  const { latitude, longitude } = raw;
+  if (typeof latitude !== 'number' || !Number.isFinite(latitude) || latitude < -90 || latitude > 90) return null;
+  if (typeof longitude !== 'number' || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
+  return { latitude, longitude };
+}
+
 export function parseDonorInput(raw: unknown): ParseResult<DonorInput> {
   if (!isObject(raw)) return { value: null, error: 'body' };
 
@@ -107,6 +126,8 @@ export function parseDonorInput(raw: unknown): ParseResult<DonorInput> {
   const nearestHospital = optionalText(raw.nearestHospital, 120);
   if (nearestHospital === null) return { value: null, error: 'nearestHospital' };
   if (raw.isAvailable !== undefined && typeof raw.isAvailable !== 'boolean') return { value: null, error: 'isAvailable' };
+  const latLng = optionalLatLng(raw);
+  if (latLng === null) return { value: null, error: 'latitude' };
 
   return {
     error: null,
@@ -124,6 +145,7 @@ export function parseDonorInput(raw: unknown): ParseResult<DonorInput> {
       vehicle,
       nearestHospital,
       isAvailable: (raw.isAvailable as boolean | undefined) ?? true,
+      ...latLng,
     },
   };
 }
@@ -151,6 +173,8 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
   if (raw.language !== undefined && raw.language !== 'bn' && raw.language !== 'en') return { value: null, error: 'language' };
   const postText = text(raw.postText, 1, 1000);
   if (postText === null) return { value: null, error: 'postText' };
+  const latLng = optionalLatLng(raw);
+  if (latLng === null) return { value: null, error: 'latitude' };
 
   return {
     error: null,
@@ -167,6 +191,7 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
       isCritical: (raw.isCritical as boolean | undefined) ?? true,
       language: (raw.language as SosInput['language'] | undefined) ?? 'bn',
       postText,
+      ...latLng,
     },
   };
 }
@@ -271,6 +296,8 @@ export interface DonorUpdateInput {
   nearestHospital?: string;
   isAvailable?: boolean;
   lastDonationMonths?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 /** Any subset of a donor's editable fields. Whether the caller may apply it is `donorAccess.ts`'s job. */
@@ -321,6 +348,11 @@ export function parseDonorUpdateInput(raw: unknown): ParseResult<DonorUpdateInpu
     if (lastDonationMonths === null) return { value: null, error: 'lastDonationMonths' };
     if (lastDonationMonths !== undefined) value.lastDonationMonths = lastDonationMonths;
   }
+  if (raw.latitude !== undefined || raw.longitude !== undefined) {
+    const latLng = optionalLatLng(raw);
+    if (latLng === null) return { value: null, error: 'latitude' };
+    Object.assign(value, latLng);
+  }
 
   if (Object.keys(value).length === 0) return { value: null, error: 'body' };
   return { error: null, value };
@@ -341,6 +373,8 @@ export interface OrganizationApplyInput {
   directorName?: string;
   totalBeds?: number;
   icuBeds?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 /** A new organization's public application. Starts `pending`; an admin decides (`panel.hospitals`). */
@@ -380,6 +414,9 @@ export function parseOrganizationApplyInput(raw: unknown): ParseResult<Organizat
   const icuBeds = optionalInt(raw.icuBeds, 0, 5_000);
   if (icuBeds === null) return { value: null, error: 'icuBeds' };
   if (icuBeds !== undefined) value.icuBeds = icuBeds;
+  const latLng = optionalLatLng(raw);
+  if (latLng === null) return { value: null, error: 'latitude' };
+  Object.assign(value, latLng);
 
   return { error: null, value };
 }
@@ -428,12 +465,49 @@ function readPaging(params: Params): { page: number; pageSize: number } {
 
 const readFlag = (value: string | null): boolean => value === 'true' || value === '1';
 
+export interface NearQuery {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+}
+
+const DEFAULT_RADIUS_KM = 50;
+const MAX_RADIUS_KM = 2000;
+
+/**
+ * `lat`/`lng`/optional `radiusKm` (default 50km) for "near me" sorting. Absent entirely → no filter
+ * (`undefined`, same as every list behaves today). Present but malformed → a hard error, same as
+ * `bloodGroup`/`status` above, not silently clamped like paging.
+ */
+function readNear(params: Params): ParseResult<NearQuery | undefined> {
+  const latRaw = params.get('lat');
+  const lngRaw = params.get('lng');
+  if (latRaw === null && lngRaw === null) return { error: null, value: undefined };
+
+  const lat = latRaw === null ? NaN : Number.parseFloat(latRaw);
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) return { value: null, error: 'lat' };
+  const lng = lngRaw === null ? NaN : Number.parseFloat(lngRaw);
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) return { value: null, error: 'lng' };
+
+  const radiusRaw = params.get('radiusKm');
+  let radiusKm = DEFAULT_RADIUS_KM;
+  if (radiusRaw !== null) {
+    const parsed = Number.parseFloat(radiusRaw);
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_RADIUS_KM) return { value: null, error: 'radiusKm' };
+    radiusKm = parsed;
+  }
+
+  return { error: null, value: { lat, lng, radiusKm } };
+}
+
 export interface DonorQuery {
   bloodGroup: BloodGroupValue | undefined;
   q: string | undefined;
   available: boolean;
   /** Only the signed-in person's own donor profiles. */
   mine: boolean;
+  /** "Near me": sort by distance from this point instead of newest-first. */
+  near: NearQuery | undefined;
   page: number;
   pageSize: number;
 }
@@ -443,6 +517,8 @@ export function parseDonorQuery(params: Params): ParseResult<DonorQuery> {
   const group = params.get('bloodGroup');
   if (group !== null && group !== '' && !isBloodGroup(group)) return { value: null, error: 'bloodGroup' };
   const q = (params.get('q') ?? '').trim().slice(0, 60);
+  const near = readNear(params);
+  if (near.error) return { value: null, error: near.error };
   return {
     error: null,
     value: {
@@ -450,6 +526,7 @@ export function parseDonorQuery(params: Params): ParseResult<DonorQuery> {
       q: q || undefined,
       available: readFlag(params.get('available')),
       mine: readFlag(params.get('mine')),
+      near: near.value,
       ...readPaging(params),
     },
   };
@@ -463,6 +540,8 @@ export interface RequestQuery {
   ids: string[] | undefined;
   /** Only the signed-in person's own requests. */
   mine: boolean;
+  /** "Near me": sort by distance from this point instead of newest-first. */
+  near: NearQuery | undefined;
   page: number;
   pageSize: number;
 }
@@ -477,6 +556,8 @@ export function parseRequestQuery(params: Params): ParseResult<RequestQuery> {
   }
   const group = params.get('bloodGroup');
   if (group !== null && group !== '' && !isBloodGroup(group)) return { value: null, error: 'bloodGroup' };
+  const near = readNear(params);
+  if (near.error) return { value: null, error: near.error };
 
   const ids = [
     ...new Set(
@@ -495,7 +576,20 @@ export function parseRequestQuery(params: Params): ParseResult<RequestQuery> {
       bloodGroup: group ? (group as BloodGroupValue) : undefined,
       ids: ids.length > 0 ? ids : undefined,
       mine: readFlag(params.get('mine')),
+      near: near.value,
       ...readPaging(params),
     },
   };
+}
+
+export interface OrganizationQuery {
+  /** "Near me" / nearest-hospital: sort by distance from this point instead of the default order. */
+  near: NearQuery | undefined;
+}
+
+/** `GET /api/organizations` filters. */
+export function parseOrganizationQuery(params: Params): ParseResult<OrganizationQuery> {
+  const near = readNear(params);
+  if (near.error) return { value: null, error: near.error };
+  return { error: null, value: { near: near.value } };
 }
