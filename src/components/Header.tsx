@@ -225,7 +225,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {/* Sign in with Google (only when Supabase is configured) */}
-          <AuthButton />
+          <AuthButton onNavigate={onNavigate} />
 
           {/* User Profile Avatar Pill */}
           <button

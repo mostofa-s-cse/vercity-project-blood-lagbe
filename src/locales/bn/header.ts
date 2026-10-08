@@ -27,7 +27,7 @@ export const header: Header = {
     donorPassport: 'ডোনার পাসপোর্ট',
     userDocs: 'ব্যবহার নির্দেশিকা',
   },
-  signIn: 'Google দিয়ে সাইন ইন',
+  signIn: 'সাইন ইন',
   signOut: 'সাইন আউট',
   divisions: {
     dhakaCentral: 'ঢাকা সেন্ট্রাল (DMCH / BSMMU)',

@@ -15,6 +15,7 @@ import { command } from './en/command.ts';
 import { docs } from './en/docs.ts';
 import { access } from './en/access.ts';
 import { admin } from './en/admin.ts';
+import { auth } from './en/auth.ts';
 
 export const en = {
   common,
@@ -34,6 +35,7 @@ export const en = {
   admin,
   access,
   docs,
+  auth,
 };
 
 export type Translations = typeof en;

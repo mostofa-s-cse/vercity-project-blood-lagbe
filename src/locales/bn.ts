@@ -16,6 +16,7 @@ import { command } from './bn/command.ts';
 import { docs } from './bn/docs.ts';
 import { access } from './bn/access.ts';
 import { admin } from './bn/admin.ts';
+import { auth } from './bn/auth.ts';
 
 export const bn: Translations = {
   common,
@@ -35,4 +36,5 @@ export const bn: Translations = {
   admin,
   access,
   docs,
+  auth,
 };

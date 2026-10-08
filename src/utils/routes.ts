@@ -11,6 +11,9 @@ export const SCREEN_PATHS: Record<ScreenId, string> = {
   'ops-command': '/command',
   'admin-panel': '/admin',
   'user-docs': '/docs',
+  'sign-in': '/sign-in',
+  'forgot-password': '/forgot-password',
+  'reset-password': '/reset-password',
 };
 
 export const LANGUAGES = ['bn', 'en'] as const;

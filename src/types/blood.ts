@@ -12,7 +12,10 @@ export type ScreenId =
   | 'hospital-org'
   | 'admin-panel'
   | 'ops-command'
-  | 'user-docs';
+  | 'user-docs'
+  | 'sign-in'
+  | 'forgot-password'
+  | 'reset-password';
 
 export type RequestStatus = 'pending' | 'donor_found' | 'completed' | 'cancelled';
 

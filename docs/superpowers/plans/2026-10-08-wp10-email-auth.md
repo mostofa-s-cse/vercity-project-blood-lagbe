@@ -124,22 +124,35 @@ pre-commit to a file that might end up being two trivial one-liners.
 - [x] Gates clean (`lint`, 223 tests). Commit.
 
 ### Task 3: Screens
-- [ ] New `ScreenId`s/`SCREEN_PATHS` entries (`sign-in`, `forgot-password`, `reset-password`); page.tsx
-      wrappers under `src/app/[lang]/...` per this project's thin-wrapper convention.
-- [ ] `SignInScreen.tsx`: email+password sign-in, a toggle to a sign-up form (name is not collected here
-      — `Profile.name`, if the app ever wants one, already comes from `user_metadata` the same way
-      Google's does, nothing new to build), "Forgot password?" link, the existing Google button moved in
-      from `AuthButton.tsx`. Already-signed-in people land back on `next` (or `/`) instead of seeing the
-      form again.
-- [ ] `ForgotPasswordScreen.tsx`, `ResetPasswordScreen.tsx` per Contracts, including the
-      no-valid-recovery-session explanatory state on the latter.
-- [ ] `AuthButton.tsx`: "Sign in" now navigates to the `sign-in` screen; sign-out stays as it is.
-- [ ] Locale strings (`en`/`bn`), gates (`lint`/`test`/`build`). Browser check without a real Supabase
-      project: confirm the demo-mode fallback (`configured === false`) still hides all of this exactly
-      like it hides the Google button today — `docs/SETUP-SUPABASE.md`'s "the app runs without any of
-      this" promise must keep holding. The signed-in flows themselves can't be verified without a real
-      Supabase project (say so, same as Task 1) — note precisely what was and wasn't checked.
-- [ ] Commit.
+- [x] New `ScreenId`s/`SCREEN_PATHS` entries (`sign-in`, `forgot-password`, `reset-password`); page.tsx
+      wrappers under `src/app/[lang]/...` per this project's thin-wrapper convention. `requiredAccess()`
+      needed no changes, confirmed — these paths aren't in `PROTECTED_PATHS`, so they're open to
+      everyone, same as the emergency screens.
+- [x] `SignInScreen.tsx`: email+password sign-in with a toggle to a sign-up form (name is not collected
+      — `Profile.name`, if ever wanted, already comes from `user_metadata` the same way Google's does),
+      "Forgot password?" link, the Google button moved in from `AuthButton.tsx`. Already-signed-in people
+      land back on `next` (read from `?next=`, validated with the existing `safeNextPath()`) instead of
+      seeing the form again. `signUp`'s "needs email confirmation" case shows a real "check your email"
+      panel instead of silently doing nothing.
+- [x] `ForgotPasswordScreen.tsx`, `ResetPasswordScreen.tsx` per Contracts, including the
+      no-valid-recovery-session explanatory state on the latter (a plain `!user` check after loading —
+      deliberately not trying to detect Supabase's `PASSWORD_RECOVERY` event specifically, since that
+      would need live-project verification this sandbox can't do anyway; the simpler check matches what
+      the plan already called for).
+- [x] `AuthButton.tsx`: "Sign in" now navigates to the `sign-in` screen (needed an `onNavigate` prop it
+      didn't have before — threaded through from `Header.tsx`, which already had one); sign-out stays as
+      it is. Also fixed `header.signIn`'s label ("Sign in with Google" → "Sign in") since the button no
+      longer only offers Google.
+- [x] Locale strings (`en`/`bn`, new `auth.ts` namespace registered in both aggregators). Found and fixed
+      a stale hardcoded count in `src/utils/routes.test.ts` (`SCREEN_PATHS` went from 10 to 13 entries).
+      Gates clean (`lint`, 223 tests, `build`). Browser-checked without a real Supabase project (no
+      Supabase env vars in this sandbox, same as every other check in this repo): all three new pages
+      render an empty `<main>` — the demo-mode fallback hides the forms exactly like it hides the Google
+      button today, no broken state, no console errors. The signed-in flows themselves (actually
+      completing a sign-up, confirming an email, resetting a password) cannot be verified without a real
+      Supabase project — not checked, said so plainly, same limitation as Task 1 and as Google sign-in
+      elsewhere in this repo.
+- [x] Commit.
 
 ### Task 4: Setup documentation
 - [ ] `docs/SETUP-SUPABASE.md`: a new section next to the Google one — enabling the Email provider,

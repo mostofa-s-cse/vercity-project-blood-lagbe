@@ -25,7 +25,7 @@ export const header = {
     donorPassport: 'Donor Passport',
     userDocs: 'User Guide',
   },
-  signIn: 'Sign in with Google',
+  signIn: 'Sign in',
   signOut: 'Sign out',
   divisions: {
     dhakaCentral: 'Dhaka Central (DMCH / BSMMU)',
