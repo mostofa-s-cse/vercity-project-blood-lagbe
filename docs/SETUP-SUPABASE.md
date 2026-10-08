@@ -55,7 +55,7 @@ npm run db:migrate   # applies prisma/migrations to your database
 npm run db:seed      # optional: loads the same sample donors and requests the demo uses, so the directory and hub aren't empty
 ```
 
-This creates the tables (`profiles`, `donors`, `sos_requests`, `request_responses`, ...) and turns on **row-level security** with no policies. That means the browser key can read and write nothing in those tables; only the server (through Prisma) can. Check it in the dashboard under **Table Editor**: each table should show the RLS badge.
+This creates the tables (`profiles`, `donors`, `sos_requests`, `request_responses`, ...) and turns on **row-level security** with no policies. That means the browser key (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, used by Supabase's own client-side REST/realtime API as the `anon`/`authenticated` Postgres role) can read and write **nothing** in any of these tables — zero policies means a default-deny. Only the server can touch the data, through Prisma's `DATABASE_URL`, which connects as a role that bypasses RLS entirely (the same way any Postgres superuser-style connection does). Every API route in this app goes through Prisma, never the browser key, so this split is what actually enforces "only the server decides" — reviewed table by table for WP11 (every `CREATE TABLE` migration enables RLS in the same or the very next migration, with no exceptions and no `CREATE POLICY` anywhere). Check it in the dashboard under **Table Editor**: each table should show the RLS badge.
 
 ## 5. Create the Google sign-in credentials
 

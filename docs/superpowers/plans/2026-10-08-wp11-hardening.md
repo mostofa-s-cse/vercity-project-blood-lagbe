@@ -178,10 +178,14 @@ No code changes — a documented confirmation (see "What exists today") plus a s
 - [x] Commit.
 
 ### Task 3: Row-Level-Security review
-- [ ] No code change expected (see "What exists today"); if the review turns up an actual gap, fix the
-      specific table's migration the same hand-written way every other migration here is written.
-- [ ] `docs/SETUP-SUPABASE.md`: a short paragraph making the server/browser RLS split explicit.
-- [ ] Commit (even if docs-only).
+- [x] Audited all 11 migrations by grep: every `CREATE TABLE` has a matching `ENABLE ROW LEVEL SECURITY`
+      in the same or the very next migration — including `organizations` and `notifications`, the newest
+      tables added this session — and zero `CREATE POLICY` exists anywhere, confirming the intentional
+      default-deny design. No gap found; no code change needed.
+- [x] `docs/SETUP-SUPABASE.md`: expanded the existing RLS paragraph to spell out exactly which Postgres
+      role the browser key uses (`anon`/`authenticated`, via Supabase's own REST/realtime API), why zero
+      policies means default-deny for it, and that the WP11 audit confirmed this holds table by table.
+- [x] Commit (docs-only).
 
 ### Task 4: Responsive fix
 - [ ] Measure `Header.tsx` at exactly 390px in the browser (Playwright `browser_resize`), confirm which
