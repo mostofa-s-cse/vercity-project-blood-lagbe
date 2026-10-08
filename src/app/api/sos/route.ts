@@ -53,6 +53,8 @@ export async function POST(request: Request) {
         isCritical: input.isCritical,
         language: input.language,
         postText: input.postText,
+        latitude: input.latitude,
+        longitude: input.longitude,
       },
       select: { id: true },
     });

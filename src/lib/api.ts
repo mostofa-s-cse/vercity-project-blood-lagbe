@@ -12,6 +12,8 @@ export interface DonorPayload {
   vehicle?: string;
   nearestHospital?: string;
   isAvailable: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface SosPayload {
@@ -27,6 +29,8 @@ export interface SosPayload {
   isCritical: boolean;
   language: 'bn' | 'en';
   postText: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 /** Saved blood stock per hospital: `{ hospitalId: { "O+": units } }`, only the groups hospitals have reported. */

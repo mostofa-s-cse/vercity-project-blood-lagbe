@@ -34,6 +34,7 @@ export function toSampleDonorDtos(donors: readonly Donor[], now: Date = new Date
       nearestHospital: donor.nearestHospital,
       phoneMasked: maskPhone(donor.phone),
       createdAt: new Date(now.getTime() - (index + 1) * HOUR).toISOString(),
+      distanceKm: null,
     };
   });
 }
@@ -79,6 +80,9 @@ export function toSampleRequestDtos(demands: readonly EmergencyDemand[], donors:
       updatedAt: createdAt,
       completedAt: status === 'COMPLETED' ? createdAt : null,
       responseCount: demand.bagsPledged,
+      latitude: null,
+      longitude: null,
+      distanceKm: null,
     };
   });
 }

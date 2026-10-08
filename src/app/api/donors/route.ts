@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { BloodGroup, Prisma } from '@/generated/prisma/client';
 import { toDonorDto } from '@/lib/dto';
 import { DONATION_COOLDOWN_DAYS } from '@/lib/eligibility';
+import { boundingBox, haversineDistanceKm } from '@/lib/geo';
 import { hashToken, newManageToken } from '@/lib/manageToken';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/supabase/server';
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
 
   const parsed = parseDonorQuery(new URL(request.url).searchParams);
   if (parsed.error) return NextResponse.json({ error: 'invalid_query', field: parsed.error }, { status: 400 });
-  const { bloodGroup, q, available, mine, page, pageSize } = parsed.value;
+  const { bloodGroup, q, available, mine, near, page, pageSize } = parsed.value;
 
   let userId: string | null = null;
   if (mine) {
@@ -31,6 +32,8 @@ export async function GET(request: Request) {
 
   // "Available" means both the manual switch and the automatic 90-day eligibility rule (WP5).
   const eligibleCutoff = new Date(Date.now() - DONATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+
+  const nearBox = near ? boundingBox({ lat: near.lat, lng: near.lng }, near.radiusKm) : null;
 
   const where: Prisma.DonorWhereInput = {
     ...(bloodGroup ? { bloodGroup: DB_BLOOD_GROUP[bloodGroup] as BloodGroup } : {}),
@@ -49,11 +52,32 @@ export async function GET(request: Request) {
             },
           ]
         : []),
+      // A cheap pre-filter; the exact Haversine cutoff and sort happen below, in application code.
+      ...(nearBox
+        ? [{ latitude: { gte: nearBox.minLat, lte: nearBox.maxLat }, longitude: { gte: nearBox.minLng, lte: nearBox.maxLng } }]
+        : []),
     ],
   };
 
   try {
     const prisma = getPrisma();
+
+    if (near) {
+      const rows = await prisma.donor.findMany({ where });
+      const withDistance = rows
+        .map((row) => ({ row, distanceKm: haversineDistanceKm(near, { lat: row.latitude!, lng: row.longitude! }) }))
+        .filter(({ distanceKm }) => distanceKm <= near.radiusKm)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+      const total = withDistance.length;
+      const page_ = withDistance.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
+      return NextResponse.json({
+        donors: page_.map(({ row, distanceKm }) => toDonorDto(row, distanceKm)),
+        total,
+        page,
+        pageSize,
+      });
+    }
+
     const [rows, total] = await Promise.all([
       prisma.donor.findMany({
         where,
@@ -63,7 +87,7 @@ export async function GET(request: Request) {
       }),
       prisma.donor.count({ where }),
     ]);
-    return NextResponse.json({ donors: rows.map(toDonorDto), total, page, pageSize });
+    return NextResponse.json({ donors: rows.map((row) => toDonorDto(row)), total, page, pageSize });
   } catch (error) {
     console.error('Could not load donors', error);
     return NextResponse.json({ error: 'load_failed' }, { status: 500 });
@@ -116,6 +140,8 @@ export async function POST(request: Request) {
         vehicle: input.vehicle,
         nearestHospital: input.nearestHospital,
         isAvailable: input.isAvailable,
+        latitude: input.latitude,
+        longitude: input.longitude,
       },
       select: { id: true },
     });

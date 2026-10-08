@@ -70,6 +70,9 @@ export interface HospitalOrganization {
   coldStorageTempC: number;
   coldStorageStatus: 'optimal' | 'warning' | 'critical';
   lastAuditDate: string;
+  /** For the map (WP6). `null`/absent until the organization has a real coordinate (sample data has none). */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface DonationCamp {

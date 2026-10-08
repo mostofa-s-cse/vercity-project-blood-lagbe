@@ -43,5 +43,7 @@ export function toHospitalOrganizations(orgs: readonly OrganizationDto[]): Hospi
     coldStorageTempC: 4.0,
     coldStorageStatus: 'optimal',
     lastAuditDate: '—',
+    latitude: org.latitude,
+    longitude: org.longitude,
   }));
 }

@@ -25,6 +25,9 @@ export interface DonorDto {
   /** For example "017••••4315". The full number is only given by `GET /api/donors/[id]/contact`. */
   phoneMasked: string;
   createdAt: string;
+  /** Straight-line distance from a `near` query's point, or `null` without one. Never the donor's own
+   *  raw coordinate — that stays server-side only, same privacy rule as the masked phone (WP6). */
+  distanceKm: number | null;
 }
 
 export interface RequestDto {
@@ -49,6 +52,11 @@ export interface RequestDto {
   updatedAt: string;
   completedAt: string | null;
   responseCount: number;
+  /** For the Emergency Hub's map (WP6). `null` until the request has a real coordinate. */
+  latitude: number | null;
+  longitude: number | null;
+  /** Straight-line distance from a `near` query's point, or `null` without one. */
+  distanceKm: number | null;
 }
 
 export interface ResponseDto {
@@ -136,4 +144,9 @@ export interface OrganizationDto {
   totalBeds: number | null;
   icuBeds: number | null;
   createdAt: string;
+  /** For the Hospitals screen's map (WP6). `null` until the organization has a real coordinate. */
+  latitude: number | null;
+  longitude: number | null;
+  /** Straight-line distance from a `near` query's point, or `null` without one. */
+  distanceKm: number | null;
 }

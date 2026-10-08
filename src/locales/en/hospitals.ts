@@ -17,7 +17,18 @@ export const hospitals = {
     requisitions: 'Doctor Requisition Desk',
     camps: 'Donation Drives & Camps',
     dispatch: 'Emergency Call Dispatch',
+    map: 'Map',
   },
+
+  findNearest: 'Nearest facility',
+  locating: 'Locating…',
+  nearestFound: (name: string) => `Switched to the nearest facility: ${name}.`,
+  nearestNoneAvailable: 'No facility has a map location yet.',
+  nearestDenied: 'Could not get your location. Pick a facility from the list instead.',
+  nearestUnsupported: 'This browser cannot share your location. Pick a facility from the list instead.',
+  mapTitle: 'Facilities Map',
+  mapSubtitle: 'Only facilities with a real location appear here.',
+  mapEmpty: 'No facility has a map location yet.',
 
   totalUnitsInVault: 'Total Units in Vault',
   bagsCount: (n: number) => `${n} Units`,

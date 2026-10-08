@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { BloodGroup, Prisma, RequestStatus } from '@/generated/prisma/client';
 import { toRequestDto } from '@/lib/dto';
+import { boundingBox, haversineDistanceKm } from '@/lib/geo';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { DB_BLOOD_GROUP, parseRequestQuery } from '@/lib/validation';
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
 
   const parsed = parseRequestQuery(new URL(request.url).searchParams);
   if (parsed.error) return NextResponse.json({ error: 'invalid_query', field: parsed.error }, { status: 400 });
-  const { status, emergency, bloodGroup, ids, mine, page, pageSize } = parsed.value;
+  const { status, emergency, bloodGroup, ids, mine, near, page, pageSize } = parsed.value;
 
   let userId: string | null = null;
   if (mine) {
@@ -26,16 +27,40 @@ export async function GET(request: Request) {
     if (!userId) return NextResponse.json({ error: 'sign_in_required' }, { status: 401 });
   }
 
+  const nearBox = near ? boundingBox({ lat: near.lat, lng: near.lng }, near.radiusKm) : null;
+
   const where: Prisma.SosRequestWhereInput = {
     ...(status ? { status: status as RequestStatus } : {}),
     ...(emergency ? { isCritical: true } : {}),
     ...(bloodGroup ? { bloodGroup: DB_BLOOD_GROUP[bloodGroup] as BloodGroup } : {}),
     ...(ids ? { id: { in: ids } } : {}),
     ...(userId ? { userId } : {}),
+    // A cheap pre-filter; the exact Haversine cutoff and sort happen below, in application code.
+    ...(nearBox
+      ? { latitude: { gte: nearBox.minLat, lte: nearBox.maxLat }, longitude: { gte: nearBox.minLng, lte: nearBox.maxLng } }
+      : {}),
   };
 
   try {
     const prisma = getPrisma();
+    const include = { _count: { select: { responses: true } } } as const;
+
+    if (near) {
+      const rows = await prisma.sosRequest.findMany({ where, include });
+      const withDistance = rows
+        .map((row) => ({ row, distanceKm: haversineDistanceKm(near, { lat: row.latitude!, lng: row.longitude! }) }))
+        .filter(({ distanceKm }) => distanceKm <= near.radiusKm)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+      const total = withDistance.length;
+      const page_ = withDistance.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
+      return NextResponse.json({
+        requests: page_.map(({ row, distanceKm }) => toRequestDto(row, distanceKm)),
+        total,
+        page,
+        pageSize,
+      });
+    }
+
     const [rows, total] = await Promise.all([
       prisma.sosRequest.findMany({
         where,
@@ -43,11 +68,11 @@ export async function GET(request: Request) {
         orderBy: [{ status: 'asc' }, { isCritical: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: { _count: { select: { responses: true } } },
+        include,
       }),
       prisma.sosRequest.count({ where }),
     ]);
-    return NextResponse.json({ requests: rows.map(toRequestDto), total, page, pageSize });
+    return NextResponse.json({ requests: rows.map((row) => toRequestDto(row)), total, page, pageSize });
   } catch (error) {
     console.error('Could not load requests', error);
     return NextResponse.json({ error: 'load_failed' }, { status: 500 });

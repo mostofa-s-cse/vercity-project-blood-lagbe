@@ -7,6 +7,9 @@ import { isDatabaseOff } from '../store/errors';
 import { sampleContactPhone, sampleDonors } from '../data/sample';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useGeolocation } from '../hooks/useGeolocation';
+
+const NEAR_ME_RADIUS_KM = 50;
 
 interface DonorDirectoryProps {
   onNavigate: (screen: ScreenId) => void;
@@ -48,13 +51,35 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
   /** Once the server says there is no database, the screen stays on sample data. */
   const [demo, setDemo] = useState(false);
 
+  // "Near me": an explicit opt-in (never prompted automatically). Denied/unsupported just falls back
+  // to the normal list, same as never having pressed it.
+  const [nearMeOn, setNearMeOn] = useState(false);
+  const { coords, status: geoStatus, request: requestLocation } = useGeolocation();
+  const near = nearMeOn && coords ? { lat: coords.lat, lng: coords.lng, radiusKm: NEAR_ME_RADIUS_KM } : undefined;
+
+  const handleToggleNearMe = () => {
+    sound.playTap();
+    if (nearMeOn) {
+      setNearMeOn(false);
+      return;
+    }
+    setNearMeOn(true);
+    requestLocation();
+  };
+
+  useEffect(() => {
+    if (nearMeOn && (geoStatus === 'denied' || geoStatus === 'unsupported')) {
+      setNearMeOn(false);
+    }
+  }, [nearMeOn, geoStatus]);
+
   // Wait until typing pauses before searching.
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const filterKey = JSON.stringify([selectedGroup, search, onlyAvailable]);
+  const filterKey = JSON.stringify([selectedGroup, search, onlyAvailable, near?.lat, near?.lng, near?.radiusKm]);
   const [pageState, setPageState] = useState<{ key: string; page: number }>({ key: filterKey, page: 1 });
   const page = pageState.key === filterKey ? pageState.page : 1;
 
@@ -63,6 +88,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
       bloodGroup: selectedGroup === 'ALL' ? undefined : selectedGroup,
       q: search || undefined,
       available: onlyAvailable || undefined,
+      ...(near ?? {}),
       page,
       pageSize: PAGE_SIZE,
     },
@@ -291,7 +317,26 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
             />
             <span>{t.donors.availableNowOnly}</span>
           </label>
+          <button
+            type="button"
+            onClick={handleToggleNearMe}
+            disabled={geoStatus === 'loading'}
+            aria-pressed={nearMeOn}
+            className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl shrink-0 cursor-pointer disabled:opacity-60 ${
+              nearMeOn ? 'bg-slate-900 text-white hover:bg-slate-800' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">
+              {geoStatus === 'loading' ? 'progress_activity' : 'near_me'}
+            </span>
+            {geoStatus === 'loading' ? t.donors.nearMeLocating : t.donors.nearMe}
+          </button>
         </div>
+        {(geoStatus === 'denied' || geoStatus === 'unsupported') && (
+          <p className="text-[11px] text-amber-700 px-1">
+            {geoStatus === 'denied' ? t.donors.nearMeDenied : t.donors.nearMeUnsupported}
+          </p>
+        )}
       </div>
 
       {/* Results Count & Status */}

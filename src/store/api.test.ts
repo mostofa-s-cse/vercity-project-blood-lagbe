@@ -25,6 +25,14 @@ test('getDonors builds the query string from the filters, in a fixed order', asy
   sub.unsubscribe();
 });
 
+test('getDonors includes lat/lng/radiusKm when given', async () => {
+  const { slice, store, urls } = setup();
+  const sub = store.dispatch(slice.endpoints.getDonors.initiate({ lat: 23.81, lng: 90.41, radiusKm: 10 }));
+  await sub;
+  assert.deepEqual(urls, ['/api/donors?lat=23.81&lng=90.41&radiusKm=10']);
+  sub.unsubscribe();
+});
+
 test('empty filters are left out, and available=false is not sent', async () => {
   const { slice, store, urls } = setup();
   // Different arguments are different cache entries, so both are fetched; both must give the plain URL.
@@ -257,6 +265,14 @@ test('getOrganizations, apply and review are wired up with tag invalidation', as
   assert.deepEqual(reviewCall!.body, { decision: 'approve' });
   assert.equal(calls.filter((c) => c.method === 'GET').length, 3, 'the org list was refetched after reviewing');
   list.unsubscribe();
+});
+
+test('getOrganizations includes lat/lng/radiusKm ("nearest hospital") when given', async () => {
+  const { slice, store, calls } = fakeServer(() => [200, { organizations: [] }]);
+  const sub = store.dispatch(slice.endpoints.getOrganizations.initiate({ lat: 23.81, lng: 90.41, radiusKm: 25 }));
+  await sub;
+  assert.equal(calls[0].path, '/api/organizations?lat=23.81&lng=90.41&radiusKm=25');
+  sub.unsubscribe();
 });
 
 test('resolving a fraud incident refreshes the fraud list', async () => {

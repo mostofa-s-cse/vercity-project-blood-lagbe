@@ -10,7 +10,8 @@ import type { RequestStatusValue } from './requestStatus';
  * Note: `toDonorDto` never copies the donor's phone number; only the masked form leaves the server in lists.
  */
 
-export function toDonorDto(row: Donor): DonorDto {
+/** `distanceKm` is only known when the caller ran a `near` query; null otherwise. */
+export function toDonorDto(row: Donor, distanceKm: number | null = null): DonorDto {
   return {
     id: row.id,
     name: row.name,
@@ -27,12 +28,13 @@ export function toDonorDto(row: Donor): DonorDto {
     nearestHospital: row.nearestHospital,
     phoneMasked: maskPhone(row.phone),
     createdAt: row.createdAt.toISOString(),
+    distanceKm,
   };
 }
 
 type RequestRow = SosRequest & { _count: { responses: number } };
 
-export function toRequestDto(row: RequestRow): RequestDto {
+export function toRequestDto(row: RequestRow, distanceKm: number | null = null): RequestDto {
   return {
     id: row.id,
     area: row.area,
@@ -53,6 +55,9 @@ export function toRequestDto(row: RequestRow): RequestDto {
     updatedAt: row.updatedAt.toISOString(),
     completedAt: row.completedAt ? row.completedAt.toISOString() : null,
     responseCount: row._count.responses,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    distanceKm,
   };
 }
 
@@ -101,7 +106,7 @@ export function toDonationDto(row: Donation): DonationDto {
   };
 }
 
-export function toOrganizationDto(row: Organization): OrganizationDto {
+export function toOrganizationDto(row: Organization, distanceKm: number | null = null): OrganizationDto {
   return {
     id: row.id,
     name: row.name,
@@ -119,5 +124,8 @@ export function toOrganizationDto(row: Organization): OrganizationDto {
     totalBeds: row.totalBeds,
     icuBeds: row.icuBeds,
     createdAt: row.createdAt.toISOString(),
+    latitude: row.latitude,
+    longitude: row.longitude,
+    distanceKm,
   };
 }

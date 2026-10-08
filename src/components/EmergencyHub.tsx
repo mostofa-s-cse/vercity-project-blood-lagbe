@@ -8,6 +8,10 @@ import { sampleRequests } from '../data/sample';
 import { isValidBdPhone } from '../utils/phone';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useGeolocation } from '../hooks/useGeolocation';
+import { MapView } from './MapView';
+
+const NEAR_ME_RADIUS_KM = 50;
 
 interface EmergencyHubProps {
   onNavigate: (screen: ScreenId) => void;
@@ -89,8 +93,15 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
+  // "Near me": an explicit opt-in (never prompted automatically). Denied/unsupported just keeps the
+  // full list, same as never having pressed it.
+  const [nearMeOn, setNearMeOn] = useState(false);
+  const { coords, status: geoStatus, request: requestLocation } = useGeolocation();
+  const near = nearMeOn && coords ? { lat: coords.lat, lng: coords.lng, radiusKm: NEAR_ME_RADIUS_KM } : undefined;
+  const [showMap, setShowMap] = useState(false);
+
   // Pages added with "Load more", remembered per filter: a new filter starts again from the first page.
-  const filterKey = `${selectedBlood}|${emergencyOnly}`;
+  const filterKey = `${selectedBlood}|${emergencyOnly}|${nearMeOn}`;
   const [extra, setExtra] = useState<{ key: string; count: number }>({ key: filterKey, count: 0 });
   const extraPages = extra.key === filterKey ? extra.count : 0;
 
@@ -107,8 +118,9 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
       pageSize: PAGE_SIZE,
       ...(selectedBlood !== 'ALL' ? { bloodGroup: selectedBlood } : {}),
       ...(emergencyOnly ? { emergency: true } : {}),
+      ...(near ?? {}),
     }),
-    [selectedBlood, emergencyOnly]
+    [selectedBlood, emergencyOnly, near?.lat, near?.lng, near?.radiusKm]
   );
   const { currentData, error, refetch } = useGetRequestsQuery({ ...queryArgs, page: 1 });
   const isDemo = isDatabaseOff(error);
@@ -144,6 +156,23 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), ms);
   }, []);
+
+  const handleToggleNearMe = () => {
+    sound.playTap();
+    if (nearMeOn) {
+      setNearMeOn(false);
+      return;
+    }
+    setNearMeOn(true);
+    requestLocation();
+  };
+
+  useEffect(() => {
+    if (nearMeOn && (geoStatus === 'denied' || geoStatus === 'unsupported')) {
+      showToast(geoStatus === 'denied' ? t.hub.nearMeDenied : t.hub.nearMeUnsupported);
+      setNearMeOn(false);
+    }
+  }, [nearMeOn, geoStatus, showToast, t]);
 
   const formatCountdown = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -469,19 +498,62 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
                   {t.hub.liveFeed}
                 </span>
               </div>
-              <button
-                onClick={() => {
-                  setEmergencyOnly((on) => !on);
-                  sound.playTap();
-                }}
-                aria-pressed={emergencyOnly}
-                className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  emergencyOnly ? 'bg-red-600 text-white hover:bg-red-700' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
-                }`}
-              >
-                <span className="material-symbols-outlined text-sm">emergency</span> {t.hub.emergencyOnly}
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleToggleNearMe}
+                  disabled={geoStatus === 'loading'}
+                  aria-pressed={nearMeOn}
+                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-60 ${
+                    nearMeOn ? 'bg-slate-900 text-white hover:bg-slate-800' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    {geoStatus === 'loading' ? 'progress_activity' : 'near_me'}
+                  </span>
+                  {geoStatus === 'loading' ? t.hub.nearMeLocating : t.hub.nearMe}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMap((on) => !on);
+                    sound.playTap();
+                  }}
+                  aria-pressed={showMap}
+                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    showMap ? 'bg-slate-900 text-white hover:bg-slate-800' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">map</span>
+                  {showMap ? t.hub.hideMap : t.hub.showMap}
+                </button>
+                <button
+                  onClick={() => {
+                    setEmergencyOnly((on) => !on);
+                    sound.playTap();
+                  }}
+                  aria-pressed={emergencyOnly}
+                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    emergencyOnly ? 'bg-red-600 text-white hover:bg-red-700' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">emergency</span> {t.hub.emergencyOnly}
+                </button>
+              </div>
             </div>
+
+            {showMap && (
+              <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+                {firstPage.some((r) => r.latitude !== null && r.longitude !== null) ? (
+                  <MapView
+                    markers={firstPage
+                      .filter((r) => r.latitude !== null && r.longitude !== null)
+                      .map((r) => ({ id: r.id, lat: r.latitude!, lng: r.longitude!, label: `${r.bloodGroup} · ${r.place}` }))}
+                    center={near}
+                  />
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-6">{t.hub.mapEmpty}</p>
+                )}
+              </div>
+            )}
 
             {isDemo && (
               <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-xs font-medium">

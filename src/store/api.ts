@@ -17,7 +17,14 @@ import { browserStorage as donorStorage, tokenFor as donorTokenFor } from '../li
 import { browserStorage, tokenFor } from '../lib/myRequests.ts';
 import type { RequestStatusValue } from '../lib/requestStatus.ts';
 
-export interface DonorQuery {
+/** "Near me": sorts by distance from this point instead of the default order. `radiusKm` defaults to 50 on the server. */
+export interface NearParams {
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+}
+
+export interface DonorQuery extends NearParams {
   bloodGroup?: string;
   /** Text searched in the donor's name and area. */
   q?: string;
@@ -27,6 +34,8 @@ export interface DonorQuery {
   page?: number;
   pageSize?: number;
 }
+
+export type OrganizationQuery = NearParams;
 
 export interface OrganizationApplyPayload {
   name: string;
@@ -40,6 +49,8 @@ export interface OrganizationApplyPayload {
   directorName?: string;
   totalBeds?: number;
   icuBeds?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 /** A donor profile's editable fields, any subset (server validates with `parseDonorUpdateInput`). */
@@ -53,9 +64,11 @@ export interface DonorUpdatePayload {
   nearestHospital?: string;
   isAvailable?: boolean;
   lastDonationMonths?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
-export interface RequestsQuery {
+export interface RequestsQuery extends NearParams {
   status?: string;
   emergency?: boolean;
   bloodGroup?: string;
@@ -123,6 +136,9 @@ export function createApiSlice({
             ['q', a.q],
             ['available', a.available],
             ['mine', a.mine],
+            ['lat', a.lat],
+            ['lng', a.lng],
+            ['radiusKm', a.radiusKm],
             ['page', a.page],
             ['pageSize', a.pageSize],
           ])}`;
@@ -172,6 +188,9 @@ export function createApiSlice({
             ['bloodGroup', a.bloodGroup],
             ['ids', a.ids?.length ? a.ids.join(',') : undefined],
             ['mine', a.mine],
+            ['lat', a.lat],
+            ['lng', a.lng],
+            ['radiusKm', a.radiusKm],
             ['page', a.page],
             ['pageSize', a.pageSize],
           ])}`;
@@ -226,8 +245,15 @@ export function createApiSlice({
         query: () => 'admin/logs',
       }),
 
-      getOrganizations: build.query<{ organizations: OrganizationDto[] }, void>({
-        query: () => 'organizations',
+      getOrganizations: build.query<{ organizations: OrganizationDto[] }, OrganizationQuery | void>({
+        query: (args) => {
+          const a = (args ?? {}) as OrganizationQuery;
+          return `organizations${queryString([
+            ['lat', a.lat],
+            ['lng', a.lng],
+            ['radiusKm', a.radiusKm],
+          ])}`;
+        },
         providesTags: ['Organization'],
       }),
 

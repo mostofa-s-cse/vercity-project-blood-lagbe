@@ -8,6 +8,9 @@ import { fetchHospitalStock, saveHospitalStock, type HospitalStockMap } from '..
 import { useApplyOrganizationMutation, useGetOrganizationsQuery, type OrganizationApplyPayload } from '../store/api';
 import { isDatabaseOff } from '../store/errors';
 import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
+import { haversineDistanceKm } from '../lib/geo.ts';
+import { useGeolocation } from '../hooks/useGeolocation';
+import { MapView } from './MapView';
 
 /** Total bags of a hospital: always the sum of its blood groups. */
 const sumStock = (stock: HospitalOrganization['bloodStock']): number =>
@@ -53,7 +56,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const [selectedOrgId, setSelectedOrgId] = useState<string>(SAMPLE_HOSPITAL_ORGS[0].id);
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
   const [camps, setCamps] = useState<DonationCamp[]>(SAMPLE_CAMPS);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'requisitions' | 'camps' | 'dispatch'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'requisitions' | 'camps' | 'dispatch' | 'map'>('inventory');
 
   // New Camp Modal state
   const [isCampModalOpen, setIsCampModalOpen] = useState(false);
@@ -68,6 +71,31 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const canEdit = canManageHospital(selectedOrg.id);
   // Camps are not saved yet, so only admin and hospital accounts may create them (everyone in demo mode).
   const canCreateCamp = can('camps.create');
+
+  // "Nearest hospital": an explicit opt-in (never prompted automatically), picks the closest facility
+  // that has a real coordinate. Facilities without one (sample data, or a pending application) are skipped.
+  const { coords, status: geoStatus, request: requestLocation } = useGeolocation();
+  const handleFindNearest = () => {
+    sound.playTap();
+    requestLocation();
+  };
+  useEffect(() => {
+    if (!coords) return;
+    const withCoords = hospitals.filter((h) => h.latitude != null && h.longitude != null);
+    if (withCoords.length === 0) {
+      showToast(t.hospitals.nearestNoneAvailable);
+      return;
+    }
+    const nearest = withCoords.reduce((best, h) =>
+      haversineDistanceKm(coords, { lat: h.latitude!, lng: h.longitude! }) <
+      haversineDistanceKm(coords, { lat: best.latitude!, lng: best.longitude! })
+        ? h
+        : best
+    );
+    setSelectedOrgId(nearest.id);
+    showToast(t.hospitals.nearestFound(nearest.name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords]);
 
   // Real organizations replace the sample list once they load; without a database this stays the sample.
   const { currentData: orgsData, error: orgsError } = useGetOrganizationsQuery();
@@ -100,6 +128,12 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
+
+  useEffect(() => {
+    if (geoStatus === 'denied') showToast(t.hospitals.nearestDenied);
+    if (geoStatus === 'unsupported') showToast(t.hospitals.nearestUnsupported);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoStatus]);
 
   // "Apply to register your organization": public, no login required.
   const [applyOrganization, { isLoading: applying }] = useApplyOrganizationMutation();
@@ -268,6 +302,16 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
                 </option>
               ))}
             </select>
+            <button
+              onClick={handleFindNearest}
+              disabled={geoStatus === 'loading'}
+              className="flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-60 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">
+                {geoStatus === 'loading' ? 'progress_activity' : 'near_me'}
+              </span>
+              {geoStatus === 'loading' ? t.hospitals.locating : t.hospitals.findNearest}
+            </button>
           </div>
         </div>
 
@@ -278,6 +322,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
             { id: 'requisitions' as const, label: t.hospitals.tabs.requisitions, icon: 'prescriptions' },
             { id: 'camps' as const, label: t.hospitals.tabs.camps, icon: 'event', count: camps.length },
             { id: 'dispatch' as const, label: t.hospitals.tabs.dispatch, icon: 'send_to_mobile' },
+            { id: 'map' as const, label: t.hospitals.tabs.map, icon: 'map' },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -645,6 +690,29 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: FACILITIES MAP */}
+      {activeTab === 'map' && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col gap-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span className="material-symbols-outlined text-red-600">map</span>
+              <span>{t.hospitals.mapTitle}</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">{t.hospitals.mapSubtitle}</p>
+          </div>
+          {hospitals.some((h) => h.latitude != null && h.longitude != null) ? (
+            <MapView
+              markers={hospitals
+                .filter((h) => h.latitude != null && h.longitude != null)
+                .map((h) => ({ id: h.id, lat: h.latitude!, lng: h.longitude!, label: `${h.name} (${h.shortCode})` }))}
+              center={coords ?? undefined}
+            />
+          ) : (
+            <p className="text-xs text-slate-500 text-center py-6">{t.hospitals.mapEmpty}</p>
+          )}
         </div>
       )}
 

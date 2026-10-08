@@ -47,6 +47,8 @@ export async function POST(request: Request) {
         directorName: input.directorName,
         totalBeds: input.totalBeds,
         icuBeds: input.icuBeds,
+        latitude: input.latitude,
+        longitude: input.longitude,
         appliedBy: userId,
       },
     });

@@ -20,6 +20,9 @@ const baseDto: OrganizationDto = {
   totalBeds: 100,
   icuBeds: 10,
   createdAt: '2026-01-15T00:00:00.000Z',
+  latitude: 23.81,
+  longitude: 90.41,
+  distanceKm: null,
 };
 
 test('toHospitalOrganizations carries every field across and zeroes blood stock', () => {
@@ -39,6 +42,8 @@ test('toHospitalOrganizations carries every field across and zeroes blood stock'
   assert.equal(hospital.totalBeds, 100);
   assert.equal(hospital.icuBeds, 10);
   assert.equal(hospital.availableBags, 0);
+  assert.equal(hospital.latitude, 23.81);
+  assert.equal(hospital.longitude, 90.41);
   assert.deepEqual(hospital.bloodStock, {
     'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0, 'AB+': 0, 'AB-': 0, 'O+': 0, 'O-': 0,
   });

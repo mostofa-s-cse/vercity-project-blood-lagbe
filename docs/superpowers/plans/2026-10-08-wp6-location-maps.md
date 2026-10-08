@@ -143,25 +143,47 @@ distance-sorted or placed on the map; it still works exactly as it does today ev
 - [x] Gates clean (`lint`, 197 tests, `build`). Commit.
 
 ### Task 4: Endpoints and client
-- [ ] `GET /api/donors`, `GET /api/requests`, `GET /api/organizations`: `near` support per Contracts;
-      `distanceKm` in the three DTOs when computed. Database checks on `.dev-db` (curl): a point near
-      Dhaka sorts Dhaka-ish sample rows first once a few get seeded coordinates; no `lat`/`lng` → same
-      order as today, unchanged.
-- [ ] `src/store/api.ts`: `lat`/`lng`/`radiusKm` added to `DonorQuery`/`RequestsQuery`/organizations
-      query, `distanceKm` on the response types; tests.
-- [ ] `useGeolocation()` hook; "near me" wired into Emergency Hub and Donor Directory (sorts by
-      distance when available, same list otherwise); Hospitals screen gets a "nearest hospital" sort.
-- [ ] `leaflet` (+ `react-leaflet` if it simplifies the component, check its SSR story first) added as
-      a dependency; Emergency Hub and Hospitals screen gain a map toggle (OSM tiles, requests/
-      organizations as markers, no donor markers — see out-of-scope).
-- [ ] No database, no geolocation permission, or geolocation denied: every screen falls back to exactly
-      what it does today (plain list, no map forced open).
-- [ ] Locale strings, gates (`lint`/`test`/`build`), browser check against `.dev-db` with a few rows
-      given real coordinates (confirm distance sort and the map markers render in the right place),
-      commit.
+- [x] `GET /api/donors`, `GET /api/requests`, `GET /api/organizations`: `near` support per Contracts —
+      a bounding-box pre-filter in the Prisma `where`, then the exact Haversine distance computed,
+      filtered to the real radius and sorted in application code (pagination also moves into
+      application code for a `near` query, since the sort can't happen in SQL); `distanceKm` in the
+      three DTOs when computed, `null` otherwise. `toDonorDto`/`toRequestDto`/`toOrganizationDto` take
+      an optional `distanceKm` second argument. `RequestDto`/`OrganizationDto` also gained real
+      `latitude`/`longitude` (for map markers); `DonorDto` deliberately did **not** — only `distanceKm`,
+      never the donor's raw coordinate, same privacy rule as the masked phone (no donor markers, see
+      out-of-scope). `POST /api/donors`, `POST /api/sos`, `POST /api/organizations/apply` and
+      `PATCH /api/donors/[id]` accept the optional `latitude`/`longitude`. Verified on `.dev-db` with
+      curl: tagged two sample organizations/a donor/a request with real coordinates, confirmed
+      `near=lat,lng,radiusKm` sorts the nearest first with an accurate `distanceKm`, confirmed a point
+      outside the radius returns an empty list, confirmed bad `lat` still 400s, confirmed no `near` →
+      unchanged order; confirmed `POST /api/donors` saves a real coordinate and rejects one-sided
+      lat/lng. Test rows removed afterwards.
+- [x] `src/store/api.ts`: `NearParams` (`lat`/`lng`/`radiusKm`) mixed into `DonorQuery`/`RequestsQuery`/
+      a new `OrganizationQuery`; `getOrganizations` now takes an optional query instead of `void`. 2 new
+      tests (query-string construction for donors and organizations).
+- [x] `src/hooks/useGeolocation.ts` (new directory — this is a browser-only hook, doesn't belong in
+      `src/lib`'s pure-and-tested rules). "Near me" wired into Emergency Hub and Donor Directory (an
+      explicit opt-in button, never auto-prompted; denied/unsupported falls back to the plain list with
+      an inline notice); Hospitals screen gets a "Nearest facility" button that auto-selects the closest
+      facility with a real coordinate (sorted in-process with `haversineDistanceKm`, no extra query).
+- [x] `leaflet` + `react-leaflet` (both compatible with React 19) added. `MapView.tsx` dynamic-imports
+      `MapViewInner.tsx` with `ssr: false` (Leaflet touches `window` at import time); OSM tiles, no API
+      key. Emergency Hub gained a "Map view" toggle (request markers) and the Hospitals screen gained a
+      "Map" tab (organization markers) — both show an empty-state message instead of an empty map when
+      nothing has a coordinate yet, never a forced-open or broken map.
+- [x] No database, no geolocation permission, or geolocation denied: every screen falls back to exactly
+      what it does today (plain list, no map forced open) — confirmed in the browser check below
+      (geolocation denial in the Playwright-driven browser resolved back to the idle button state with
+      an inline notice, no stuck loading state, no crash).
+- [x] Locale strings (`en`/`bn`: `hub.ts`, `donors.ts`, `hospitals.ts`). Gates clean (`lint`, 199 tests,
+      `build`). Browser-checked with Playwright against `.dev-db` with a few rows given real
+      coordinates: Emergency Hub's map toggle renders a real marker with the right popup text; Hospitals
+      screen's Map tab renders two real markers; "Near me"/"Nearest facility" buttons all show a loading
+      state then gracefully fall back (this sandbox's headless browser has no real location to grant).
+      Commit.
 
 ### Task 5: Documentation
-- [ ] `docs/HANDOFF.md` progress log; `docs/SPEC-MATCH-PLAN.md` module table row 2 ("Smart Donor
+- [x] `docs/HANDOFF.md` progress log; `docs/SPEC-MATCH-PLAN.md` module table row 2 ("Smart Donor
       Search" — real location now done, blood-group compatibility and eligibility-ranking still WP4)
       and the WP6 section/milestone table.
-- [ ] Tick every box above. Final commit.
+- [x] Tick every box above. Final commit.

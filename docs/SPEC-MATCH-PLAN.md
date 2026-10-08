@@ -6,6 +6,18 @@ Where we are, measured against the spec you gave (see "Starting point"), and the
 
 WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
 
+## Status: WP6 done, out of milestone order (2026-10-08)
+
+Location is now real end to end. A real Bangladesh administrative dataset (8 divisions, 64 districts
+with centroid coordinates, 494 upazilas — licence verified before vendoring) replaces an invented
+5-item division list. Donors, requests and organizations can carry a real coordinate; "near me" (an
+explicit browser-geolocation opt-in, never auto-prompted) sorts the donor, request and organization
+list endpoints by straight-line distance (`src/lib/geo.ts`, a SQL bounding-box pre-filter plus exact
+Haversine). The Emergency Hub and Hospitals screen each gained an OpenStreetMap/Leaflet map toggle.
+Donor markers are deliberately not built (would undo the masked-phone privacy rule); routing/ETA,
+address autocomplete and PostGIS stay out of scope at this app's scale. Realistic overall match:
+**~84%**. Plan: `docs/superpowers/plans/2026-10-08-wp6-location-maps.md`.
+
 ## Status: WP7 done, out of milestone order (2026-10-08)
 
 Hospital/organization identity and verification is now a real `Organization` table instead of
@@ -56,7 +68,7 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 | Spec module | Today | Missing |
 |---|---|---|
 | 1. Donor Registry | Registration form saves to the database and is **read back** in the directory (M1); a donor can **edit their own profile** (availability, last donation, contact) with a manage token or signed in (WP3) | Automatic eligibility from a real last-donation date (WP5) |
-| 2. Smart Donor Search | Filters (group, availability, text) search the **real database**, server-paged (M1) | Real location; blood-group compatibility; eligibility ranking (WP6) |
+| 2. Smart Donor Search | Filters (group, availability, text) search the **real database**, server-paged (M1); **real location (WP6)**: a real division→district picker (replacing an invented list), optional donor/request/organization coordinates, "near me" distance sort with an explicit opt-in geolocation prompt, OpenStreetMap/Leaflet markers on the Emergency Hub and Hospitals screen | Blood-group compatibility; eligibility ranking (WP4) |
 | 3. Blood Request Management | SOS saved and **read back**; list, view, cancel/complete my requests with a manage token; patient information (M1) | Edit a posted request |
 | 4. Emergency Request | Emergency and open requests **rank first** from the API; a "within 1 hour"/"within 4 hours" countdown (M1) | Alerts donors (WP4) |
 | 5. Donor Notifications | Bell with sample items | Matching by group and location; stored notifications; email/SMS/push |
@@ -139,11 +151,21 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 - Done: `FraudIncident` model (the `Report`-equivalent people flag) with a real Fraud tab (shared by Admin Panel and Ops Command); `AuditLog` table written by fraud resolution, hospital stock changes and role grant/revoke, read by the Logs tab; Overview/Donors/Requests/Hospitals tabs and Ops Command's SOS queue/stock matrix/fraud tab all read the database instead of `mockData.ts`; hospital identity/verification is now real too (WP7).
 - Still missing: users list (profiles and roles) as its own tab, donor and request moderation actions.
 
-### WP6. Location and maps (L, +7%)
-- Districts and upazilas dataset for Bangladesh; latitude and longitude on donors, requests and organizations.
-- "Near me" with the browser's location; distance computed on the server (Haversine, or PostGIS on Supabase for indexing) and used for sorting and notifications.
-- OpenStreetMap map (Leaflet): donors, requests and hospitals as markers.
-- Needs: the administrative dataset (I will source an open one and document the licence).
+### WP6. Location and maps (L, +7%) — **Done (2026-10-08)**
+- Real Bangladesh administrative dataset (8 divisions, 64 districts with real centroid coordinates, 494
+  upazilas — licence verified via the GitHub API before vendoring, `src/data/BDGEO_SOURCE.md`),
+  replacing an invented 5-item division list; nullable `latitude`/`longitude` on `Donor`, `SosRequest`,
+  `Organization`.
+- "Near me" with the browser's Geolocation API (explicit opt-in, never auto-prompted); distance computed
+  server-side (Haversine + a SQL bounding-box pre-filter, `src/lib/geo.ts`) and used for sorting on the
+  donors/requests/organizations list endpoints. PostGIS not needed at this scale (documented as a future
+  scaling note, not built).
+- OpenStreetMap map (Leaflet + react-leaflet, no API key): request markers on the Emergency Hub,
+  organization markers on the Hospitals screen. Donor markers deliberately not built — showing a donor's
+  home coordinate on an open map would undo the existing masked-phone privacy rule.
+- Matching/compatibility-ranking by distance and notifications on top of this distance data are WP4's
+  job, not duplicated here; turn-by-turn routing/ETA, address autocomplete and boundary polygons stay
+  out of scope (plan: `docs/superpowers/plans/2026-10-08-wp6-location-maps.md`).
 
 ### WP10. Email and password (S, +2%)
 - Sign up, sign in and password reset with Supabase Auth next to Google; email verification.
@@ -162,7 +184,7 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 |---|---|---|
 | **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% — **done** |
 | **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3 and WP5 **done**, WP4 remains |
-| **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% — WP7 **done**, WP8 in progress, WP6 remains |
+| **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% — WP7 and WP6 **done**, WP8 in progress |
 | **M4: hardening and launch** | WP10, WP11, WP12 | matches the spec |
 
 Each package ends with tests, a build, a browser check, and a commit, as before.
