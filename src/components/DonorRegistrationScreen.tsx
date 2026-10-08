@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { ScreenId, Donor, BloodGroup } from '../types/blood';
 import { sound } from '../utils/audio';
 import { isValidBdPhone } from '../utils/phone';
@@ -7,16 +7,9 @@ import { isDatabaseOff } from '../store/errors';
 import { browserStorage as donorStorage, readMyDonorProfiles, rememberDonor } from '../lib/myDonorProfile';
 import type { DonorRegisteredInfo } from '../context/AppStateContext';
 import { useLanguage } from '../context/LanguageContext';
+import { BD_DIVISIONS, districtsByDivision } from '../data/bdGeo.ts';
 
 const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-
-const DIVISIONS = [
-  { value: 'Dhaka Central', id: 'dhakaCentral' },
-  { value: 'Dhaka North', id: 'dhakaNorth' },
-  { value: 'Chattogram Port', id: 'chattogram' },
-  { value: 'Sylhet Sadar', id: 'sylhet' },
-  { value: 'Rajshahi Division', id: 'rajshahi' },
-] as const;
 
 const VEHICLES = [
   { value: 'Personal Motorcycle', id: 'motorcycle' },
@@ -38,7 +31,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   onNavigate,
   onRegisterDonor
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const uid = useId();
   const fieldId = (name: string) => `${uid}-${name}`;
 
@@ -63,7 +56,14 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   // Optional "More details"
   const [age, setAge] = useState('24');
   const [gender, setGender] = useState<'Male' | 'Female'>('Male');
-  const [division, setDivision] = useState('Dhaka Central');
+  const dhakaDivision = BD_DIVISIONS.find((d) => d.name === 'Dhaka') ?? BD_DIVISIONS[0];
+  const [divisionId, setDivisionId] = useState(dhakaDivision.id);
+  const districtOptions = useMemo(() => districtsByDivision(divisionId), [divisionId]);
+  const [districtId, setDistrictId] = useState(() => districtsByDivision(dhakaDivision.id).find((d) => d.name === 'Dhaka')?.id ?? '');
+  const selectedDivision = BD_DIVISIONS.find((d) => d.id === divisionId);
+  const selectedDistrict = districtOptions.find((d) => d.id === districtId);
+  // Stored as real district + division names (e.g. "Dhaka, Dhaka"); UI language only changes the select labels.
+  const division = selectedDistrict && selectedDivision ? `${selectedDistrict.name}, ${selectedDivision.name}` : '';
   const [email, setEmail] = useState('');
   const [weightKg, setWeightKg] = useState('65');
   const [lastDonationMonths, setLastDonationMonths] = useState('4');
@@ -402,16 +402,34 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                 </select>
               </div>
 
-              <div className="col-span-2">
+              <div>
                 <label htmlFor={fieldId('division')} className={labelClass}>{t.register.division}</label>
                 <select
                   id={fieldId('division')}
-                  value={division}
-                  onChange={(e) => setDivision(e.target.value)}
+                  value={divisionId}
+                  onChange={(e) => {
+                    const nextDivisionId = e.target.value;
+                    setDivisionId(nextDivisionId);
+                    setDistrictId(districtsByDivision(nextDivisionId)[0]?.id ?? '');
+                  }}
                   className={`${inputClass} cursor-pointer`}
                 >
-                  {DIVISIONS.map((d) => (
-                    <option key={d.value} value={d.value}>{t.register.divisionNames[d.id]}</option>
+                  {BD_DIVISIONS.map((d) => (
+                    <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor={fieldId('district')} className={labelClass}>{t.register.district}</label>
+                <select
+                  id={fieldId('district')}
+                  value={districtId}
+                  onChange={(e) => setDistrictId(e.target.value)}
+                  className={`${inputClass} cursor-pointer`}
+                >
+                  {districtOptions.map((d) => (
+                    <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
                   ))}
                 </select>
               </div>
