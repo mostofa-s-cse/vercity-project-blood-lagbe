@@ -3,6 +3,8 @@ export const admin = {
     requestStatusUpdated: (id: string, status: string) =>
       `Request #${id} status updated to ${String(status).toUpperCase()}.`,
     hospitalVerifyUpdated: (name: string) => `${name} institution verification updated.`,
+    hospitalVerifyDemoDisabled: 'No database is connected (demo mode), so this cannot be saved.',
+    hospitalVerifyFailed: 'Could not update the verification status. Please try again.',
     fraudBanned: 'Entity blacklisted across national SMS gateways.',
     fraudDismissed: 'Incident report dismissed.',
     fraudDemoDisabled: 'No database is connected (demo mode), so this cannot be saved.',
@@ -233,6 +235,7 @@ export const admin = {
     desc: 'Verify government hospitals, private trauma centers, voluntary student networks, and blood bank licenses.',
     openPortal: 'Open Hospital Portal',
     identitySample: 'identity and verification are sample data; stock is real',
+    identityReal: 'organizations and verification are real; cold-chain telemetry and audit dates stay sample',
     verified: 'Verified',
     unverified: 'Unverified',
     license: 'DGHS License:',

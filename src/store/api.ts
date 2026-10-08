@@ -7,6 +7,7 @@ import type {
   DonorDto,
   DonorListResponse,
   FraudIncidentDto,
+  OrganizationDto,
   RequestDetailResponse,
   RequestDto,
   RequestListResponse,
@@ -25,6 +26,20 @@ export interface DonorQuery {
   mine?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+export interface OrganizationApplyPayload {
+  name: string;
+  type: 'government_hospital' | 'private_hospital' | 'volunteer_org' | 'blood_bank';
+  address: string;
+  licenseNumber: string;
+  division?: string;
+  district?: string;
+  hotline?: string;
+  emergencyContact?: string;
+  directorName?: string;
+  totalBeds?: number;
+  icuBeds?: number;
 }
 
 /** A donor profile's editable fields, any subset (server validates with `parseDonorUpdateInput`). */
@@ -98,7 +113,7 @@ export function createApiSlice({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
     keepUnusedDataFor,
-    tagTypes: ['Donor', 'Request', 'Fraud'],
+    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization'],
     endpoints: (build) => ({
       getDonors: build.query<DonorListResponse, DonorQuery | void>({
         query: (args) => {
@@ -210,6 +225,21 @@ export function createApiSlice({
       getAuditLog: build.query<{ entries: AuditLogDto[] }, void>({
         query: () => 'admin/logs',
       }),
+
+      getOrganizations: build.query<{ organizations: OrganizationDto[] }, void>({
+        query: () => 'organizations',
+        providesTags: ['Organization'],
+      }),
+
+      applyOrganization: build.mutation<{ organization: OrganizationDto }, OrganizationApplyPayload>({
+        query: (body) => ({ url: 'organizations/apply', method: 'POST', body }),
+        invalidatesTags: ['Organization'],
+      }),
+
+      reviewOrganization: build.mutation<{ organization: OrganizationDto }, { id: string; decision: 'approve' | 'reject' }>({
+        query: ({ id, decision }) => ({ url: `admin/organizations/${encodeURIComponent(id)}`, method: 'PATCH', body: { decision } }),
+        invalidatesTags: ['Organization'],
+      }),
     }),
   });
 }
@@ -232,4 +262,7 @@ export const {
   useGetDonorQuery,
   useUpdateDonorMutation,
   useGetDonorDonationsQuery,
+  useGetOrganizationsQuery,
+  useApplyOrganizationMutation,
+  useReviewOrganizationMutation,
 } = api;

@@ -237,6 +237,28 @@ test('updateDonor refreshes the donor list and an explicit token wins', async ()
   list.unsubscribe();
 });
 
+test('getOrganizations, apply and review are wired up with tag invalidation', async () => {
+  const { slice, store, calls } = fakeServer((call) =>
+    call.method === 'GET' ? [200, { organizations: [] }] : [200, { organization: { id: 'o1', status: 'approved' } }]
+  );
+  const list = store.dispatch(slice.endpoints.getOrganizations.initiate());
+  await list;
+  await store.dispatch(
+    slice.endpoints.applyOrganization.initiate({ name: 'Test Clinic', type: 'blood_bank', address: 'X', licenseNumber: 'L1' })
+  );
+  await settle();
+  assert.equal(calls.find((c) => c.method === 'POST')!.path, '/api/organizations/apply');
+  assert.equal(calls.filter((c) => c.method === 'GET').length, 2, 'the org list was refetched after applying');
+
+  await store.dispatch(slice.endpoints.reviewOrganization.initiate({ id: 'o1', decision: 'approve' }));
+  await settle();
+  const reviewCall = calls.find((c) => c.method === 'PATCH');
+  assert.equal(reviewCall!.path, '/api/admin/organizations/o1');
+  assert.deepEqual(reviewCall!.body, { decision: 'approve' });
+  assert.equal(calls.filter((c) => c.method === 'GET').length, 3, 'the org list was refetched after reviewing');
+  list.unsubscribe();
+});
+
 test('resolving a fraud incident refreshes the fraud list', async () => {
   const { slice, store, calls } = fakeServer((call) =>
     call.method === 'PATCH'

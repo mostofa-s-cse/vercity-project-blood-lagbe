@@ -73,7 +73,8 @@ sample ids and any new `Organization.id`, no change needed there.
 - [x] Commit.
 
 ### Task 4: Wire the screens
-- [ ] `src/store/api.ts`: `getOrganizations`, `applyOrganization`, `reviewOrganization` (invalidates an `Organization` tag).
+- [x] `src/store/api.ts`: `getOrganizations`, `applyOrganization`, `reviewOrganization` (invalidates an `Organization` tag). Tested.
+- [x] `src/lib/organizationMapping.ts`: pure `toHospitalOrganizations()` converting a real `OrganizationDto` into the screens' `HospitalOrganization` shape (test-first, 3 tests). Locale keys for the apply form and the verified/pending badge fallback added (`en`/`bn` `hospitals.ts`, `admin.ts`).
 - [ ] `HospitalOrgScreen.tsx`: the hospital list comes from `useGetOrganizationsQuery` merged with real stock (same `mergeSavedStock` pattern, now against real org ids instead of the hardcoded sample array) instead of `SAMPLE_HOSPITAL_ORGS` directly; add a small "Apply to register your organization" collapsed form at the bottom (name, type, address, licence number — mirrors `CreateSosScreen.tsx`'s "More details" collapsed-section pattern) that posts to `applyOrganization` and shows a confirmation, no login required.
 - [ ] `AdminPanelScreen.tsx`'s Hospitals tab and `OpsCommandScreen.tsx`'s hospital tab: same real organization list; the verification toggle calls `reviewOrganization` for real instead of local state.
 - [ ] No database: both screens keep falling back to `SAMPLE_HOSPITAL_ORGS` exactly as before.
