@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { toDonorDto } from '@/lib/dto';
 import { canManageDonor, MANAGE_TOKEN_HEADER } from '@/lib/donorAccess';
+import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { getClaims } from '@/lib/supabase/server';
 import { parseDonorUpdateInput } from '@/lib/validation';
@@ -27,6 +28,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
  * its manage token, the signed-in person who registered it, or an admin-panel user with `panel.donors`.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
 
   const { id } = await params;

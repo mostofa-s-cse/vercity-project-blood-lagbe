@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { toResponseDto } from '@/lib/dto';
+import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
+import { checkRateLimit, clientKey } from '@/lib/rateLimit';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { parseRespondInput } from '@/lib/validation';
 
@@ -14,6 +16,14 @@ const MAX_BODY_BYTES = 5_000;
  * (completed or cancelled) requests take no answers.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 });
+  const rate = checkRateLimit(clientKey(request, 'respond'), { limit: 10, windowMs: 10 * 60_000 });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'rate_limited' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rate.retryAfterMs / 1000)) } }
+    );
+  }
   if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
   if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'too_large' }, { status: 413 });

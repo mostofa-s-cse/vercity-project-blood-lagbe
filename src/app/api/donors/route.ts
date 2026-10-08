@@ -4,7 +4,9 @@ import { toDonorDto } from '@/lib/dto';
 import { DONATION_COOLDOWN_DAYS } from '@/lib/eligibility';
 import { boundingBox, haversineDistanceKm } from '@/lib/geo';
 import { hashToken, newManageToken } from '@/lib/manageToken';
+import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
+import { checkRateLimit, clientKey } from '@/lib/rateLimit';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { DB_BLOOD_GROUP, parseDonorInput, parseDonorQuery } from '@/lib/validation';
 
@@ -100,6 +102,14 @@ export async function GET(request: Request) {
  * without an account; only its hash is stored.
  */
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 });
+  const rate = checkRateLimit(clientKey(request, 'donors'), { limit: 5, windowMs: 10 * 60_000 });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'rate_limited' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rate.retryAfterMs / 1000)) } }
+    );
+  }
   if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
   if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'too_large' }, { status: 413 });

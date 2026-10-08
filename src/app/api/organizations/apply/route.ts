@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { toOrganizationDto } from '@/lib/dto';
+import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
+import { checkRateLimit, clientKey } from '@/lib/rateLimit';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { parseOrganizationApplyInput } from '@/lib/validation';
 
@@ -16,6 +18,14 @@ const MAX_BODY_BYTES = 20_000;
  * the Hospital staff role for this organization on approval.
  */
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 });
+  const rate = checkRateLimit(clientKey(request, 'organizations-apply'), { limit: 5, windowMs: 10 * 60_000 });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: 'rate_limited' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rate.retryAfterMs / 1000)) } }
+    );
+  }
   if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
   if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'too_large' }, { status: 413 });

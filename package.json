@@ -9,7 +9,7 @@
     "start": "next start",
     "clean": "rm -rf .next",
     "lint": "tsc --noEmit",
-    "test": "node --test src/store/api.test.ts src/lib/requestStatus.test.ts src/lib/phoneMask.test.ts src/lib/manageToken.test.ts src/lib/myRequests.test.ts src/lib/myDonorProfile.test.ts src/lib/eligibility.test.ts src/lib/permissions.test.ts src/utils/routes.test.ts src/utils/sosPost.test.ts src/utils/phone.test.ts src/lib/validation.test.ts src/lib/safeRedirect.test.ts src/lib/roles.test.ts src/lib/grantService.test.ts src/lib/sampleMapping.test.ts src/lib/organizationMapping.test.ts src/lib/geo.test.ts src/lib/bloodCompatibility.test.ts src/lib/donorMatching.test.ts src/lib/notifyChannels.test.ts src/store/errors.test.ts src/locales/locales.test.ts src/data/bdGeo.test.ts",
+    "test": "node --test src/store/api.test.ts src/lib/requestStatus.test.ts src/lib/phoneMask.test.ts src/lib/manageToken.test.ts src/lib/myRequests.test.ts src/lib/myDonorProfile.test.ts src/lib/eligibility.test.ts src/lib/permissions.test.ts src/utils/routes.test.ts src/utils/sosPost.test.ts src/utils/phone.test.ts src/lib/validation.test.ts src/lib/safeRedirect.test.ts src/lib/roles.test.ts src/lib/grantService.test.ts src/lib/sampleMapping.test.ts src/lib/organizationMapping.test.ts src/lib/geo.test.ts src/lib/bloodCompatibility.test.ts src/lib/donorMatching.test.ts src/lib/notifyChannels.test.ts src/lib/rateLimit.test.ts src/lib/originCheck.test.ts src/store/errors.test.ts src/locales/locales.test.ts src/data/bdGeo.test.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { toRequestDto, toResponseDto } from '@/lib/dto';
+import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { canManageRequest, MANAGE_TOKEN_HEADER } from '@/lib/requestAccess';
 import { canTransition } from '@/lib/requestStatus';
@@ -72,6 +73,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
  * with `panel.requests`. Completed and cancelled requests are final.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 });
   if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
 
   let body: unknown;
