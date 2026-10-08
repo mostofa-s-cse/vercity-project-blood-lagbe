@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectDivision,
   isAudioMuted,
   onToggleAudioMute,
-  unreadCount = 2,
+  unreadCount = 0,
   onOpenNotifications,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

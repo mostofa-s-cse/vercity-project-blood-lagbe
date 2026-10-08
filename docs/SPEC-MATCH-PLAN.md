@@ -6,6 +6,17 @@ Where we are, measured against the spec you gave (see "Starting point"), and the
 
 WP9, WP1 and WP2 are done: Redux Toolkit / RTK Query is the client data layer, donors and requests are read from the database (not `mockData.ts`) with the API answering `503` and every screen falling back to sample data when there is no database, and the request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`, manage tokens, responses) works end to end and was checked against a real Postgres. Realistic overall match: **~65%** (up from ~45% at the start of M1). Details: `docs/HANDOFF.md` progress log.
 
+## Status: WP4 done (2026-10-08)
+
+Posting an emergency request now matches and notifies real compatible donors: the full ABO/Rh
+compatibility table (not just equal groups), available, eligible (WP5's 90-day rule), not the
+requester, and nearby (WP6's distance, or an area/division text fallback). A `Notification` row is
+created per match; the bell reads/marks-read against the real database. Found along the way: the bell
+was fully wired UI running on entirely fake, per-browser sample data (not merely unbuilt) — deleted
+rather than built around. Email/SMS delivery is an honest, tested no-op switch; no provider account is
+wired (the owner's job, same as Supabase keys). Realistic overall match: **~90%**. Plan:
+`docs/superpowers/plans/2026-10-08-wp4-matching-notifications.md`.
+
 ## Status: WP6 done, out of milestone order (2026-10-08)
 
 Location is now real end to end. A real Bangladesh administrative dataset (8 divisions, 64 districts
@@ -68,10 +79,10 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 | Spec module | Today | Missing |
 |---|---|---|
 | 1. Donor Registry | Registration form saves to the database and is **read back** in the directory (M1); a donor can **edit their own profile** (availability, last donation, contact) with a manage token or signed in (WP3) | Automatic eligibility from a real last-donation date (WP5) |
-| 2. Smart Donor Search | Filters (group, availability, text) search the **real database**, server-paged (M1); **real location (WP6)**: a real division→district picker (replacing an invented list), optional donor/request/organization coordinates, "near me" distance sort with an explicit opt-in geolocation prompt, OpenStreetMap/Leaflet markers on the Emergency Hub and Hospitals screen | Blood-group compatibility; eligibility ranking (WP4) |
+| 2. Smart Donor Search | Filters (group, availability, text) search the **real database**, server-paged (M1); real location (WP6): a real division→district picker, optional coordinates, "near me" distance sort, OpenStreetMap/Leaflet markers; **real blood-group compatibility matching (WP4)**, reusing the same distance/eligibility logic | Compatibility used for sorting the donor directory itself (currently only drives who gets notified on a new SOS) |
 | 3. Blood Request Management | SOS saved and **read back**; list, view, cancel/complete my requests with a manage token; patient information (M1) | Edit a posted request |
-| 4. Emergency Request | Emergency and open requests **rank first** from the API; a "within 1 hour"/"within 4 hours" countdown (M1) | Alerts donors (WP4) |
-| 5. Donor Notifications | Bell with sample items | Matching by group and location; stored notifications; email/SMS/push |
+| 4. Emergency Request | Emergency and open requests **rank first** from the API; a "within 1 hour"/"within 4 hours" countdown (M1); **posting one now matches and alerts real compatible donors (WP4)** | — |
+| 5. Donor Notifications | **Real** (WP4): a `Notification` row per compatible, available, eligible, nearby donor on every new SOS; the bell reads/marks-read against the real database, replacing what was entirely fake sample data before this | Email/SMS delivery stays an honest no-op switch — no provider account exists yet (push was never requested) |
 | 6. Donation History | A completed request writes a real `Donation`; the Passport shows real history and the automatic 90-day cooldown (WP5) | Clinical vitals/NID/QR stay sample on purpose (no real source) |
 | 7. Request Tracking | **Real statuses and transitions** (Pending, Donor Found, Completed, Cancelled) from the database, server-enforced (M1) | Priority/urgency beyond emergency-first |
 | 8. Hospital & Organization | Hospital role, own-hospital stock saved; **real `Organization` accounts, apply + admin approve/reject (WP7)** | Organizations managing the requests addressed to them (out of scope, see WP7) |
@@ -84,7 +95,7 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 | Secure authentication | Google | Email and password, password reset |
 | Roles: Donor, Blood Seeker, Hospital/Org, Admin | Hospital and Admin (as dynamic roles) | Donor and Blood Seeker |
 | Protected API | Admin and hospital routes | Rate limiting and CAPTCHA on public routes |
-| Notification system | None | See WP4 |
+| Notification system | **Real (WP4)**: a `Notification` table, matching and in-app delivery | Email/SMS provider accounts (switch is wired, provider isn't) |
 | Location search and maps | Fake distance numbers, a picture of a map | See WP6 |
 | Responsive UI | Mostly | The header ticker overflows on phones (390px) |
 
@@ -129,13 +140,24 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 - "My profile" (edit donor info, availability switch, last donation date) in `DonorRegistrationScreen.tsx`; "My requests" was already done in M1.
 - Done when: a donor can update their own profile and cannot touch anyone else's (server-tested).
 
-### WP4. Matching and notifications (L, +8%)
-- `Notification` table; one row per recipient.
-- Matching when a request is created: blood-group **compatibility** (not only equality), same district or nearby, available, eligible (at least 90 days since the last donation), and not the requester.
-- Bell reads from the API; mark as read; unread count.
-- Delivery: in-app always; email (Resend or SMTP) and SMS (a Bangladeshi SMS gateway or Twilio) behind environment variables; optional web push (VAPID keys are self-generated).
-- Done when: creating an emergency request creates notifications for exactly the matching donors (unit-tested), and the bell shows them after a reload.
-- Needs from you: email and SMS provider accounts, if you want those channels.
+### WP4. Matching and notifications (L, +8%) — **Done (2026-10-08)**
+- `Notification` table (one row per matched donor, belongs to the `Donor` row, same ownership model WP3
+  built for profile editing).
+- Matching on `POST /api/sos`: blood-group **compatibility** (the full ABO/Rh table, not only equality),
+  nearby (real coordinates within 50km when both sides have one, WP6; otherwise an exact area/division
+  text match — an under-specified request matches nobody, never everybody), available, eligible (the
+  real 90-day rule, WP5), and not the requester.
+- Bell reads from the real API; mark as read persists server-side; unread count is real.
+- Delivery: in-app is real and built on top of this package; email/SMS get an honest, tested
+  environment-variable switch (`sendEmail`/`sendSms` in `src/lib/notifyChannels.ts`) that silently skips
+  without a configured provider key — no real provider is wired in this package, same spirit as every
+  other "needs the service key" action in this app. Web push was not requested and is not built.
+- Found along the way: the bell was fully wired UI running on entirely fake, per-browser
+  (`localStorage`) sample data — not "not yet built", but actively fake — including a poster
+  self-notifying about their own SOS. Deleted rather than built around.
+- Verified end to end against a real local Postgres: 5 donors covering every exclusion case (wrong
+  group, unavailable, ineligible, wrong area) plus the one correct compatible/available/eligible/nearby
+  donor — exactly that one got notified; the bell showed it after reload, mark-as-read persisted.
 
 ### WP5. Donation history and availability (S to M, +4%) — **Done (2026-10-08)**
 - `Donation` model (donor, request, hospital, date, units, confirmed by).
@@ -183,7 +205,7 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
 | Milestone | Packages | Realistic match after |
 |---|---|---|
 | **M1: real data and lifecycle** | WP9, WP1, WP2 | ~65% — **done** |
-| **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3 and WP5 **done**, WP4 remains |
+| **M2: donors and notifications** | WP3, WP4, WP5 | ~80% — WP3, WP4 and WP5 **done** |
 | **M3: organizations, admin, maps** | WP7, WP8, WP6 | ~92% — WP7 and WP6 **done**, WP8 in progress |
 | **M4: hardening and launch** | WP10, WP11, WP12 | matches the spec |
 

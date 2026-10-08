@@ -7,6 +7,7 @@ import type {
   DonorDto,
   DonorListResponse,
   FraudIncidentDto,
+  NotificationDto,
   OrganizationDto,
   RequestDetailResponse,
   RequestDto,
@@ -126,7 +127,7 @@ export function createApiSlice({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
     keepUnusedDataFor,
-    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization'],
+    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification'],
     endpoints: (build) => ({
       getDonors: build.query<DonorListResponse, DonorQuery | void>({
         query: (args) => {
@@ -166,6 +167,22 @@ export function createApiSlice({
       getDonorDonations: build.query<{ donations: DonationDto[] }, string>({
         query: (id) => `donors/${encodeURIComponent(id)}/donations`,
         providesTags: ['Donor'],
+      }),
+
+      /** A donor's compatible-request alerts (WP4). Sends this browser's manage token for it, same pattern as `getRequest`. */
+      getDonorNotifications: build.query<{ notifications: NotificationDto[]; unreadCount: number }, { id: string; token?: string }>({
+        query: ({ id, token }) => ({ url: `donors/${encodeURIComponent(id)}/notifications`, headers: donorTokenHeaders(id, token) }),
+        providesTags: ['Notification'],
+      }),
+
+      markNotificationRead: build.mutation<{ notification: NotificationDto }, { donorId: string; id: string; token?: string }>({
+        query: ({ donorId, id, token }) => ({
+          url: `donors/${encodeURIComponent(donorId)}/notifications/${encodeURIComponent(id)}`,
+          method: 'PATCH',
+          body: { isRead: true },
+          headers: donorTokenHeaders(donorId, token),
+        }),
+        invalidatesTags: ['Notification'],
       }),
 
       /** Edits a donor's own profile. Sends this browser's manage token for it, same pattern as requests. */
@@ -291,4 +308,6 @@ export const {
   useGetOrganizationsQuery,
   useApplyOrganizationMutation,
   useReviewOrganizationMutation,
+  useGetDonorNotificationsQuery,
+  useMarkNotificationReadMutation,
 } = api;

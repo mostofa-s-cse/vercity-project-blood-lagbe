@@ -1,10 +1,10 @@
 export const notifications = {
   title: 'Donor Emergency Alerts',
-  subtitle: 'Geofenced blood calls matching your blood type',
-  clearAll: 'Clear All',
+  subtitle: 'Compatible blood requests matched to your profile',
+  markAllRead: 'Mark all read',
   empty: 'No active notifications.',
   bloodNeeded: (bloodGroup: string) => `${bloodGroup} Needed`,
+  message: (bloodGroup: string, place: string) => `${bloodGroup} blood is needed at ${place}. You're a compatible match.`,
   respondNow: 'Respond Now',
-  smsGatewayLive: 'DGHS Carrier SMS Live',
 };
 export type Notifications = typeof notifications;

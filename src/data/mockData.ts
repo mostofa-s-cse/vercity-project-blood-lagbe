@@ -1,4 +1,4 @@
-import { EmergencyDemand, Donor, ChillerUnit, HospitalStock, FraudIncident, BloodRequest, HospitalOrganization, DonationCamp, DonorNotification, DonationRecord } from '../types/blood';
+import { EmergencyDemand, Donor, ChillerUnit, HospitalStock, FraudIncident, BloodRequest, HospitalOrganization, DonationCamp, DonationRecord } from '../types/blood';
 
 export const INITIAL_DEMANDS: EmergencyDemand[] = [
   {
@@ -754,48 +754,6 @@ export const SAMPLE_CAMPS: DonationCamp[] = [
     registeredDonors: 95,
     contactNumber: '+880 1711-209482',
     status: 'upcoming'
-  }
-];
-
-export const INITIAL_NOTIFICATIONS: DonorNotification[] = [
-  {
-    id: 'NOTIF-01',
-    title: '🚨 জরুরি ও-নেগেটিভ (O-) রক্তের রিকোয়েস্ট!',
-    message: 'ঢাকা মেডিকেল কলেজ হাসপাতালে (ICU বেড ১৪) ও-নেগেটিভ রক্ত অতি জরুরি • ২ ব্যাগ প্রয়োজন (আপনার থেকে ১.৮ কিমি দূরে)।',
-    timestamp: '১০ মিনিট আগে',
-    type: 'urgent_request',
-    read: false,
-    bloodGroup: 'O-',
-    hospital: 'Dhaka Medical College Hospital',
-    distanceKm: 1.8,
-    requestId: 'REQ-1092'
-  },
-  {
-    id: 'NOTIF-02',
-    title: '🤝 ডোনার ম্যাচ সম্পন্ন হয়েছে!',
-    message: 'আপনার রিকোয়েস্ট #REQ-1088 এ রক্তদাতা তানভীর আহমেদ মোটরসাইকেলে হাসপাতালের উদ্দেশ্যে রওয়ানা হয়েছেন (ইটিএ ৮ মিনিট)।',
-    timestamp: '২৫ মিনিট আগে',
-    type: 'match_found',
-    read: false,
-    bloodGroup: 'O+',
-    hospital: 'DMCH',
-    requestId: 'REQ-1088'
-  },
-  {
-    id: 'NOTIF-03',
-    title: '🎉 আপনি রক্তদানের জন্য পুনরায় উপযুক্ত!',
-    message: 'আপনার পূর্ববর্তী রক্তদানের ৯০ দিনের বিশ্রাম মেয়াদ সফলভাবে পূর্ণ হয়েছে। আপনি এখন পুনরায় যেকোনো রোগীর জীবন বাঁচাতে প্রস্তুত।',
-    timestamp: '১ দিন আগে',
-    type: 'eligibility_alert',
-    read: true
-  },
-  {
-    id: 'NOTIF-04',
-    title: '📢 ডিজিএইচএস জরুরি নোটিশ',
-    message: 'ব্লাড ব্যাংকে রক্তের বাণিজ্যিক কেনাবেচা বা দালাল চক্র সম্পূর্ণ নিষিদ্ধ। যেকোনো অনিয়ম ১০৬৫৫ বা ৯৯৯ নম্বরে জানান।',
-    timestamp: '২ দিন আগে',
-    type: 'system_alert',
-    read: true
   }
 ];
 

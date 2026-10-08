@@ -142,28 +142,39 @@ by donor id, authorised the same triad as everywhere else (manage token, signed-
 - [x] Gates clean (`lint`, 223 tests, `build`). Commit.
 
 ### Task 4: Client and the bell
-- [ ] `src/store/api.ts`: `getDonorNotifications`, `markNotificationRead`, tagged for invalidation.
-- [ ] Replace `AppStateContext`'s fake `notifications`/`unreadCount`/`markNotificationRead`/
+- [x] `src/store/api.ts`: `getDonorNotifications`, `markNotificationRead`, new `Notification` tag.
+- [x] Replaced `AppStateContext`'s fake `notifications`/`unreadCount`/`markNotificationRead`/
       `clearAllNotifications` (backed by `usePersistentState`/`INITIAL_NOTIFICATIONS`) with the real
       API, scoped to the donor identified by this browser's remembered donor id (same `rememberedId`
       pattern `DonorRegistrationScreen.tsx`/`DonorPassportScreen.tsx` already use, WP3/WP5) or a
       signed-in person's own donor profile (`mine=true`, WP3). Nobody identified as a donor → the bell
-      shows no count and opens to an honest empty state, not sample rows.
-- [ ] Delete `handleSosCreated`'s fake self-notification and the now-unused `INITIAL_NOTIFICATIONS`
-      sample data and the `match_found`/`handshake_completed`/`system_alert`/`eligibility_alert`
-      `DonorNotification` types that were never implemented (keep `compatible_request` only, renamed
-      from `urgent_request` if that reads better — check call sites before renaming).
-- [ ] `NotificationsModal.tsx`: real `createdAt` instead of the hardcoded `'এইমাত্র'` string (format with
-      the existing locale date/relative-time convention, check other screens for one before inventing a
-      new one); remove or genuinely condition the `smsGatewayLive` claim.
-- [ ] No database, or no donor identified: bell shows empty, exactly like every other screen's
+      shows no count and opens to an honest empty state, not sample rows. `clearAllNotifications` is
+      repurposed as "mark all read" (there is no delete concept in this schema).
+- [x] Deleted `handleSosCreated`'s fake self-notification, the now-unused `INITIAL_NOTIFICATIONS`
+      sample data, and the whole `DonorNotification` type (`match_found`/`handshake_completed`/
+      `system_alert`/`eligibility_alert` were never implemented and `urgent_request` is now just
+      `NotificationDto`'s real `type: 'compatible_request'`). Also found and fixed `Header.tsx`'s
+      `unreadCount = 2` fake default prop (dead in practice since `AppShell.tsx` always passes the real
+      value, but still a misleading default).
+- [x] `NotificationsModal.tsx` rewritten against `NotificationDto` directly: real `createdAt`
+      (`toLocaleString()`, same convention `DonorPassportScreen.tsx` already uses for dates — no new
+      relative-time utility invented) instead of the hardcoded `'এইমাত্র'` string; the always-false
+      `smsGatewayLive` footer claim removed outright (no SMS gateway exists to condition it on).
+- [x] No database, or no donor identified: bell shows empty, exactly like every other screen's
       no-database/no-identity fallback — never sample notifications.
-- [ ] Locale strings, gates (`lint`/`test`/`build`), browser check against `.dev-db`: register as a
-      donor compatible with a posted SOS, confirm the bell shows a real unread notification after
-      reload, mark it read, confirm it persists read across reload.
-- [ ] Commit.
+- [x] Locale strings (`en`/`bn` `notifications.ts`: `markAllRead`, `message`, removed `clearAll`/
+      `smsGatewayLive`). Gates clean (`lint`, 223 tests, `build` — re-verified with a clean
+      `tsconfig.tsbuildinfo`, since TypeScript's incremental cache was briefly masking a real "no
+      exported member" error from the `DonorNotification` deletion; worth clearing that cache before any
+      final gate check from now on). Browser-checked against `.dev-db` end to end: registered a real
+      compatible donor (O-) through the browser (so the manage token is actually remembered in
+      `localStorage`, not just created via curl), posted a matching SOS, reloaded and saw a real unread
+      badge and the real notification text/timestamp, marked it read, reloaded again and confirmed the
+      badge was gone (read state persisted server-side, not just client state). Test rows removed
+      afterwards, cascade confirmed clean.
+- [x] Commit.
 
 ### Task 5: Documentation
-- [ ] `docs/HANDOFF.md` progress log; `docs/SPEC-MATCH-PLAN.md` module table rows 2/4/"Notification
-      system", WP4 section, milestone table (M2).
-- [ ] Tick every box above. Final commit.
+- [x] `docs/HANDOFF.md` progress log; `docs/SPEC-MATCH-PLAN.md` module table rows 2/4/5/"Notification
+      system", WP4 section, milestone table (M2), realistic match ~84% → ~90%.
+- [x] Tick every box above. Final commit.

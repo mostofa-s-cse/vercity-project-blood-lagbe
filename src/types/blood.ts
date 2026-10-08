@@ -89,19 +89,6 @@ export interface DonationCamp {
   status: 'upcoming' | 'ongoing' | 'completed';
 }
 
-export interface DonorNotification {
-  id: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  type: 'urgent_request' | 'match_found' | 'handshake_completed' | 'system_alert' | 'eligibility_alert';
-  read: boolean;
-  bloodGroup?: BloodGroup;
-  hospital?: string;
-  distanceKm?: number;
-  requestId?: string;
-}
-
 export interface DonationRecord {
   id: string;
   donationDate: string;

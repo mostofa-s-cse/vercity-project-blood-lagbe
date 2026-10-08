@@ -1,13 +1,16 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ScreenId, BloodGroup, DonorNotification } from '../types/blood';
-import { INITIAL_NOTIFICATIONS } from '../data/mockData';
+import { ScreenId, BloodGroup } from '../types/blood';
+import type { NotificationDto } from '../lib/dtoTypes';
+import { browserStorage as donorStorage, readMyDonorProfiles } from '../lib/myDonorProfile';
 import { sound } from '../utils/audio';
 import { pathToScreen, screenPath } from '../utils/routes';
 import { usePersistentState } from '../utils/persistentState';
+import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
+import { useGetDonorNotificationsQuery, useGetDonorsQuery, useMarkNotificationReadMutation } from '../store/api';
 
 interface RequisitionModalState {
   isOpen: boolean;
@@ -39,7 +42,7 @@ interface AppStateValue {
   setSelectedDivision: (div: string) => void;
   isAudioMuted: boolean;
   toggleAudioMute: () => void;
-  notifications: DonorNotification[];
+  notifications: NotificationDto[];
   unreadCount: number;
   isNotificationsOpen: boolean;
   openNotifications: () => void;
@@ -66,10 +69,25 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Kept across the remount a language switch causes, so switching language keeps the session's data.
   const [selectedDivision, setSelectedDivision] = usePersistentState<string>('selectedDivision', 'Dhaka Central');
   const [isAudioMuted, setIsAudioMuted] = usePersistentState<boolean>('isAudioMuted', false);
-  const [notifications, setNotifications] = usePersistentState<DonorNotification[]>('notifications', INITIAL_NOTIFICATIONS);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [requisitionModal, setRequisitionModal] = useState<RequisitionModalState>({ isOpen: false });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // The donor this browser is identified as (same pattern as DonorRegistrationScreen/DonorPassportScreen,
+  // WP3/WP5): a remembered manage-token donor, or a signed-in person's own donor profile. Nobody
+  // identified as a donor means no notifications, never sample ones.
+  const { user } = useAuth();
+  const [rememberedDonorId, setRememberedDonorId] = useState<string | null>(null);
+  useEffect(() => {
+    setRememberedDonorId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
+  }, []);
+  const mineDonorQuery = useGetDonorsQuery({ mine: true, pageSize: 1 }, { skip: !user });
+  const activeDonorId = rememberedDonorId ?? mineDonorQuery.data?.donors[0]?.id ?? null;
+
+  const notificationsQuery = useGetDonorNotificationsQuery({ id: activeDonorId ?? '' }, { skip: !activeDonorId });
+  const [markRead] = useMarkNotificationReadMutation();
+  const notifications = activeDonorId ? notificationsQuery.data?.notifications ?? [] : [];
+  const unreadCount = activeDonorId ? notificationsQuery.data?.unreadCount ?? 0 : 0;
 
   const navigate = useCallback(
     (screen: ScreenId) => {
@@ -102,20 +120,9 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  const handleSosCreated = ({ bloodGroup, place, bags, patientName }: SosCreatedInfo) => {
-    // Also trigger an emergency notification in the system
-    const newNotif: DonorNotification = {
-      id: `NOTIF-${Date.now().toString().slice(-4)}`,
-      title: `🚨 জরুরি ${bloodGroup} রক্তের এসওএস ব্রডকাস্ট!`,
-      message: `${place}-এ ${bags} ব্যাগ ${bloodGroup} রক্ত প্রয়োজন। রোগী: ${patientName}`,
-      timestamp: 'এইমাত্র',
-      type: 'urgent_request',
-      read: false,
-      bloodGroup,
-      hospital: place,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
+  const handleSosCreated = ({ bloodGroup, place }: SosCreatedInfo) => {
+    // Real compatible donors are matched and notified server-side (POST /api/sos, WP4); this is just
+    // the poster's own toast, not a notification.
     showToast(t.toast.sosBroadcast(bloodGroup, place));
   };
 
@@ -124,11 +131,15 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const markNotificationRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    if (!activeDonorId) return;
+    markRead({ donorId: activeDonorId, id });
   };
 
   const clearAllNotifications = () => {
-    setNotifications([]);
+    if (!activeDonorId) return;
+    for (const notification of notifications) {
+      if (!notification.isRead) markRead({ donorId: activeDonorId, id: notification.id });
+    }
   };
 
   const value: AppStateValue = {
@@ -139,7 +150,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     isAudioMuted,
     toggleAudioMute,
     notifications,
-    unreadCount: notifications.filter((n) => !n.read).length,
+    unreadCount,
     isNotificationsOpen,
     openNotifications: () => setIsNotificationsOpen(true),
     closeNotifications: () => setIsNotificationsOpen(false),
