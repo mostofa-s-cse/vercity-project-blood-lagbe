@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
   const { getActiveAlertText } = useAlert();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const activeAlertMessage = getActiveAlertText(language);
 
   const allNavItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
@@ -227,22 +227,29 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Sign in with Google (only when Supabase is configured) */}
           <AuthButton onNavigate={onNavigate} />
 
-          {/* User Profile Avatar Pill */}
+          {/* User Profile Avatar Pill — links to the Donor Passport. No fake blood-group badge: this
+              header has no real donor lookup, and a made-up group is worse than none. */}
           <button
             onClick={() => onNavigate('donor-passport')}
             className="flex items-center gap-2 pl-0.5 group cursor-pointer shrink-0"
             title={t.header.viewPassportTitle}
           >
-            <div className="relative">
+            {user?.avatarUrl ? (
               <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI"
+                src={user.avatarUrl}
                 alt={t.header.profileAlt}
+                referrerPolicy="no-referrer"
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 group-hover:ring-red-500 transition-all"
               />
-              <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[9px] font-black px-1 rounded-full border border-white">
-                O+
-              </span>
-            </div>
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-slate-900 ring-2 ring-slate-200 group-hover:ring-red-500 transition-all flex items-center justify-center">
+                {user?.name || user?.email ? (
+                  <span className="text-xs font-black text-white">{(user.name ?? user.email ?? '?')[0].toUpperCase()}</span>
+                ) : (
+                  <span className="material-symbols-outlined text-base text-white">person</span>
+                )}
+              </div>
+            )}
           </button>
 
           {/* Mobile Hamburger Menu Button */}

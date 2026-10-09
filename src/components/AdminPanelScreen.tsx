@@ -94,7 +94,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     getActiveAlertText,
     getActiveRadiusText,
   } = useAlert();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  const adminDisplayName = user?.name ?? user?.email ?? t.admin.header.adminName;
 
   const [selectedTab, setActiveTab] = useState<AdminTab>('overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -519,19 +520,26 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             <span className="hidden sm:inline">{t.admin.header.sosBroadcast}</span>
           </button>
 
-          {/* Admin User Avatar */}
+          {/* Admin User Avatar — the real signed-in person, not a fixed stock photo/name. */}
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
             <div className="relative">
-              <img
-                src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80"
-                alt={t.admin.header.adminAlt}
-                className="w-8 h-8 rounded-xl object-cover border border-slate-700"
-              />
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={t.admin.header.adminAlt}
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-xl object-cover border border-slate-700"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                  <span className="text-xs font-black text-white">{adminDisplayName[0].toUpperCase()}</span>
+                </div>
+              )}
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-950 rounded-full" />
             </div>
             <div className="hidden xl:block text-left">
               <span className="text-xs font-bold text-white block leading-tight">
-                {t.admin.header.adminName}
+                {adminDisplayName}
               </span>
               <span className="text-[10px] text-slate-400 block leading-tight">
                 {t.admin.header.superAdmin}
@@ -708,20 +716,27 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </div>
           </div>
 
-          {/* Admin User Profile Card at Bottom of Sidebar */}
+          {/* Admin User Profile Card at Bottom of Sidebar — the real signed-in person. */}
           <div className="pt-4 mt-6 border-t border-slate-800/80 flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative shrink-0">
-                <img
-                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80"
-                  alt={t.admin.header.adminAlt}
-                  className="w-9 h-9 rounded-xl object-cover border border-slate-700"
-                />
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={t.admin.header.adminAlt}
+                    referrerPolicy="no-referrer"
+                    className="w-9 h-9 rounded-xl object-cover border border-slate-700"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                    <span className="text-xs font-black text-white">{adminDisplayName[0].toUpperCase()}</span>
+                  </div>
+                )}
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-950 rounded-full" />
               </div>
               <div className="truncate">
                 <span className="text-xs font-bold text-white block truncate">
-                  {t.admin.header.adminName}
+                  {adminDisplayName}
                 </span>
                 <span className="text-[10px] text-slate-400 block truncate">
                   {t.admin.sidebar.adminRole}
