@@ -205,7 +205,6 @@ export const Header: React.FC<HeaderProps> = ({
             title={t.header.langToggleTitle}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 shadow-sm transition-all cursor-pointer active:scale-95"
           >
-            <span className="material-symbols-outlined text-base text-red-600">translate</span>
             <span className="font-extrabold">{t.header.langToggle}</span>
             <span className="px-1 py-0.2 rounded bg-red-100 text-red-700 text-[10px] font-black uppercase">
               {language.toUpperCase()}
