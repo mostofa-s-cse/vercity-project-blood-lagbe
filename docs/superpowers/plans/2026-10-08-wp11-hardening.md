@@ -243,12 +243,20 @@ No code changes — a documented confirmation (see "What exists today") plus a s
       build). Commit.
 
 ### Task 6: GitHub Actions CI
-- [ ] `.github/workflows/ci.yml`: `checks` job (zero env vars) and `e2e` job (Postgres service
-      container, migrate, seed, build, Playwright) per Contracts.
-- [ ] Push the branch (or open a throwaway PR) and confirm both jobs actually go green on GitHub's
-      runners, not just "looks right" from reading the YAML — a workflow file that has never run is not
-      verified.
-- [ ] Commit.
+- [x] `.github/workflows/ci.yml`: `checks` job (`npm ci`/lint/test/build, zero env vars) and `e2e` job
+      (Postgres service container; demo-mode specs first since they need no database, then
+      migrate/seed/build/real-db specs) per Contracts. Also added `workflow_dispatch` (useful for manual
+      re-runs beyond just this verification).
+- [x] **Actually confirmed green on GitHub's own runners, not just read from the YAML**: `workflow_dispatch`
+      needs the workflow file to exist on the default branch first (a GitHub limitation — a brand-new
+      workflow isn't dispatchable until it's been merged to the default branch at least once), which it
+      wasn't yet. Temporarily added this feature branch to the `push` trigger, pushed, watched the run
+      with `gh run watch` — **both jobs passed**: `lint, test, build (zero environment variables)` in 45s,
+      `Playwright end-to-end tests` (Postgres service container, migrate, seed, build, both demo-mode and
+      real-db specs) in 1m57s. Reverted the trigger back to `[main, prod]` once confirmed. (One harmless
+      upstream annotation: `actions/checkout@v4`/`actions/setup-node@v4` target Node 20 internally, which
+      GitHub is forcing to Node 24 on its runners — unrelated to this app's own `node-version: '22'`.)
+- [x] Commit.
 
 ### Task 7: Documentation
 - [ ] `docs/HANDOFF.md` progress log (rate limiting's honest Vercel caveat stays visible, not buried);
