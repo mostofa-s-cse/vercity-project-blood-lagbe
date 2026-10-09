@@ -1,8 +1,10 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { ScreenId } from '../types/blood';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { safeNextPath } from '../lib/safeRedirect';
+import { localizedPath } from '../utils/routes';
 
 interface NoAccessScreenProps {
   need: 'admin' | 'user';
@@ -11,14 +13,17 @@ interface NoAccessScreenProps {
 
 /** Shown when someone opens a page they may not see (the proxy sends them here). */
 export const NoAccessScreen: React.FC<NoAccessScreenProps> = ({ need, onNavigate }) => {
-  const { t } = useLanguage();
-  const { configured, loading, user, signInWithGoogle, signOut } = useAuth();
+  const { t, language } = useLanguage();
+  const router = useRouter();
+  const { configured, loading, user, signOut } = useAuth();
   const a = t.access;
 
-  // Go back to the page they were trying to open after signing in.
+  // The sign-in screen (email/password or Google), not straight into Google — go back to the page
+  // they were trying to open once they're actually signed in.
   const signIn = () => {
     const from = new URLSearchParams(window.location.search).get('from');
-    void signInWithGoogle(safeNextPath(from, window.location.pathname));
+    const next = safeNextPath(from, window.location.pathname);
+    router.push(`${localizedPath(language, '/sign-in')}?next=${encodeURIComponent(next)}`);
   };
 
   const title = need === 'admin' ? a.adminTitle : a.userTitle;
