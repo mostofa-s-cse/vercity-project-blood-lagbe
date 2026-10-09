@@ -94,7 +94,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     getActiveAlertText,
     getActiveRadiusText,
   } = useAlert();
-  const { can, user } = useAuth();
+  const { can, user, signOut } = useAuth();
   const adminDisplayName = user?.name ?? user?.email ?? t.admin.header.adminName;
 
   const [selectedTab, setActiveTab] = useState<AdminTab>('overview');
@@ -744,18 +744,30 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                sound.playTap();
-                showToast(
-                  t.admin.toasts.sessionActive
-                );
-              }}
-              title={t.admin.sidebar.sessionVerified}
-              className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-base">verified_user</span>
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => {
+                  sound.playTap();
+                  showToast(t.admin.toasts.sessionActive);
+                }}
+                title={t.admin.sidebar.sessionVerified}
+                className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">verified_user</span>
+              </button>
+              {user && (
+                <button
+                  onClick={() => {
+                    sound.playTap();
+                    void signOut().then(() => onNavigate('emergency-hub'));
+                  }}
+                  title={t.header.signOut}
+                  className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-base">logout</span>
+                </button>
+              )}
+            </div>
           </div>
         </aside>
 
