@@ -10,8 +10,6 @@ export const header = {
   langToggle: 'বাংলা',
   langToggleTitle: 'বাংলায় দেখুন',
   notificationsTitle: 'Emergency Blood Alerts',
-  viewPassportTitle: 'View Lifeline Donor Passport',
-  profileAlt: 'Profile',
   toggleMenu: 'Toggle Menu',
   badgeNew: 'NEW',
   nav: {

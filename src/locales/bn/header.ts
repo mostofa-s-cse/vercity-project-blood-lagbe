@@ -12,8 +12,6 @@ export const header: Header = {
   langToggle: 'English',
   langToggleTitle: 'Switch to English',
   notificationsTitle: 'জরুরি রক্ত বিজ্ঞপ্তি',
-  viewPassportTitle: 'লাইফলাইন ডোনার পাসপোর্ট দেখুন',
-  profileAlt: 'প্রোফাইল',
   toggleMenu: 'মেনু খুলুন / বন্ধ করুন',
   badgeNew: 'নতুন',
   nav: {

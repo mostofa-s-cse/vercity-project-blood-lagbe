@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
   const { getActiveAlertText } = useAlert();
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const activeAlertMessage = getActiveAlertText(language);
 
   const allNavItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
@@ -224,33 +224,10 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="tracking-wide uppercase">{t.header.sosTriggerBtn}</span>
           </button>
 
-          {/* Sign in with Google (only when Supabase is configured) */}
+          {/* Sign in with Google/email, or the real signed-in person's avatar + Sign out. The "Donor
+              Passport" nav item (above) is already the way there, so this doesn't duplicate it with a
+              second avatar. */}
           <AuthButton onNavigate={onNavigate} />
-
-          {/* User Profile Avatar Pill — links to the Donor Passport. No fake blood-group badge: this
-              header has no real donor lookup, and a made-up group is worse than none. */}
-          <button
-            onClick={() => onNavigate('donor-passport')}
-            className="flex items-center gap-2 pl-0.5 group cursor-pointer shrink-0"
-            title={t.header.viewPassportTitle}
-          >
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={t.header.profileAlt}
-                referrerPolicy="no-referrer"
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 group-hover:ring-red-500 transition-all"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-slate-900 ring-2 ring-slate-200 group-hover:ring-red-500 transition-all flex items-center justify-center">
-                {user?.name || user?.email ? (
-                  <span className="text-xs font-black text-white">{(user.name ?? user.email ?? '?')[0].toUpperCase()}</span>
-                ) : (
-                  <span className="material-symbols-outlined text-base text-white">person</span>
-                )}
-              </div>
-            )}
-          </button>
 
           {/* Mobile Hamburger Menu Button */}
           <button
