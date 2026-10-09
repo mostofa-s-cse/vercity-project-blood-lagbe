@@ -84,5 +84,6 @@ when unset, never a crash.
 - [`docs/SPEC-MATCH-PLAN.md`](docs/SPEC-MATCH-PLAN.md) — the long-range roadmap and how closely the
   codebase matches the original spec, work package by work package.
 - [`docs/SETUP-SUPABASE.md`](docs/SETUP-SUPABASE.md) — setting up Supabase, Google sign-in, and roles.
+- [`docs/EVALUATION.md`](docs/EVALUATION.md) — final self-assessment against the original spec.
 - [`CLAUDE.md`](CLAUDE.md) — conventions for this codebase (written for an AI coding assistant, but
   equally useful as a terse contributor guide).
