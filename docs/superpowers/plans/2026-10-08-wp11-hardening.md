@@ -188,10 +188,29 @@ No code changes — a documented confirmation (see "What exists today") plus a s
 - [x] Commit (docs-only).
 
 ### Task 4: Responsive fix
-- [ ] Measure `Header.tsx` at exactly 390px in the browser (Playwright `browser_resize`), confirm which
-      row actually overflows, fix it there.
-- [ ] 360px sweep over the screens listed in Contracts; fix anything genuinely broken found this way.
-- [ ] Gates (`lint`/`test`/`build`). Commit.
+- [x] Measured `Header.tsx` at exactly 390px (`document.documentElement.scrollWidth` vs `clientWidth`,
+      more reliable than eyeballing a screenshot — and this sandbox's Playwright can't actually take one
+      here: the header has several infinite CSS animations (the alert marquee, the SOS button's
+      `animate-pulse`, the bell badge's `animate-bounce`), which makes Playwright's screenshot
+      "wait for stable" pre-check hang forever; worked entirely from DOM measurements and accessibility
+      snapshots instead). Found **two real overflow sources**, confirmed by elimination (not assumed):
+      1. The "Main Brand & Action Bar" row (`justify-between`, no `flex-wrap`, every child `shrink-0`) —
+         exactly as suspected in "What exists today". Fixed with `flex-wrap` on that row and on the
+         right-actions group (`justify-end` instead of implicit start, so it still reads right-aligned
+         when it does wrap).
+      2. **A second bug the initial diagnosis didn't predict**: even after the row could wrap, the brand
+         button's subtitle ("Emergency Lifeline & Centralized Blood Rescue Network") still overflowed by
+         exactly 7px at 360px width specifically. Classic nested-flexbox trap: a `shrink-0` button wrapping
+         a `flex-col` with no `min-w-0` lets the subtitle's natural unwrapped width become the button's
+         effective minimum, instead of letting it truncate. Fixed by removing `shrink-0` from the brand
+         wrapper/button (keeping it only on the fixed-size logo icon, where it belongs), adding `min-w-0`
+         to the text column, and `truncate` on the subtitle span.
+- [x] 360px **and** 390px sweep, **in both languages**, over Emergency Hub, Donor Directory, Create SOS,
+      Request Tracking, Donor Register, Hospitals, Donor Passport, Sign-in (16 page/width combinations):
+      `scrollWidth === clientWidth` on every single one after the fix (was `scrollWidth - clientWidth =
+      7` on every page before it, since the subtitle bug lives in the shared header, not per-screen
+      content).
+- [x] Gates clean (`lint`, 242 tests, `build`). Commit.
 
 ### Task 5: Playwright E2E tests
 - [ ] `@playwright/test` installed, `playwright.config.ts`, `e2e/demo-mode.spec.ts` (no database),
