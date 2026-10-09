@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js';
 import { createBrowserSupabase } from '../lib/supabase/client';
 import { ADMIN_AREA_PERMISSIONS, type Permission } from '../lib/permissions';
 import { can as claimsCan, canManageHospital as claimsCanManageHospital } from '../lib/roles';
+import { normalizePhoneForAuth } from '../lib/phoneAuth';
 
 export interface AuthUser {
   id: string;
@@ -38,6 +39,12 @@ interface AuthContextType {
   /** `error` is a short Supabase error code (e.g. `user_already_exists`), or null. Never throws. */
   signUpWithEmail: (email: string, password: string, next?: string) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithPhone: (phone: string, password: string) => Promise<{ error: string | null }>;
+  /**
+   * No SMS, no OTP (see src/lib/phoneAuth.ts): creates the account server-side already phone-confirmed,
+   * then signs in with the same password. Never has a "check your phone" step, unlike email sign-up.
+   */
+  signUpWithPhone: (phone: string, password: string, name?: string) => Promise<{ error: string | null }>;
   /** Always resolves the same way whether or not the email has an account (Supabase's own anti-enumeration behaviour). */
   requestPasswordReset: (email: string, next?: string) => Promise<{ error: string | null }>;
   /** Only works while the browser holds the short-lived recovery session the reset-password link's callback created. */
@@ -132,6 +139,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [supabase]
   );
 
+  const signUpWithPhone = useCallback(
+    async (phone: string, password: string, name?: string) => {
+      if (!supabase) return { error: 'not_configured' };
+      const response = await fetch('/api/auth/signup-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password, name }),
+      });
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        const error = body && typeof body === 'object' && 'error' in body ? String((body as { error: unknown }).error) : 'sign_up_failed';
+        return { error };
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({ phone: normalizePhoneForAuth(phone), password });
+      if (error) return { error: error.code ?? 'sign_in_failed' };
+      setUser(toAuthUser(data.user));
+      return { error: null };
+    },
+    [supabase]
+  );
+
+  const signInWithPhone = useCallback(
+    async (phone: string, password: string) => {
+      if (!supabase) return { error: 'not_configured' };
+      const { data, error } = await supabase.auth.signInWithPassword({ phone: normalizePhoneForAuth(phone), password });
+      if (error) return { error: error.code ?? 'sign_in_failed' };
+      setUser(toAuthUser(data.user));
+      return { error: null };
+    },
+    [supabase]
+  );
+
   const requestPasswordReset = useCallback(
     async (email: string, next?: string) => {
       if (!supabase) return { error: 'not_configured' };
@@ -180,6 +219,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         signUpWithEmail,
         signInWithEmail,
+        signInWithPhone,
+        signUpWithPhone,
         requestPasswordReset,
         updatePassword,
       }}

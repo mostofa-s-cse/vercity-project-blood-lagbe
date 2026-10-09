@@ -1,6 +1,8 @@
-import { hashToken, tokenMatches } from './manageToken';
-import { can } from './roles';
-import { getClaims } from './supabase/server';
+import { hashToken, tokenMatches } from './manageToken.ts';
+import { can } from './roles.ts';
+import { getClaims } from './supabase/server.ts';
+
+export { canClaimDonor } from './manageToken.ts';
 
 /** The header a person without an account uses to manage the donor profile they registered. */
 export const MANAGE_TOKEN_HEADER = 'x-manage-token';

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { safeNextPath } from '../lib/safeRedirect';
 import { localizedPath } from '../utils/routes';
+import { isValidBdPhone } from '../utils/phone';
 
 interface SignInScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -19,10 +20,12 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
   const { t, language } = useLanguage();
   const uid = useId();
   const router = useRouter();
-  const { configured, loading, user, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { configured, loading, user, signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithPhone, signUpWithPhone } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -52,8 +55,13 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
     setFormError(null);
 
     const trimmedEmail = email.trim().toLowerCase();
-    if (!EMAIL_RE.test(trimmedEmail)) {
+    const trimmedPhone = phone.trim();
+    if (method === 'email' && !EMAIL_RE.test(trimmedEmail)) {
       setFormError(t.auth.invalidEmail);
+      return;
+    }
+    if (method === 'phone' && !isValidBdPhone(trimmedPhone)) {
+      setFormError(t.register.mobileError);
       return;
     }
     if (mode === 'signup' && password !== confirmPassword) {
@@ -66,20 +74,21 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
     // server-side permission check on the target route), and this component unmounts with it. Clearing
     // it early would re-enable the button and make the wait look like nothing happened.
     if (mode === 'signup') {
-      const result = await signUpWithEmail(trimmedEmail, password, nextPath());
+      const result =
+        method === 'email' ? await signUpWithEmail(trimmedEmail, password, nextPath()) : await signUpWithPhone(trimmedPhone, password);
       if (result.error) {
         setFormError(errorText(result.error));
         setSubmitting(false);
         return;
       }
-      if (result.needsEmailConfirmation) {
+      if ('needsEmailConfirmation' in result && result.needsEmailConfirmation) {
         setNeedsEmailConfirmation(true);
         setSubmitting(false);
         return;
       }
       router.replace(nextPath());
     } else {
-      const result = await signInWithEmail(trimmedEmail, password);
+      const result = method === 'email' ? await signInWithEmail(trimmedEmail, password) : await signInWithPhone(trimmedPhone, password);
       if (result.error) {
         setFormError(errorText(result.error));
         setSubmitting(false);
@@ -117,20 +126,58 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
         </h1>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <div>
-            <label htmlFor={emailId} className={labelClass}>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMethod('email')}
+              className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
+                method === 'email' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
+              }`}
+            >
               {t.auth.emailLabel}
-            </label>
-            <input
-              id={emailId}
-              type="email"
-              autoComplete="email"
-              placeholder={t.auth.emailPlaceholder}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-            />
+            </button>
+            <button
+              type="button"
+              onClick={() => setMethod('phone')}
+              className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
+                method === 'phone' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
+              }`}
+            >
+              {t.register.claimPhoneMethod}
+            </button>
           </div>
+
+          {method === 'email' ? (
+            <div>
+              <label htmlFor={emailId} className={labelClass}>
+                {t.auth.emailLabel}
+              </label>
+              <input
+                id={emailId}
+                type="email"
+                autoComplete="email"
+                placeholder={t.auth.emailPlaceholder}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          ) : (
+            <div>
+              <label htmlFor={emailId} className={labelClass}>
+                {t.register.mobile}
+              </label>
+              <input
+                id={emailId}
+                type="tel"
+                autoComplete="tel"
+                placeholder={t.register.mobilePlaceholder}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          )}
 
           <div>
             <label htmlFor={passwordId} className={labelClass}>
@@ -176,7 +223,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
 
           <button
             type="submit"
-            disabled={submitting || !email || !password}
+            disabled={submitting || !(method === 'email' ? email : phone) || !password}
             className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-extrabold text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             {submitting && <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>}

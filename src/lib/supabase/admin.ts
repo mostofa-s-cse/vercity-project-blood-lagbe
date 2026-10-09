@@ -1,6 +1,7 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import type { AuthAdmin } from '../grantService';
+import type { PhoneAuthAdmin } from '../phoneAuth';
 import { getSupabaseEnv } from './env';
 
 /** True when the service key is set. Server-only: this file can never be imported by browser code. */
@@ -25,4 +26,13 @@ export function createAuthAdmin(): AuthAdmin | null {
       if (error) throw new Error(`Supabase could not update the user: ${error.message}`);
     },
   };
+}
+
+/** Admin access for creating phone-based accounts (`src/lib/phoneAuth.ts`). Null when not configured. */
+export function createPhoneAuthAdmin(): PhoneAuthAdmin | null {
+  const env = getSupabaseEnv();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env || !serviceKey) return null;
+  const client = createClient(env.url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  return client.auth.admin;
 }

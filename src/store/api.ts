@@ -197,6 +197,16 @@ export function createApiSlice({
         invalidatesTags: ['Donor'],
       }),
 
+      /** Links an anonymously-registered donor to the account the caller just signed into. */
+      claimDonor: build.mutation<{ donor: DonorDto }, { id: string; token?: string }>({
+        query: ({ id, token }) => ({
+          url: `donors/${encodeURIComponent(id)}/claim`,
+          method: 'POST',
+          headers: donorTokenHeaders(id, token),
+        }),
+        invalidatesTags: ['Donor'],
+      }),
+
       getRequests: build.query<RequestListResponse, RequestsQuery | void>({
         query: (args) => {
           const a = (args ?? {}) as RequestsQuery;
@@ -312,6 +322,7 @@ export const {
   useGetAuditLogQuery,
   useGetDonorQuery,
   useUpdateDonorMutation,
+  useClaimDonorMutation,
   useGetDonorDonationsQuery,
   useGetOrganizationsQuery,
   useApplyOrganizationMutation,

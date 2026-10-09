@@ -48,6 +48,7 @@ export const auth = {
     same_password: 'That is already your current password.',
     not_configured: 'Sign-in is not available right now.',
     sign_up_failed: 'Could not create your account. Please try again.',
+    phone_taken: 'An account with this phone number already exists. Try signing in instead.',
     sign_in_failed: 'Could not sign in. Please try again.',
     update_password_failed: 'Could not update your password. Please try again.',
   },

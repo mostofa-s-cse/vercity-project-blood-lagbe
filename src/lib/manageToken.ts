@@ -20,3 +20,14 @@ export function tokenMatches(token: string | null | undefined, storedHash: strin
   if (!token || !storedHash || !/^[0-9a-f]{64}$/.test(storedHash)) return false;
   return timingSafeEqual(Buffer.from(hashToken(token), 'hex'), Buffer.from(storedHash, 'hex'));
 }
+
+/**
+ * Whether the holder of this manage token may link the donor to the account they just signed into.
+ * Only when nobody owns it yet, so a leaked/guessed token can't steal an already-claimed profile.
+ */
+export function canClaimDonor(
+  donor: { manageTokenHash: string | null; userId: string | null },
+  token: string | null
+): boolean {
+  return donor.userId === null && tokenMatches(token, donor.manageTokenHash);
+}

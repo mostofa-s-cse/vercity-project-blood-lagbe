@@ -2,7 +2,7 @@ import React, { useEffect, useId, useMemo, useState } from 'react';
 import { ScreenId, Donor, BloodGroup } from '../types/blood';
 import { sound } from '../utils/audio';
 import { isValidBdPhone } from '../utils/phone';
-import { useGetDonorQuery, useGetDonorsQuery, useRegisterDonorMutation, useUpdateDonorMutation } from '../store/api';
+import { useClaimDonorMutation, useGetDonorQuery, useGetDonorsQuery, useRegisterDonorMutation, useUpdateDonorMutation } from '../store/api';
 import { isDatabaseOff } from '../store/errors';
 import { browserStorage as donorStorage, readMyDonorProfiles, rememberDonor } from '../lib/myDonorProfile';
 import type { DonorRegisteredInfo } from '../context/AppStateContext';
@@ -48,10 +48,26 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   // A signed-in person's own donor profile, for when this specific browser has no remembered id (a new
   // device, cleared storage, or registered from a different browser) — same fallback DonorPassportScreen
   // uses, so a signed-in donor always sees "My profile" instead of a blank form to fill in again.
-  const { user } = useAuth();
+  const { user, signUpWithEmail, signUpWithPhone } = useAuth();
   const mineQuery = useGetDonorsQuery({ mine: true, pageSize: 1 }, { skip: !user });
   const [showForm, setShowForm] = useState(false);
   const activeId = showForm ? null : rememberedId ?? mineQuery.data?.donors[0]?.id ?? null;
+
+  // Links an anonymously-registered donor (this browser's manage token) to an account the moment one
+  // becomes available — right after the optional "save to an account" form below succeeds, or later if
+  // they come back signed in on their own. Fires at most once per mount; a rejection (already linked,
+  // wrong token) is silently fine, not an error worth surfacing here.
+  const [claimDonor] = useClaimDonorMutation();
+  const [claimAttempted, setClaimAttempted] = useState(false);
+  const [claimLinked, setClaimLinked] = useState(false);
+  useEffect(() => {
+    if (!user || claimAttempted || !rememberedId) return;
+    setClaimAttempted(true);
+    void claimDonor({ id: rememberedId })
+      .unwrap()
+      .then(() => setClaimLinked(true))
+      .catch(() => undefined);
+  }, [user, rememberedId, claimAttempted, claimDonor]);
 
   // Required fields
   const [registerDonor] = useRegisterDonorMutation();
@@ -82,6 +98,40 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
 
   const [submittedDonor, setSubmittedDonor] = useState<Donor | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  // Optional, shown only on the success card for someone not signed in: turns the anonymous manage-token
+  // profile above into a real account, so it can be reached from any device (see claimDonor effect above).
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const [claimMethod, setClaimMethod] = useState<'email' | 'phone'>('email');
+  const [claimEmail, setClaimEmail] = useState('');
+  const [claimPhone, setClaimPhone] = useState('');
+  const [claimPassword, setClaimPassword] = useState('');
+  const [claimSubmitting, setClaimSubmitting] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimNeedsEmailConfirmation, setClaimNeedsEmailConfirmation] = useState(false);
+  const claimCanSubmit =
+    claimPassword.length >= 6 && (claimMethod === 'email' ? EMAIL_RE.test(claimEmail.trim()) : isValidBdPhone(claimPhone));
+
+  const handleClaimSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimCanSubmit) return;
+    setClaimError(null);
+    setClaimSubmitting(true);
+    try {
+      const result =
+        claimMethod === 'email'
+          ? await signUpWithEmail(claimEmail.trim().toLowerCase(), claimPassword)
+          : await signUpWithPhone(claimPhone.trim(), claimPassword, name.trim() || undefined);
+      if (result.error) {
+        setClaimError(result.error);
+        return;
+      }
+      if ('needsEmailConfirmation' in result && result.needsEmailConfirmation) setClaimNeedsEmailConfirmation(true);
+      // Otherwise the account now has a session: the claimDonor effect above links it automatically.
+    } finally {
+      setClaimSubmitting(false);
+    }
+  };
 
   const phoneValid = isValidBdPhone(phone);
   const showPhoneError = phoneTouched && !phoneValid;
@@ -147,7 +197,11 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       turnstileToken: turnstileToken ?? undefined,
     })
       .unwrap()
-      .then((saved) => rememberDonor(donorStorage(), { id: saved.id, token: saved.manageToken }))
+      .then((saved) => {
+        rememberDonor(donorStorage(), { id: saved.id, token: saved.manageToken });
+        // So the optional "save to an account" section below can claim it without a reload.
+        setRememberedId(saved.id);
+      })
       .catch(() => undefined);
 
     onRegisterDonor({ name: createdDonor.name, bloodGroup });
@@ -212,6 +266,82 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
               </div>
             </dl>
           </div>
+
+          {!user && (
+            <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-col gap-3 text-left">
+              <div>
+                <h3 className="text-sm font-black text-slate-900">{t.register.claimTitle}</h3>
+                <p className="text-xs text-slate-600 mt-0.5">{t.register.claimDesc}</p>
+              </div>
+              {claimNeedsEmailConfirmation ? (
+                <p className="text-xs font-semibold text-emerald-700">{t.register.claimCheckEmail}</p>
+              ) : (
+                <form onSubmit={(e) => void handleClaimSubmit(e)} className="flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setClaimMethod('email')}
+                      className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
+                        claimMethod === 'email' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
+                      }`}
+                    >
+                      {t.auth.emailLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setClaimMethod('phone')}
+                      className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
+                        claimMethod === 'phone' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
+                      }`}
+                    >
+                      {t.register.claimPhoneMethod}
+                    </button>
+                  </div>
+                  {claimMethod === 'email' ? (
+                    <input
+                      type="email"
+                      value={claimEmail}
+                      onChange={(e) => setClaimEmail(e.target.value)}
+                      placeholder={t.auth.emailPlaceholder}
+                      className={inputClass}
+                    />
+                  ) : (
+                    <input
+                      type="tel"
+                      value={claimPhone}
+                      onChange={(e) => setClaimPhone(e.target.value)}
+                      placeholder={t.register.claimPhonePlaceholder}
+                      className={inputClass}
+                    />
+                  )}
+                  <input
+                    type="password"
+                    value={claimPassword}
+                    onChange={(e) => setClaimPassword(e.target.value)}
+                    placeholder={t.auth.passwordLabel}
+                    className={inputClass}
+                  />
+                  {claimError && (
+                    <p className="text-xs font-semibold text-red-600">
+                      {(t.auth.errors as Record<string, string>)[claimError] ?? t.auth.errors.sign_up_failed}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={!claimCanSubmit || claimSubmitting}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    {claimSubmitting ? t.auth.signingUp : t.register.claimSubmit}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+          {claimLinked && (
+            <p className="w-full text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+              {t.register.claimLinked}
+            </p>
+          )}
 
           <div className="w-full flex flex-col sm:flex-row gap-3 mt-2">
             <button

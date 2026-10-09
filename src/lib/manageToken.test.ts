@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hashToken, newManageToken, tokenMatches } from './manageToken.ts';
+import { canClaimDonor, hashToken, newManageToken, tokenMatches } from './manageToken.ts';
 
 test('tokens are long, unique and URL-safe', () => {
   const tokens = new Set(Array.from({ length: 200 }, () => newManageToken()));
@@ -38,4 +38,23 @@ test('wrong, empty and missing tokens or hashes never match', () => {
   assert.equal(tokenMatches(token, 'short'), false);
   // The stored hash itself is not a valid token.
   assert.equal(tokenMatches(stored, stored), false);
+});
+
+test('canClaimDonor: matching token and no owner yet -> true', () => {
+  const token = newManageToken();
+  assert.equal(canClaimDonor({ manageTokenHash: hashToken(token), userId: null }, token), true);
+});
+
+test('canClaimDonor: already linked to someone -> false, even with the right token', () => {
+  const token = newManageToken();
+  assert.equal(canClaimDonor({ manageTokenHash: hashToken(token), userId: 'some-profile-id' }, token), false);
+});
+
+test('canClaimDonor: wrong token -> false', () => {
+  const token = newManageToken();
+  assert.equal(canClaimDonor({ manageTokenHash: hashToken(token), userId: null }, newManageToken()), false);
+});
+
+test('canClaimDonor: donor was never given a manage token -> false', () => {
+  assert.equal(canClaimDonor({ manageTokenHash: null, userId: null }, newManageToken()), false);
 });
