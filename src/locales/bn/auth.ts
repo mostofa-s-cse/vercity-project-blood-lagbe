@@ -13,6 +13,8 @@ export const auth: Auth = {
   continueWithGoogle: 'Google দিয়ে চালিয়ে যান',
   signInSubmit: 'সাইন ইন',
   signUpSubmit: 'অ্যাকাউন্ট তৈরি করুন',
+  signingIn: 'সাইন ইন হচ্ছে…',
+  signingUp: 'অ্যাকাউন্ট তৈরি হচ্ছে…',
   forgotPasswordLink: 'পাসওয়ার্ড ভুলে গেছেন?',
   invalidEmail: 'সঠিক ইমেইল ঠিকানা লিখুন।',
   passwordsDontMatch: 'পাসওয়ার্ড দুটি মিলছে না।',

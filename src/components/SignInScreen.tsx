@@ -57,28 +57,30 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
     }
 
     setSubmitting(true);
-    try {
-      if (mode === 'signup') {
-        const result = await signUpWithEmail(trimmedEmail, password, nextPath());
-        if (result.error) {
-          setFormError(errorText(result.error));
-          return;
-        }
-        if (result.needsEmailConfirmation) {
-          setNeedsEmailConfirmation(true);
-          return;
-        }
-        router.replace(nextPath());
-      } else {
-        const result = await signInWithEmail(trimmedEmail, password);
-        if (result.error) {
-          setFormError(errorText(result.error));
-          return;
-        }
-        router.replace(nextPath());
+    // Not reset to false on success: the page is about to navigate away (possibly after a slower
+    // server-side permission check on the target route), and this component unmounts with it. Clearing
+    // it early would re-enable the button and make the wait look like nothing happened.
+    if (mode === 'signup') {
+      const result = await signUpWithEmail(trimmedEmail, password, nextPath());
+      if (result.error) {
+        setFormError(errorText(result.error));
+        setSubmitting(false);
+        return;
       }
-    } finally {
-      setSubmitting(false);
+      if (result.needsEmailConfirmation) {
+        setNeedsEmailConfirmation(true);
+        setSubmitting(false);
+        return;
+      }
+      router.replace(nextPath());
+    } else {
+      const result = await signInWithEmail(trimmedEmail, password);
+      if (result.error) {
+        setFormError(errorText(result.error));
+        setSubmitting(false);
+        return;
+      }
+      router.replace(nextPath());
     }
   };
 
@@ -170,9 +172,12 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
           <button
             type="submit"
             disabled={submitting || !email || !password}
-            className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-extrabold text-sm transition-colors cursor-pointer"
+            className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-extrabold text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
-            {mode === 'signin' ? t.auth.signInSubmit : t.auth.signUpSubmit}
+            {submitting && <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>}
+            {submitting
+              ? mode === 'signin' ? t.auth.signingIn : t.auth.signingUp
+              : mode === 'signin' ? t.auth.signInSubmit : t.auth.signUpSubmit}
           </button>
         </form>
 

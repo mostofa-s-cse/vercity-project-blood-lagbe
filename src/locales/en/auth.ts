@@ -11,6 +11,8 @@ export const auth = {
   continueWithGoogle: 'Continue with Google',
   signInSubmit: 'Sign in',
   signUpSubmit: 'Create account',
+  signingIn: 'Signing in…',
+  signingUp: 'Creating account…',
   forgotPasswordLink: 'Forgot password?',
   invalidEmail: 'Enter a valid email address.',
   passwordsDontMatch: 'Passwords do not match.',
