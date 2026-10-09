@@ -4,6 +4,7 @@ import { ScreenId } from '../types/blood';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { safeNextPath } from '../lib/safeRedirect';
+import { localizedPath } from '../utils/routes';
 
 interface SignInScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -15,7 +16,7 @@ const labelClass = 'block text-sm font-bold text-slate-800 mb-1.5';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const uid = useId();
   const router = useRouter();
   const { configured, loading, user, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
@@ -28,7 +29,11 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
   const [submitting, setSubmitting] = useState(false);
   const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
-  const nextPath = () => safeNextPath(new URLSearchParams(window.location.search).get('next'), window.location.pathname);
+  // Falls back to the Emergency Hub, never to this sign-in page itself — the old fallback was
+  // `window.location.pathname`, which *is* this page without a real `?next=`, so a successful sign-in
+  // without one (e.g. clicking "Sign in" straight from the header) just redirected back here forever.
+  const nextPath = () =>
+    safeNextPath(new URLSearchParams(window.location.search).get('next'), localizedPath(language, '/'));
 
   // Already signed in: go straight to where they were headed.
   useEffect(() => {
