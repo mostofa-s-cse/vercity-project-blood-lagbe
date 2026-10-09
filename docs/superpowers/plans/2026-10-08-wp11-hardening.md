@@ -213,9 +213,34 @@ No code changes — a documented confirmation (see "What exists today") plus a s
 - [x] Gates clean (`lint`, 242 tests, `build`). Commit.
 
 ### Task 5: Playwright E2E tests
-- [ ] `@playwright/test` installed, `playwright.config.ts`, `e2e/demo-mode.spec.ts` (no database),
-      `e2e/sos-lifecycle.spec.ts` + `e2e/donor-profile.spec.ts` (real database) per Contracts.
-- [ ] Run all three locally against `.dev-db` and in true zero-env mode; both must pass. Commit.
+- [x] `@playwright/test` installed (Chromium browser binary installed too). `playwright.config.ts`,
+      `e2e/demo-mode.spec.ts` (no database), `e2e/sos-lifecycle.spec.ts` + `e2e/donor-profile.spec.ts`
+      (real database).
+- [x] **Design changed from the Contracts' original two-webServer plan, for a real reason found while
+      building this**: Next.js 16's dev server refuses to start a second instance in the same project
+      directory even on a different port ("Another next dev server is already running"), so the two
+      modes (demo / real-db) can't run concurrently here. Split into two separate invocations instead
+      (`npm run test:e2e:demo` / `npm run test:e2e:real`, `PW_MODE` env var picks the project + webServer
+      in `playwright.config.ts`), which also maps cleanly onto Task 6's CI design (demo-mode needs no
+      database and can run in the zero-env `checks` job; real-db needs the `e2e` job's Postgres service
+      container).
+- [x] Demo mode's env-blanking approach (Contracts) verified empirically before relying on it: Next.js's
+      env loader only fills in a `.env.local` value when the key isn't already present in `process.env`
+      — an explicit empty string still counts as present — confirmed with a one-off curl test
+      (`DATABASE_URL="" ... npm run dev` answered `database_not_configured`) before writing it into the
+      config, not assumed from documentation.
+- [x] `e2e/demo-mode.spec.ts`'s "no console errors" check needed filtering: every API answers `503` in
+      demo mode by design (that's what triggers the sample-data fallback), and Chrome logs any non-2xx
+      response as a console "error" regardless of whether the app handled it correctly — filtered out
+      `/status of 503/` specifically, kept everything else.
+- [x] `e2e/sos-lifecycle.spec.ts` first failed with a 30s timeout (submit button stayed disabled) —
+      root-caused to the test's own phone number being 10 digits instead of the 11 a real Bangladesh
+      mobile number needs (`01[3-9]` + 8 more digits); fixed the test, not the app.
+- [x] All 5 specs (3 demo-mode + 2 real-db) pass locally — demo-mode against true zero env vars, real-db
+      against `.dev-db`. Test rows removed from `.dev-db` afterwards. Added `test-results/`,
+      `playwright-report/`, `blob-report/` to `.gitignore`. Gates clean (`lint`, 242 unit tests, `build`
+      — unaffected, Playwright specs are separate from the `node:test` suite and not part of the Next.js
+      build). Commit.
 
 ### Task 6: GitHub Actions CI
 - [ ] `.github/workflows/ci.yml`: `checks` job (zero env vars) and `e2e` job (Postgres service

@@ -10,6 +10,9 @@ coverage/
 next-env.d.ts
 *.tsbuildinfo
 .playwright-mcp/
+test-results/
+playwright-report/
+blob-report/
 
 # Generated Prisma client (created by `npm install` / `npm run db:generate`)
 src/generated/
