@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, prod]
+    branches: [main, prod, feat/simplify-ux]
   pull_request:
   workflow_dispatch:
 
