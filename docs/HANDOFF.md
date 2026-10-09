@@ -7,7 +7,7 @@ The owner's spec ("Blood Donation & Blood Request Management System") asks for: 
 
 ## Where the work stands
 
-Realistic match to the spec: **~97%** (was ~45% at the start of M1, ~65% after M1; +~3% dynamic-dashboards (part of WP8), +~6% WP3, +~4% WP5, +~3% WP7 — WP7's organization-verification slice of WP8's gap was already partly reflected in the ~75% figure, so the jump is smaller than WP7's full +6% estimate — +~6% WP6, +~6% WP4 — slightly under WP4's full +8% estimate since email/SMS stay an honest switch with no provider wired — +~2% WP10 (full estimate, since this package's scope is genuinely complete; only its live-verification remains, same as Google sign-in)).
+Realistic match to the spec: **~95%** (was ~45% at the start of M1, ~65% after M1; +~3% dynamic-dashboards (part of WP8), +~6% WP3, +~4% WP5, +~3% WP7 — WP7's organization-verification slice of WP8's gap was already partly reflected in the ~75% figure, so the jump is smaller than WP7's full +6% estimate — +~6% WP6, +~6% WP4 — slightly under WP4's full +8% estimate since email/SMS stay an honest switch with no provider wired — +~2% WP10, +~3% WP11. Only WP12 (deployment/docs, +~2%) remains to reach the ~97% ceiling this spec realistically supports — the last ~3% is things no codebase can close by itself: a real Supabase/Google/email/SMS/Turnstile/Redis account, actually deployed and used.).
 
 Already built (all on the branch chain below):
 - Next.js migration from Vite; English/Bengali locale files; language in the URL (`/bn`, `/en`); user guide page.
@@ -23,10 +23,13 @@ Already built (all on the branch chain below):
 | **M1: real data and lifecycle** | WP9 Redux Toolkit + API layer, WP1 real data, WP2 request lifecycle | **Done**, plan: `docs/superpowers/plans/2026-09-29-m1-real-data.md` |
 | M2: donors and notifications | WP3, WP4, WP5 | WP3, WP4 and WP5 **done** (out of milestone order, see below) |
 | M3: organizations, admin, maps | WP7, WP8, WP6 | WP7 and WP6 **done** (out of milestone order, see below); WP8 (admin dashboard) **in progress** outside the milestone order |
-| M4: hardening and launch | WP10, WP11, WP12 | WP10 **done** (out of milestone order, see below); WP11/WP12 not started |
+| M4: hardening and launch | WP10, WP11, WP12 | WP10 and WP11 **done** (out of milestone order, see below); WP12 not started |
 
 ### Dynamic dashboards (out-of-order work, not a numbered milestone)
 Plan: `docs/superpowers/plans/2026-10-06-dynamic-dashboards.md` (done). Added `FraudIncident` and `AuditLog` tables/APIs, and rewired the Admin Panel and Ops Command off hardcoded mock state onto real data wherever a real source exists (donors, requests, hospital stock, fraud reports, audit log). Cold-chain sensor readings and telecom gateway health stay sample — no real sensor/SMS integration exists or is planned. Hospital identity/verification is now real too (WP7, below). See "Known issues" below for exactly which Admin Panel/Ops Command tabs are real vs. sample in this environment (it depends on having a real Supabase session, not just local Postgres).
+
+### WP11: Security, quality and responsiveness (out of milestone order, done 2026-10-08)
+Plan: `docs/superpowers/plans/2026-10-08-wp11-hardening.md` (done). Rate limiting (`src/lib/rateLimit.ts`, an honest in-memory limiter — see "Known issues" for its real limits) and an origin check (`src/lib/originCheck.ts`) on the four public POST routes; a Turnstile CAPTCHA switch (`src/lib/turnstile.ts`, skips without a real key, same pattern as `notifyChannels.ts`); a Row-Level-Security audit confirming every table has it with no gap; fixed two real header-overflow bugs at 360-390px; 5 Playwright E2E specs (3 demo-mode, 2 real-database); a GitHub Actions CI workflow, confirmed green on GitHub's own runners, not just read from the YAML. Found and fixed a real bug along the way: `originCheck.ts`'s first version compared against `new URL(request.url).origin`, which broke on this project's own `--hostname 0.0.0.0` dev server — caught by the Task 2 browser check, not Task 1's own curl verification.
 
 ### WP10: Email and password sign-in (out of milestone order, done 2026-10-08)
 Plan: `docs/superpowers/plans/2026-10-08-wp10-email-auth.md` (done). Email + password sign-in, sign-up and password reset sit next to Google in `AuthContext.tsx` (`signUpWithEmail`/`signInWithEmail`/`requestPasswordReset`/`updatePassword`), same session/`Profile`/roles — nothing downstream changed. New dedicated `sign-in`/`forgot-password`/`reset-password` screens; email verification and password reset are Supabase Auth's own built-in flow, no bespoke token system built. This sandbox has no real Supabase project (same standing limitation as Google sign-in never being run here): confirmed the auth-method-agnostic `/auth/callback` route at the code level and browser-checked the demo-mode fallback; the signed-in flows themselves weren't verified live — said so plainly.
@@ -86,8 +89,13 @@ Machine notes for the owner's computer: port 3000 is used by another project (us
 - Hospitals screen: camps are not saved (stock is).
 - Admin Panel: Donor Registry, Blood Requests Desk and Hospitals tabs **read** real data (same APIs the public screens use, no permission needed). Overview's donor/request counts are real; its blood-group supply/demand matrix and Avg Donor Transit ETA stay sample (no demand/ETA data exists anywhere). Fraud and Logs tabs, all of Ops Command, and now also the Hospitals tab's **verify/reject toggle** (a write, gated by `panel.hospitals`) need a real Supabase sign-in to pass their permission check — this repo has never run one (see below), so the toggle currently fails with a graceful "could not update" toast even though the API and database side is real and tested (the underlying approve/reject/grant logic was verified directly against the database in WP7 Task 3). Hospital identity and verification (name, licence, verified badge) are now real (`Organization` table, WP7); cold-chain sensor readings, telecom gateway health, and a real organization's chiller temperature/audit date stay one fixed sample placeholder — no real sensor/SMS integration or audit-log source exists.
 - Notifications (WP4): matching and the bell are real; email/SMS delivery is an honest, tested no-op switch (`src/lib/notifyChannels.ts`) — without `RESEND_API_KEY`/an SMS gateway key, a match only shows up in-app, nothing is actually emailed or texted. Web push was not requested and is not built.
-- Header ticker makes the page wider than a phone (390px).
-- No rate limiting or CAPTCHA on public POST routes (WP11).
+- CAPTCHA (WP11): the Turnstile switch is built and wired into the four public forms, but no real
+  `TURNSTILE_SECRET_KEY`/`NEXT_PUBLIC_TURNSTILE_SITE_KEY` is configured anywhere — the owner's Cloudflare
+  account, same boundary as every other "needs your own keys" item here.
+- Rate limiting (WP11) is a real but honestly limited in-memory speed bump: it resets on restart and
+  shares no state across multiple server instances or regions, so on Vercel specifically (WP12's target)
+  it is a soft deterrent, not a hard guarantee. A shared store (Upstash Redis) is the real production
+  answer, not built here — the owner's job once real traffic justifies it.
 - Real Google sign-in and the Supabase admin API were never run (no keys); covered by tests with fakes. This is also why the Admin Panel's Fraud/Logs tabs and all of Ops Command can't be shown with real data in this environment — their permission check (`panel.fraud`, `panel.logs`, `ops.command`) needs an actual signed-in session with that permission, not just `NEXT_PUBLIC_ADMIN_OPEN=true` (which only opens the *page*, same as it always did for Access/roles management).
 
 ## What the owner will provide

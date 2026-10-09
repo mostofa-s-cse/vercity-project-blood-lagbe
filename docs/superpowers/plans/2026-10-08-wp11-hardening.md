@@ -259,7 +259,7 @@ No code changes — a documented confirmation (see "What exists today") plus a s
 - [x] Commit.
 
 ### Task 7: Documentation
-- [ ] `docs/HANDOFF.md` progress log (rate limiting's honest Vercel caveat stays visible, not buried);
+- [x] `docs/HANDOFF.md` progress log (rate limiting's honest Vercel caveat stays visible, not buried);
       `docs/SPEC-MATCH-PLAN.md` WP11 section, milestone table (M4), realistic match update. Remove the
       "No rate limiting or CAPTCHA" and "Header ticker" lines from "Known issues" once actually fixed.
-- [ ] Tick every box above. Final commit.
+- [x] Tick every box above. Final commit.

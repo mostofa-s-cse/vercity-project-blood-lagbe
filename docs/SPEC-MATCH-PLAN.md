@@ -104,12 +104,12 @@ The main gap: donors and SOS requests are **write-only**. The directory, the hub
 |---|---|---|
 | Redux Toolkit | **Adopted (M1)**: store + RTK Query is the client data layer | Auth slice beyond the existing `AuthContext` |
 | REST API | **Read/update endpoints added (M1)**: donors, requests, respond, status, pagination | Delete; district/radius filters |
-| Secure authentication | Google + **email/password, password reset (WP10)**, both through Supabase Auth | Rate limiting/CAPTCHA on sign-up and reset (WP11) |
+| Secure authentication | Google + **email/password, password reset (WP10)**, both through Supabase Auth | Rate limiting/CAPTCHA on sign-up/sign-in themselves (they go straight to Supabase's own client SDK, not one of this app's own API routes — WP11's rate limiting/CAPTCHA cover the donor/SOS/organization/respond routes instead, see WP11) |
 | Roles: Donor, Blood Seeker, Hospital/Org, Admin | Hospital and Admin (as dynamic roles) | Donor and Blood Seeker |
-| Protected API | Admin and hospital routes | Rate limiting and CAPTCHA on public routes |
+| Protected API | Admin and hospital routes; **the four public mutating routes (donors/sos/organizations-apply/respond) now have rate limiting, an origin check and a CAPTCHA switch (WP11)** | A real Turnstile key (owner's job); a shared rate-limit store for multi-instance deployments |
 | Notification system | **Real (WP4)**: a `Notification` table, matching and in-app delivery | Email/SMS provider accounts (switch is wired, provider isn't) |
 | Location search and maps | Fake distance numbers, a picture of a map | See WP6 |
-| Responsive UI | Mostly | The header ticker overflows on phones (390px) |
+| Responsive UI | **Mostly, and the known header overflow at 360-390px is fixed (WP11)** | — |
 
 ## Decisions (defaults I will use unless you say otherwise)
 
@@ -213,10 +213,28 @@ Sizes: **S** = a focused session, **M** = several sessions, **L** = a large piec
   browser-checked; the actual signed-in flows were not verified against a live project — said so
   plainly rather than overclaiming.
 
-### WP11. Security, quality and responsiveness (M, +3%)
-- Rate limiting and CAPTCHA (Cloudflare Turnstile) on the public POST routes; origin checks; a Row-Level-Security review.
-- Playwright end-to-end tests for the main flows; GitHub Actions running lint, tests, build.
-- Fix the phone overflow (header ticker) and check every screen at 360px.
+### WP11. Security, quality and responsiveness (M, +3%) — **Done (2026-10-08)**
+- Rate limiting (`src/lib/rateLimit.ts`, an honest in-memory fixed-window limiter — real but limited:
+  resets on restart, no cross-instance state, a soft speed bump on Vercel specifically, not a hard
+  guarantee; a shared store like Upstash Redis is the real production answer, not built here) and an
+  origin check (`src/lib/originCheck.ts`) on the four public POST routes. A Cloudflare Turnstile CAPTCHA
+  switch (`src/lib/turnstile.ts`/`TurnstileWidget.tsx`) wired into the same four forms, skipped (not
+  failed) without a real key — the owner's Cloudflare account, same boundary as every other "needs your
+  own keys" item in this app.
+- Row-Level-Security audited table by table (all 11 migrations): every `CREATE TABLE` has a matching
+  `ENABLE ROW LEVEL SECURITY`, zero `CREATE POLICY` anywhere — confirmed, no gap.
+- Playwright end-to-end tests: 3 demo-mode specs (no database) and 2 real-database specs (the full SOS
+  lifecycle between two signed-out visitors; donor registration and profile editing). GitHub Actions
+  (`.github/workflows/ci.yml`): a zero-env `checks` job and an `e2e` job with a free Postgres service
+  container — confirmed **actually green on GitHub's own runners**, not just read from the YAML.
+- Fixed the header-ticker overflow at 390px — two real bugs, not the one originally suspected (a missing
+  `flex-wrap`, and separately a classic nested-flexbox `min-w-0` trap that only showed up at 360px) — and
+  swept 360px/390px across both languages over all 8 main screens.
+- Found and fixed a real bug along the way: the origin check's first version compared against
+  `new URL(request.url).origin`, which broke on this project's own dev server (`--hostname 0.0.0.0`
+  means `request.url` never matches a real browser's `Origin`) — caught by browser-testing the CAPTCHA
+  switch, not by the origin check's own curl verification, which hadn't covered a genuinely matching
+  origin.
 
 ### WP12. Deployment and documentation (S, +2%)
 - Vercel deployment guide and environment checklist; seeded demo database; README with architecture; the final evaluation notes the spec asks for.
@@ -239,5 +257,5 @@ Each package ends with tests, a build, a browser check, and a commit, as before.
 | Nothing | M1 | Can start now |
 | Email provider account (Resend or SMTP) and an SMS gateway account | Email and SMS notifications (WP4) | Before WP4 delivery channels; in-app notifications need nothing |
 | Supabase project (already needed) | Everything server-side | Already in `docs/SETUP-SUPABASE.md` |
-| Cloudflare Turnstile keys | CAPTCHA (WP11) | Before WP11 |
+| Cloudflare Turnstile keys | CAPTCHA (WP11, built and wired, switched off without a key) | Whenever real bot protection is wanted |
 | Vercel account | Deployment (WP12) | Before WP12 |
