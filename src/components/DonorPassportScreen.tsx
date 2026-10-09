@@ -130,18 +130,28 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
           <div className="relative z-10 my-6 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRa_qgZ4D0JH1FH_9_3lcBwJW2TCZoLH0XEWx8Qwpdz8678B6kODnsDddVS-UFGFaJ8A7Xz-4Qplkl9AiX3edNVszYC_EcFAbCMMifCX9BmnXIUM4GAzPN8rYy--1oxTfesImJfy5rGo75P6Q6jrj5DTbU7jyJwqft8clNXttKn8jwOpjC8SYYfwIGobjjnaP3bmIetXYgFmeRZdE2um7l2J_xIVO97lnRl_1QO_qCYVTGikkez7FI"
-                  alt={t.passport.donorName}
-                  className="w-20 h-20 rounded-2xl object-cover border-2 border-red-500 shadow-xl"
-                />
+                {(() => {
+                  const displayName = realDonor?.name ?? user?.name ?? user?.email ?? t.passport.donorName;
+                  return user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={displayName}
+                      referrerPolicy="no-referrer"
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-red-500 shadow-xl"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-slate-800 border-2 border-red-500 shadow-xl flex items-center justify-center">
+                      <span className="text-2xl font-black text-white">{(displayName[0] ?? '?').toUpperCase()}</span>
+                    </div>
+                  );
+                })()}
                 <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs border-2 border-slate-900" title={t.passport.verifiedNid}>
                   ✓
                 </span>
               </div>
 
               <div>
-                <h2 className="text-xl font-extrabold text-white">{realDonor?.name ?? t.passport.donorName}</h2>
+                <h2 className="text-xl font-extrabold text-white">{realDonor?.name ?? user?.name ?? t.passport.donorName}</h2>
                 <p className="text-xs text-slate-300 font-mono mt-0.5">NID: 1996269120000492</p>
                 <p className="text-[11px] text-red-300 mt-1 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">location_on</span>
