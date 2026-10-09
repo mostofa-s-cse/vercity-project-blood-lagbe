@@ -52,7 +52,7 @@ export const register: Register = {
   viewPassport: 'ডোনার পাসপোর্ট দেখুন',
   openDirectory: 'ডোনার ডিরেক্টরি খুলুন',
   myProfileTitle: 'আমার ডোনার প্রোফাইল',
-  myProfileDesc: 'আপনি যে ডোনার প্রোফাইল নিবন্ধন করেছেন তা এই ব্রাউজার মনে রেখেছে, তাই এখান থেকে আপডেট করতে পারবেন।',
+  myProfileDesc: 'এটি আপনার সাথে যুক্ত ডোনার প্রোফাইল, তাই এখান থেকে আপডেট করতে পারবেন।',
   editAvailable: 'এখন রক্ত দিতে প্রস্তুত',
   editLastDonation: 'শেষ রক্তদানের পর কত মাস',
   saveChanges: 'পরিবর্তন সংরক্ষণ করুন',

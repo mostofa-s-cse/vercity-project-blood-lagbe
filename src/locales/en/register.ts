@@ -50,7 +50,7 @@ export const register = {
   viewPassport: 'View Donor Passport',
   openDirectory: 'Open Donor Directory',
   myProfileTitle: 'My donor profile',
-  myProfileDesc: 'This browser remembers the donor profile you registered, so you can update it here.',
+  myProfileDesc: 'This is the donor profile linked to you, so you can update it here.',
   editAvailable: 'Available to donate now',
   editLastDonation: 'Months since last donation',
   saveChanges: 'Save changes',

@@ -2,10 +2,11 @@ import React, { useEffect, useId, useMemo, useState } from 'react';
 import { ScreenId, Donor, BloodGroup } from '../types/blood';
 import { sound } from '../utils/audio';
 import { isValidBdPhone } from '../utils/phone';
-import { useGetDonorQuery, useRegisterDonorMutation, useUpdateDonorMutation } from '../store/api';
+import { useGetDonorQuery, useGetDonorsQuery, useRegisterDonorMutation, useUpdateDonorMutation } from '../store/api';
 import { isDatabaseOff } from '../store/errors';
 import { browserStorage as donorStorage, readMyDonorProfiles, rememberDonor } from '../lib/myDonorProfile';
 import type { DonorRegisteredInfo } from '../context/AppStateContext';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { BD_DIVISIONS, districtsByDivision } from '../data/bdGeo.ts';
 import { TurnstileWidget } from './TurnstileWidget';
@@ -38,11 +39,19 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
 
   // A donor this browser already registered (if any), so returning visitors see "My profile" instead
   // of a blank form. Starts null (matches the server-rendered markup) and is read from localStorage
-  // only after mount, so hydration does not mismatch; `null` again once they press "Register someone else".
+  // only after mount, so hydration does not mismatch.
   const [rememberedId, setRememberedId] = useState<string | null>(null);
   useEffect(() => {
     setRememberedId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
   }, []);
+
+  // A signed-in person's own donor profile, for when this specific browser has no remembered id (a new
+  // device, cleared storage, or registered from a different browser) — same fallback DonorPassportScreen
+  // uses, so a signed-in donor always sees "My profile" instead of a blank form to fill in again.
+  const { user } = useAuth();
+  const mineQuery = useGetDonorsQuery({ mine: true, pageSize: 1 }, { skip: !user });
+  const [showForm, setShowForm] = useState(false);
+  const activeId = showForm ? null : rememberedId ?? mineQuery.data?.donors[0]?.id ?? null;
 
   // Required fields
   const [registerDonor] = useRegisterDonorMutation();
@@ -164,10 +173,10 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
         </button>
       </div>
 
-      {!submittedDonor && rememberedId ? (
+      {!submittedDonor && activeId ? (
         <MyDonorProfilePanel
-          id={rememberedId}
-          onRegisterAnother={() => setRememberedId(null)}
+          id={activeId}
+          onRegisterAnother={() => setShowForm(true)}
         />
       ) : submittedDonor ? (
         /* Success Screen */
