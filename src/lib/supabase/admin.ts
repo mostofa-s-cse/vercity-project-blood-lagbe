@@ -1,6 +1,7 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import type { AuthAdmin } from '../grantService';
+import type { EmailAuthAdmin } from '../emailAuth';
 import type { PhoneAuthAdmin } from '../phoneAuth';
 import { getSupabaseEnv } from './env';
 
@@ -30,6 +31,15 @@ export function createAuthAdmin(): AuthAdmin | null {
 
 /** Admin access for creating phone-based accounts (`src/lib/phoneAuth.ts`). Null when not configured. */
 export function createPhoneAuthAdmin(): PhoneAuthAdmin | null {
+  const env = getSupabaseEnv();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env || !serviceKey) return null;
+  const client = createClient(env.url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  return client.auth.admin;
+}
+
+/** Admin access for creating email-based accounts with no confirmation wait (`src/lib/emailAuth.ts`). */
+export function createEmailAuthAdmin(): EmailAuthAdmin | null {
   const env = getSupabaseEnv();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!env || !serviceKey) return null;

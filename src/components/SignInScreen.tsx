@@ -30,7 +30,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
 
   // Falls back to the Emergency Hub, never to this sign-in page itself — the old fallback was
   // `window.location.pathname`, which *is* this page without a real `?next=`, so a successful sign-in
@@ -74,15 +73,9 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
     // server-side permission check on the target route), and this component unmounts with it. Clearing
     // it early would re-enable the button and make the wait look like nothing happened.
     if (mode === 'signup') {
-      const result =
-        method === 'email' ? await signUpWithEmail(trimmedEmail, password, nextPath()) : await signUpWithPhone(trimmedPhone, password);
+      const result = method === 'email' ? await signUpWithEmail(trimmedEmail, password) : await signUpWithPhone(trimmedPhone, password);
       if (result.error) {
         setFormError(errorText(result.error));
-        setSubmitting(false);
-        return;
-      }
-      if ('needsEmailConfirmation' in result && result.needsEmailConfirmation) {
-        setNeedsEmailConfirmation(true);
         setSubmitting(false);
         return;
       }
@@ -97,22 +90,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
       router.replace(nextPath());
     }
   };
-
-  if (needsEmailConfirmation) {
-    return (
-      <div className="w-full max-w-md mx-auto px-4 py-16 flex flex-col items-center gap-4 text-center">
-        <span className="material-symbols-outlined text-emerald-600 text-5xl">mark_email_read</span>
-        <h1 className="text-2xl font-black text-slate-900">{t.auth.checkEmailTitle}</h1>
-        <p className="text-sm text-slate-600">{t.auth.checkEmailDesc}</p>
-        <button
-          onClick={() => onNavigate('emergency-hub')}
-          className="mt-2 px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
-        >
-          {t.auth.backHome}
-        </button>
-      </div>
-    );
-  }
 
   const emailId = `${uid}-email`;
   const passwordId = `${uid}-password`;

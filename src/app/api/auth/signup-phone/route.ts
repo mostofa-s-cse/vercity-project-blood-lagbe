@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createPhoneAccount, type PhoneAuthAdmin } from '@/lib/phoneAuth';
 import { isSameOrigin } from '@/lib/originCheck';
+import { syncProfile } from '@/lib/profile';
 import { checkRateLimit, clientKey } from '@/lib/rateLimit';
 import { createPhoneAuthAdmin } from '@/lib/supabase/admin';
 import { isValidBdPhone } from '@/utils/phone';
@@ -50,6 +51,13 @@ export async function POST(request: Request) {
   const result = await createPhoneAccount(admin, { phone: body.phone, password: body.password, name });
   if ('error' in result) {
     return NextResponse.json({ error: result.error }, { status: result.error === 'phone_taken' ? 409 : 500 });
+  }
+  // Same reasoning as signup-email: this path never hits /auth/callback (the route that normally
+  // creates the `profiles` row), so it has to happen here instead.
+  try {
+    await syncProfile({ id: result.userId, email: null, user_metadata: name ? { name } : undefined });
+  } catch (error) {
+    console.error('Could not create profile for new phone account', error);
   }
   return NextResponse.json({ userId: result.userId });
 }

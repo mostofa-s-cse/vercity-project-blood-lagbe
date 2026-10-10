@@ -108,7 +108,6 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   const [claimPassword, setClaimPassword] = useState('');
   const [claimSubmitting, setClaimSubmitting] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
-  const [claimNeedsEmailConfirmation, setClaimNeedsEmailConfirmation] = useState(false);
   const claimCanSubmit =
     claimPassword.length >= 6 && (claimMethod === 'email' ? EMAIL_RE.test(claimEmail.trim()) : isValidBdPhone(claimPhone));
 
@@ -118,16 +117,16 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
     setClaimError(null);
     setClaimSubmitting(true);
     try {
+      const trimmedName = name.trim() || undefined;
       const result =
         claimMethod === 'email'
-          ? await signUpWithEmail(claimEmail.trim().toLowerCase(), claimPassword)
-          : await signUpWithPhone(claimPhone.trim(), claimPassword, name.trim() || undefined);
+          ? await signUpWithEmail(claimEmail.trim().toLowerCase(), claimPassword, trimmedName)
+          : await signUpWithPhone(claimPhone.trim(), claimPassword, trimmedName);
       if (result.error) {
         setClaimError(result.error);
         return;
       }
-      if ('needsEmailConfirmation' in result && result.needsEmailConfirmation) setClaimNeedsEmailConfirmation(true);
-      // Otherwise the account now has a session: the claimDonor effect above links it automatically.
+      // The account now has a session: the claimDonor effect above links it automatically.
     } finally {
       setClaimSubmitting(false);
     }
@@ -273,68 +272,64 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                 <h3 className="text-sm font-black text-slate-900">{t.register.claimTitle}</h3>
                 <p className="text-xs text-slate-600 mt-0.5">{t.register.claimDesc}</p>
               </div>
-              {claimNeedsEmailConfirmation ? (
-                <p className="text-xs font-semibold text-emerald-700">{t.register.claimCheckEmail}</p>
-              ) : (
-                <form onSubmit={(e) => void handleClaimSubmit(e)} className="flex flex-col gap-3">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setClaimMethod('email')}
-                      className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
-                        claimMethod === 'email' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
-                      }`}
-                    >
-                      {t.auth.emailLabel}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setClaimMethod('phone')}
-                      className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
-                        claimMethod === 'phone' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
-                      }`}
-                    >
-                      {t.register.claimPhoneMethod}
-                    </button>
-                  </div>
-                  {claimMethod === 'email' ? (
-                    <input
-                      type="email"
-                      value={claimEmail}
-                      onChange={(e) => setClaimEmail(e.target.value)}
-                      placeholder={t.auth.emailPlaceholder}
-                      className={inputClass}
-                    />
-                  ) : (
-                    <input
-                      type="tel"
-                      value={claimPhone}
-                      onChange={(e) => setClaimPhone(e.target.value)}
-                      placeholder={t.register.claimPhonePlaceholder}
-                      className={inputClass}
-                    />
-                  )}
+              <form onSubmit={(e) => void handleClaimSubmit(e)} className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setClaimMethod('email')}
+                    className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
+                      claimMethod === 'email' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
+                    }`}
+                  >
+                    {t.auth.emailLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClaimMethod('phone')}
+                    className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-colors ${
+                      claimMethod === 'phone' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-300'
+                    }`}
+                  >
+                    {t.register.claimPhoneMethod}
+                  </button>
+                </div>
+                {claimMethod === 'email' ? (
                   <input
-                    type="password"
-                    value={claimPassword}
-                    onChange={(e) => setClaimPassword(e.target.value)}
-                    placeholder={t.auth.passwordLabel}
+                    type="email"
+                    value={claimEmail}
+                    onChange={(e) => setClaimEmail(e.target.value)}
+                    placeholder={t.auth.emailPlaceholder}
                     className={inputClass}
                   />
-                  {claimError && (
-                    <p className="text-xs font-semibold text-red-600">
-                      {(t.auth.errors as Record<string, string>)[claimError] ?? t.auth.errors.sign_up_failed}
-                    </p>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={!claimCanSubmit || claimSubmitting}
-                    className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-bold text-xs cursor-pointer transition-colors"
-                  >
-                    {claimSubmitting ? t.auth.signingUp : t.register.claimSubmit}
-                  </button>
-                </form>
-              )}
+                ) : (
+                  <input
+                    type="tel"
+                    value={claimPhone}
+                    onChange={(e) => setClaimPhone(e.target.value)}
+                    placeholder={t.register.claimPhonePlaceholder}
+                    className={inputClass}
+                  />
+                )}
+                <input
+                  type="password"
+                  value={claimPassword}
+                  onChange={(e) => setClaimPassword(e.target.value)}
+                  placeholder={t.auth.passwordLabel}
+                  className={inputClass}
+                />
+                {claimError && (
+                  <p className="text-xs font-semibold text-red-600">
+                    {(t.auth.errors as Record<string, string>)[claimError] ?? t.auth.errors.sign_up_failed}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!claimCanSubmit || claimSubmitting}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-bold text-xs cursor-pointer transition-colors"
+                >
+                  {claimSubmitting ? t.auth.signingUp : t.register.claimSubmit}
+                </button>
+              </form>
             </div>
           )}
           {claimLinked && (

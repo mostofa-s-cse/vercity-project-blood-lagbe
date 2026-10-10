@@ -65,7 +65,6 @@ export const register = {
   claimPhoneMethod: 'Phone',
   claimPhonePlaceholder: '01712345678',
   claimSubmit: 'Create account & save',
-  claimCheckEmail: 'Check your email for a confirmation link, then come back here — this profile will link automatically.',
   claimLinked: 'Saved. You can now reach this profile from any device by signing in.',
 };
 export type Register = typeof register;

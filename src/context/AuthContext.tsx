@@ -36,8 +36,11 @@ interface AuthContextType {
   /** `next` is the same-site path to return to after signing in (default: the current page). */
   signInWithGoogle: (next?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  /** `error` is a short Supabase error code (e.g. `user_already_exists`), or null. Never throws. */
-  signUpWithEmail: (email: string, password: string, next?: string) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
+  /**
+   * No confirmation-link wait (see src/lib/emailAuth.ts): creates the account server-side already
+   * confirmed, then signs in immediately with the same password. `error` is a short error code, or null.
+   */
+  signUpWithEmail: (email: string, password: string, name?: string) => Promise<{ error: string | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithPhone: (phone: string, password: string) => Promise<{ error: string | null }>;
   /**
@@ -112,18 +115,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabase]);
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string, next?: string) => {
-      if (!supabase) return { error: 'not_configured', needsEmailConfirmation: false };
-      const target = encodeURIComponent(next ?? `${window.location.pathname}${window.location.search}`);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${target}` },
+    async (email: string, password: string, name?: string) => {
+      if (!supabase) return { error: 'not_configured' };
+      const response = await fetch('/api/auth/signup-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
       });
-      if (error) return { error: error.code ?? 'sign_up_failed', needsEmailConfirmation: false };
-      // Email confirmations on (the project default): the session comes back null even on success.
-      if (data.session) setUser(toAuthUser(data.session.user));
-      return { error: null, needsEmailConfirmation: !data.session };
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        const error = body && typeof body === 'object' && 'error' in body ? String((body as { error: unknown }).error) : 'sign_up_failed';
+        return { error };
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: error.code ?? 'sign_in_failed' };
+      setUser(toAuthUser(data.user));
+      return { error: null };
     },
     [supabase]
   );

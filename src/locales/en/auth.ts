@@ -20,9 +20,6 @@ export const auth = {
   continueBtn: 'Continue',
   backHome: 'Back to Emergency Hub',
 
-  checkEmailTitle: 'Check your email',
-  checkEmailDesc: 'We sent a confirmation link to your email address. Open it to finish creating your account.',
-
   forgotPasswordTitle: 'Reset your password',
   forgotPasswordDesc: "Enter your email and we'll send you a link to reset your password.",
   forgotPasswordSubmit: 'Send reset link',
@@ -49,6 +46,7 @@ export const auth = {
     not_configured: 'Sign-in is not available right now.',
     sign_up_failed: 'Could not create your account. Please try again.',
     phone_taken: 'An account with this phone number already exists. Try signing in instead.',
+    email_taken: 'An account with this email already exists. Try signing in instead.',
     sign_in_failed: 'Could not sign in. Please try again.',
     update_password_failed: 'Could not update your password. Please try again.',
   },
