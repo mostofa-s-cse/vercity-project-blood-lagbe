@@ -1575,7 +1575,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.admin.donors.searchPlaceholder}
-                className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+                className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-medium text-slate-900 placeholder-slate-400 outline-none focus:border-red-500"
               />
             </div>
 
@@ -1583,7 +1583,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <select
                 value={bloodFilter}
                 onChange={(e) => setBloodFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none cursor-pointer"
               >
                 <option value="ALL">{t.admin.donors.allBloodGroups}</option>
                 {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map(bg => (
@@ -1596,7 +1596,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none cursor-pointer"
               >
                 <option value="ALL">{t.admin.donors.allStatuses}</option>
                 <option value="AVAILABLE">{t.admin.donors.filterAvailable}</option>
@@ -1757,7 +1757,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.admin.requests.searchPlaceholder}
-                className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-red-500"
+                className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-medium text-slate-900 placeholder-slate-400 outline-none focus:border-red-500"
               />
             </div>
 
@@ -1765,7 +1765,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <select
                 value={bloodFilter}
                 onChange={(e) => setBloodFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none cursor-pointer"
               >
                 <option value="ALL">{t.admin.donors.allBloodGroups}</option>
                 {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map(bg => (
@@ -1778,7 +1778,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none cursor-pointer"
               >
                 <option value="ALL">{t.admin.donors.allStatuses}</option>
                 <option value="PENDING">{t.admin.requests.filterPending}</option>
