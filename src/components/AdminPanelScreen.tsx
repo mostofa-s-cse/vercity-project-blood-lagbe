@@ -64,6 +64,7 @@ const mergeSavedStock = (base: HospitalOrganization[], saved: HospitalStockMap):
 interface AdminPanelScreenProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenRequisition: (demand: any) => void;
+  onOpenCreateSos: () => void;
 }
 
 type AdminTab = 'overview' | 'alerts' | 'donors' | 'requests' | 'hospitals' | 'fraud' | 'logs' | 'access';
@@ -82,7 +83,8 @@ const TAB_PERMISSION: Record<AdminTab, Permission> = {
 
 export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onNavigate,
-  onOpenRequisition
+  onOpenRequisition,
+  onOpenCreateSos
 }) => {
   const { language, toggleLanguage, t } = useLanguage();
   const {
@@ -1740,7 +1742,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </div>
 
             <button
-              onClick={() => onNavigate('create-sos')}
+              onClick={onOpenCreateSos}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all self-start sm:self-auto"
             >
               <span className="material-symbols-outlined text-base">add_circle</span>

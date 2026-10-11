@@ -54,6 +54,11 @@ interface AppStateValue {
   requisitionModal: RequisitionModalState;
   openRequisition: (demand: any) => void;
   closeRequisition: () => void;
+  /** Lets a screen that isn't the public /sos page (e.g. the Admin Panel) post a request without
+   * leaving where it is. */
+  isCreateSosModalOpen: boolean;
+  openCreateSosModal: () => void;
+  closeCreateSosModal: () => void;
   handleSosCreated: (info: SosCreatedInfo) => void;
   handleRegisterDonor: (info: DonorRegisteredInfo) => void;
 }
@@ -71,6 +76,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isAudioMuted, setIsAudioMuted] = usePersistentState<boolean>('isAudioMuted', false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [requisitionModal, setRequisitionModal] = useState<RequisitionModalState>({ isOpen: false });
+  const [isCreateSosModalOpen, setIsCreateSosModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // The donor this browser is identified as (same pattern as DonorRegistrationScreen/DonorPassportScreen,
@@ -161,6 +167,9 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     requisitionModal,
     openRequisition,
     closeRequisition: () => setRequisitionModal({ isOpen: false }),
+    isCreateSosModalOpen,
+    openCreateSosModal: () => setIsCreateSosModalOpen(true),
+    closeCreateSosModal: () => setIsCreateSosModalOpen(false),
     handleSosCreated,
     handleRegisterDonor,
   };

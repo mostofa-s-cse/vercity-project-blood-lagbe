@@ -6,6 +6,7 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { NotificationsModal } from './NotificationsModal';
 import { RequisitionModal } from './RequisitionModal';
+import { CreateSosModal } from './CreateSosModal';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const app = useAppState();
@@ -44,6 +45,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     />
   );
 
+  const createSosModal = <CreateSosModal isOpen={app.isCreateSosModalOpen} onClose={app.closeCreateSosModal} />;
+
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-red-500 selection:text-white">
@@ -51,6 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
         {notificationsModal}
         {requisitionModal}
+        {createSosModal}
       </div>
     );
   }
@@ -76,6 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {notificationsModal}
       {requisitionModal}
+      {createSosModal}
     </div>
   );
 }
