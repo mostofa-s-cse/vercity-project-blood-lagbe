@@ -53,7 +53,7 @@ export default async function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <Providers language={lang}>{children}</Providers>
       </body>
     </html>

@@ -60,6 +60,11 @@ export function forgetDonor(storage: StorageLike | null, id: string): void {
   write(storage, readMyDonorProfiles(storage).filter((entry) => entry.id !== id));
 }
 
+/** Forgets every remembered donor, e.g. on sign-out so the next person on this browser starts with a blank form. */
+export function clearMyDonorProfiles(storage: StorageLike | null): void {
+  write(storage, []);
+}
+
 export function tokenFor(storage: StorageLike | null, id: string): string | undefined {
   return readMyDonorProfiles(storage).find((entry) => entry.id === id)?.token;
 }

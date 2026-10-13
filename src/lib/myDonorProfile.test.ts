@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { forgetDonor, MAX_REMEMBERED, readMyDonorProfiles, rememberDonor, tokenFor, type StorageLike } from './myDonorProfile.ts';
+import { clearMyDonorProfiles, forgetDonor, MAX_REMEMBERED, readMyDonorProfiles, rememberDonor, tokenFor, type StorageLike } from './myDonorProfile.ts';
 
 function memoryStorage(initial: Record<string, string> = {}): StorageLike & { data: Record<string, string> } {
   const data = { ...initial };
@@ -80,4 +80,14 @@ test('storage that is blocked or missing never throws', () => {
   assert.doesNotThrow(() => forgetDonor(blocked, 'a'));
   assert.deepEqual(readMyDonorProfiles(null), []);
   assert.doesNotThrow(() => rememberDonor(null, { id: 'a', token: 't' }));
+});
+
+test('clearMyDonorProfiles forgets every remembered donor and never throws', () => {
+  const storage = memoryStorage();
+  rememberDonor(storage, { id: 'a', token: 'ta' });
+  rememberDonor(storage, { id: 'b', token: 'tb' });
+  clearMyDonorProfiles(storage);
+  assert.deepEqual(readMyDonorProfiles(storage), []);
+  assert.doesNotThrow(() => clearMyDonorProfiles(blocked));
+  assert.doesNotThrow(() => clearMyDonorProfiles(null));
 });

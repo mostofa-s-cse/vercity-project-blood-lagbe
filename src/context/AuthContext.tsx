@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js';
 import { createBrowserSupabase } from '../lib/supabase/client';
 import { ADMIN_AREA_PERMISSIONS, type Permission } from '../lib/permissions';
 import { can as claimsCan, canManageHospital as claimsCanManageHospital } from '../lib/roles';
+import { browserStorage, clearMyDonorProfiles } from '../lib/myDonorProfile';
 import { normalizePhoneForAuth } from '../lib/phoneAuth';
 
 export interface AuthUser {
@@ -111,6 +112,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
+    // A donor registered on this browser stays reachable through the account (or its manage token); drop
+    // the local copy so the next person here does not see someone else's "My profile".
+    clearMyDonorProfiles(browserStorage());
     setUser(null);
   }, [supabase]);
 

@@ -14,6 +14,12 @@ interface SignInScreenProps {
 const inputClass =
   'w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-base font-medium text-slate-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-colors';
 const labelClass = 'block text-sm font-bold text-slate-800 mb-1.5';
+const DEMO_PASSWORD = 'DemoPass123!';
+const DEMO_ACCOUNTS = [
+  { email: 'demo@bloodlagbe.test', role: 'demoRoleUser' },
+  { email: 'hospital-demo@bloodlagbe.test', role: 'demoRoleHospital' },
+  { email: 'admin-demo@bloodlagbe.test', role: 'demoRoleAdmin' },
+] as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
@@ -228,6 +234,34 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
           </svg>
           <span>{t.auth.continueWithGoogle}</span>
         </button>
+
+        {mode === 'signin' && (
+          <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">{t.auth.demoTitle}</p>
+            <ul className="flex flex-col gap-2">
+              {DEMO_ACCOUNTS.map((a) => (
+                <li key={a.email} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 text-xs text-slate-700">
+                    <p className="font-bold">{t.auth[a.role]}</p>
+                    <p className="truncate font-mono">{a.email} · {DEMO_PASSWORD}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMethod('email');
+                      setEmail(a.email);
+                      setPassword(DEMO_PASSWORD);
+                      setFormError(null);
+                    }}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-white text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    {t.auth.demoFill}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <button
           onClick={() => {
