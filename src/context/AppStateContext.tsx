@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { usePathname, useRouter } from 'next/navigation';
 import { ScreenId, BloodGroup } from '../types/blood';
 import type { NotificationDto } from '../lib/dtoTypes';
-import { browserStorage as donorStorage, readMyDonorProfiles } from '../lib/myDonorProfile';
+import { browserStorage as donorStorage, DONOR_PROFILE_CHANGED, readMyDonorProfiles } from '../lib/myDonorProfile';
 import { sound } from '../utils/audio';
 import { pathToScreen, screenPath } from '../utils/routes';
 import { usePersistentState } from '../utils/persistentState';
@@ -84,13 +84,18 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // identified as a donor means no notifications, never sample ones.
   const { user } = useAuth();
   const [rememberedDonorId, setRememberedDonorId] = useState<string | null>(null);
+  // Read again whenever a donor is registered or the remembered ones are cleared (sign-out); reading only
+  // on mount left the bell empty after registering until a reload.
   useEffect(() => {
-    setRememberedDonorId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
+    const read = () => setRememberedDonorId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
+    read();
+    window.addEventListener(DONOR_PROFILE_CHANGED, read);
+    return () => window.removeEventListener(DONOR_PROFILE_CHANGED, read);
   }, []);
   const mineDonorQuery = useGetDonorsQuery({ mine: true, pageSize: 1 }, { skip: !user });
   const activeDonorId = rememberedDonorId ?? mineDonorQuery.data?.donors[0]?.id ?? null;
 
-  const notificationsQuery = useGetDonorNotificationsQuery({ id: activeDonorId ?? '' }, { skip: !activeDonorId });
+  const notificationsQuery = useGetDonorNotificationsQuery({ id: activeDonorId ?? '' }, { skip: !activeDonorId, pollingInterval: 30_000 });
   const [markRead] = useMarkNotificationReadMutation();
   const notifications = activeDonorId ? notificationsQuery.data?.notifications ?? [] : [];
   const unreadCount = activeDonorId ? notificationsQuery.data?.unreadCount ?? 0 : 0;

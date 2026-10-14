@@ -9,6 +9,7 @@ import { useAlert } from '../context/AlertContext';
 import { useAuth } from '../context/AuthContext';
 import type { Permission } from '../lib/permissions';
 import { AdminRolesPanel } from './AdminRolesPanel';
+import { HospitalOrgScreen } from './HospitalOrgScreen';
 import {
   useGetAdminStatsQuery,
   useGetAuditLogQuery,
@@ -108,6 +109,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const selectedTab: AdminTab = urlTab !== null && Object.hasOwn(TAB_PERMISSION, urlTab) ? (urlTab as AdminTab) : 'overview';
   const setActiveTab = (tab: AdminTab) => router.push(subPagePath(language, '/admin', tab, 'overview'));
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isPortalOpen, setIsPortalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodFilter, setBloodFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -1053,7 +1055,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </button>
                 )}
                 <button
-                  onClick={() => onNavigate('hospital-org')}
+                  onClick={() => setIsPortalOpen(true)}
                   className="w-full py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border border-red-200"
                 >
                   <span className="material-symbols-outlined text-base">account_balance</span>
@@ -1940,7 +1942,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </div>
 
             <button
-              onClick={() => onNavigate('hospital-org')}
+              onClick={() => setIsPortalOpen(true)}
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
             >
               <span className="material-symbols-outlined text-base">open_in_new</span>
@@ -2111,7 +2113,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         </div>
       )}
 
-      {/* TAB 6: SMS GATEWAYS & AUDIT LOGS */}
+      {/* TAB 6: SYSTEM AUDIT */}
       {activeTab === 'logs' && (
         <div className="bg-slate-950 text-slate-200 rounded-3xl p-6 border border-slate-800 shadow-xl flex flex-col gap-4 font-mono text-xs">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -2121,29 +2123,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 {t.admin.logs.title}
               </span>
             </div>
-            <span className="text-[11px] text-slate-400">{t.admin.logs.sampleBadge}</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-2">
-            {[
-              { name: 'Grameenphone (GP-SMS-E01)', latency: '42ms', status: '100%' },
-              { name: 'Banglalink (BL-ALRT-GW)', latency: '58ms', status: '99.9%' },
-              { name: 'Robi / Airtel (R-PUSH-02)', latency: '61ms', status: '99.8%' },
-              { name: 'Teletalk Emergency (TT-999)', latency: '35ms', status: '100%' }
-            ].map(gw => (
-              <div key={gw.name} className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 block truncate">{gw.name}</span>
-                <span className="text-emerald-400 font-bold block mt-1">{t.admin.logs.online(gw.status)}</span>
-                <span className="text-[10px] text-slate-500">{t.admin.logs.latency} {gw.latency}</span>
-              </div>
-            ))}
+            {logsDemo && <span className="text-[11px] text-slate-400">{t.admin.logs.sampleBadge}</span>}
           </div>
 
           <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-2 max-h-72 overflow-y-auto">
             {logsDemo ? (
               <>
                 <div className="text-amber-400 mb-2">{t.admin.logs.demoNotice}</div>
-                <div className="text-slate-400">[10:24:18] <span className="text-emerald-400">[GP-SMS]</span> {t.admin.logs.log1}</div>
+                <div className="text-slate-400">[10:24:18] <span className="text-emerald-400">[BROADCAST]</span> {t.admin.logs.log1}</div>
                 <div className="text-slate-400">[10:23:45] <span className="text-cyan-400">[BDRCS-AUTH]</span> {t.admin.logs.log2}</div>
                 <div className="text-slate-400">[10:21:02] <span className="text-amber-400">[AUDIT-WARN]</span> {t.admin.logs.log3}</div>
               </>
@@ -2167,6 +2154,35 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
         </div>
       </div>
+
+      {/* Hospital Portal Modal: opens over the dashboard instead of leaving it */}
+      {isPortalOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.admin.hospitals.openPortal}
+          onKeyDown={(e) => e.key === 'Escape' && setIsPortalOpen(false)}
+        >
+          <div className="relative max-w-6xl mx-auto bg-slate-50 rounded-3xl shadow-2xl border border-slate-200 p-3 sm:p-5">
+            <button
+              onClick={() => setIsPortalOpen(false)}
+              aria-label={t.admin.hospitals.closePortal}
+              className="sticky top-0 ml-auto mb-2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer shadow-md"
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+              <span>{t.admin.hospitals.closePortal}</span>
+            </button>
+            <HospitalOrgScreen
+              onNavigate={(screen) => {
+                setIsPortalOpen(false);
+                onNavigate(screen);
+              }}
+              onOpenRequisition={onOpenRequisition}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Donor Dossier Modal */}
       {selectedDonor && (

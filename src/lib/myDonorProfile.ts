@@ -18,6 +18,13 @@ export interface RememberedDonor {
 const KEY = 'bloodlagbe.myDonorProfile';
 export const MAX_REMEMBERED = 50;
 
+/** Fired after the remembered donors change, so parts of the app that read them once can read them again. */
+export const DONOR_PROFILE_CHANGED = 'bloodlagbe:donor-profile-changed';
+
+export function announceDonorProfileChange(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(DONOR_PROFILE_CHANGED));
+}
+
 /** The browser's local storage, or null when it is missing or blocked. */
 export function browserStorage(): StorageLike | null {
   try {

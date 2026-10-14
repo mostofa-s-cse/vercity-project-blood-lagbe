@@ -4,7 +4,7 @@ import { sound } from '../utils/audio';
 import { isValidBdPhone } from '../utils/phone';
 import { useClaimDonorMutation, useGetDonorQuery, useGetDonorsQuery, useRegisterDonorMutation, useUpdateDonorMutation } from '../store/api';
 import { isDatabaseOff } from '../store/errors';
-import { browserStorage as donorStorage, readMyDonorProfiles, rememberDonor } from '../lib/myDonorProfile';
+import { browserStorage as donorStorage, announceDonorProfileChange, readMyDonorProfiles, rememberDonor } from '../lib/myDonorProfile';
 import type { DonorRegisteredInfo } from '../context/AppStateContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -201,6 +201,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       .unwrap()
       .then((saved) => {
         rememberDonor(donorStorage(), { id: saved.id, token: saved.manageToken });
+        announceDonorProfileChange();
         // So the optional "save to an account" section below can claim it without a reload.
         setRememberedId(saved.id);
       })
