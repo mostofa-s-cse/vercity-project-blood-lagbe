@@ -57,7 +57,22 @@ const PATH_TO_SCREEN: Record<string, ScreenId> = Object.fromEntries(
 export function pathToScreen(pathname: string | null | undefined): ScreenId {
   if (!pathname) return 'emergency-hub';
   const { path } = splitLanguage(pathname);
-  return Object.hasOwn(PATH_TO_SCREEN, path) ? PATH_TO_SCREEN[path] : 'emergency-hub';
+  if (Object.hasOwn(PATH_TO_SCREEN, path)) return PATH_TO_SCREEN[path];
+  // A sub-page such as /admin/donors belongs to its screen.
+  const base = `/${path.split('/')[1] ?? ''}`;
+  return Object.hasOwn(PATH_TO_SCREEN, base) ? PATH_TO_SCREEN[base] : 'emergency-hub';
+}
+
+/** The segment after a screen's path (`/bn/admin/donors` with `/admin` gives `donors`), or null. */
+export function subPath(pathname: string, base: string): string | null {
+  const { path } = splitLanguage(pathname);
+  if (!path.startsWith(`${base}/`)) return null;
+  return path.slice(base.length + 1).split('/')[0] || null;
+}
+
+/** URL of a sub-page; the default one lives on the bare screen path. */
+export function subPagePath(language: Language, base: string, page: string, defaultPage: string): string {
+  return localizedPath(language, page === defaultPage ? base : `${base}/${page}`);
 }
 
 // Same alias list as the old getScreenFromHash in App.tsx.

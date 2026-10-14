@@ -10,6 +10,8 @@ import {
   resolveLegacyRedirect,
   screenPath,
   splitLanguage,
+  subPath,
+  subPagePath,
   switchLanguagePath,
 } from './routes.ts';
 
@@ -150,4 +152,22 @@ test('resolveLegacyRedirect works from a language root and returns an unprefixed
   assert.equal(resolveLegacyRedirect('/bn/admin', '#sos'), null);
   assert.equal(resolveLegacyRedirect('/en/donors', '#admin'), null);
   assert.equal(resolveLegacyRedirect('/bn', '#constructor'), null);
+});
+
+test('a sub-page of a screen still belongs to that screen', () => {
+  assert.equal(pathToScreen('/bn/admin/donors'), 'admin-panel');
+  assert.equal(pathToScreen('/en/command/sos-queue'), 'ops-command');
+  assert.equal(pathToScreen('/bn/nope/donors'), 'emergency-hub');
+});
+
+test('subPath reads the part after the screen path', () => {
+  assert.equal(subPath('/bn/admin/donors', '/admin'), 'donors');
+  assert.equal(subPath('/en/command/sos-queue/', '/command'), 'sos-queue');
+  assert.equal(subPath('/bn/admin', '/admin'), null);
+  assert.equal(subPath('/bn/command/x', '/admin'), null);
+});
+
+test('subPagePath builds the URL, leaving the default page on the bare path', () => {
+  assert.equal(subPagePath('bn', '/admin', 'donors', 'overview'), '/bn/admin/donors');
+  assert.equal(subPagePath('en', '/admin', 'overview', 'overview'), '/en/admin');
 });

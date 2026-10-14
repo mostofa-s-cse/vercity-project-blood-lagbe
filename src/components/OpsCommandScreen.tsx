@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { subPagePath, subPath } from '../utils/routes';
 import { OpsSubTab, ScreenId, BloodGroup, HospitalOrganization } from '../types/blood';
 import { CHILLER_UNITS, SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../data/mockData';
 import { sound } from '../utils/audio';
@@ -46,12 +48,19 @@ interface OpsCommandScreenProps {
   onOpenRequisition: (demand: any) => void;
 }
 
+const OPS_TABS: OpsSubTab[] = ['overview', 'sos-queue', 'hospitals-stocks', 'anti-fraud', 'system-gateways'];
+
 export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
   onNavigate,
   onOpenRequisition,
 }) => {
   const { t, language } = useLanguage();
-  const [activeTab, setActiveTab] = useState<OpsSubTab>('overview');
+  // The open tab lives in the URL (/command/sos-queue) so a reload or a shared link lands on the same tab.
+  const router = useRouter();
+  const pathname = usePathname();
+  const urlTab = subPath(pathname, '/command');
+  const activeTab: OpsSubTab = OPS_TABS.includes(urlTab as OpsSubTab) ? (urlTab as OpsSubTab) : 'overview';
+  const setActiveTab = (tab: OpsSubTab) => router.push(subPagePath(language, '/command', tab, 'overview'));
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [stockMap, setStockMap] = useState<Record<string, Record<string, number>> | null>(null);
 

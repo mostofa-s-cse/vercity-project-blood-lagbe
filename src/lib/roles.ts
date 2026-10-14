@@ -24,7 +24,10 @@ const PROTECTED_PATHS: Record<string, Requirement> = {
 };
 
 export function requiredAccess(path: string): Requirement | null {
-  return Object.hasOwn(PROTECTED_PATHS, path) ? PROTECTED_PATHS[path] : null;
+  if (Object.hasOwn(PROTECTED_PATHS, path)) return PROTECTED_PATHS[path];
+  // Sub-pages (/admin/donors, /command/sos-queue) need the same access as their screen.
+  const base = `/${path.split('/')[1] ?? ''}`;
+  return Object.hasOwn(PROTECTED_PATHS, base) ? PROTECTED_PATHS[base] : null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

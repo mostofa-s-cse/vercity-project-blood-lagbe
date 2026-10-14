@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { subPagePath, subPath } from '../utils/routes';
 import { ScreenId, HospitalOrganization, BloodGroup } from '../types/blood';
 import { SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../data/mockData';
 import { sound } from '../utils/audio';
@@ -99,7 +101,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const { can, user, signOut } = useAuth();
   const adminDisplayName = user?.name ?? user?.email ?? t.admin.header.adminName;
 
-  const [selectedTab, setActiveTab] = useState<AdminTab>('overview');
+  // The open tab lives in the URL (/admin/donors) so a reload or a shared link lands on the same tab.
+  const router = useRouter();
+  const pathname = usePathname();
+  const urlTab = subPath(pathname, '/admin');
+  const selectedTab: AdminTab = urlTab !== null && Object.hasOwn(TAB_PERMISSION, urlTab) ? (urlTab as AdminTab) : 'overview';
+  const setActiveTab = (tab: AdminTab) => router.push(subPagePath(language, '/admin', tab, 'overview'));
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodFilter, setBloodFilter] = useState<string>('ALL');

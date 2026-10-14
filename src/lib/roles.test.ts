@@ -10,7 +10,7 @@ test('only the admin panel, Ops Command and the passport are protected', () => {
   assert.deepEqual(requiredAccess('/admin'), { level: 'admin', permission: 'panel.open' });
   assert.deepEqual(requiredAccess('/command'), { level: 'admin', permission: 'ops.command' });
   assert.deepEqual(requiredAccess('/passport'), { level: 'user' });
-  for (const open of ['/', '/donors', '/sos', '/tracking', '/register', '/tracker', '/hospitals', '/deck', '/docs', '/no-access/admin', '/admin/x', '/constructor', '/__proto__']) {
+  for (const open of ['/', '/donors', '/sos', '/tracking', '/register', '/tracker', '/hospitals', '/deck', '/docs', '/no-access/admin', '/constructor', '/__proto__']) {
     assert.equal(requiredAccess(open), null, open);
   }
 });
@@ -106,4 +106,10 @@ test('signed-in pages: open in demo mode, sign-in required once Supabase is set 
   assert.equal(canAccessPath(user, ctx({ claims: claims({}) })), true);
   // The admin demo switch does not open the signed-in area.
   assert.equal(canAccessPath(user, ctx({ adminOpen: true, claims: null })), false);
+});
+
+test('sub-pages of the admin screens need the same access as the screen', () => {
+  assert.deepEqual(requiredAccess('/admin/donors'), { level: 'admin', permission: 'panel.open' });
+  assert.deepEqual(requiredAccess('/command/sos-queue'), { level: 'admin', permission: 'ops.command' });
+  assert.equal(requiredAccess('/administrator'), null);
 });

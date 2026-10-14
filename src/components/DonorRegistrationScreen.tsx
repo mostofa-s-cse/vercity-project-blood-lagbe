@@ -41,14 +41,17 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   // of a blank form. Starts null (matches the server-rendered markup) and is read from localStorage
   // only after mount, so hydration does not mismatch.
   const [rememberedId, setRememberedId] = useState<string | null>(null);
-  useEffect(() => {
-    setRememberedId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
-  }, []);
 
   // A signed-in person's own donor profile, for when this specific browser has no remembered id (a new
   // device, cleared storage, or registered from a different browser) — same fallback DonorPassportScreen
   // uses, so a signed-in donor always sees "My profile" instead of a blank form to fill in again.
   const { user, signUpWithEmail, signUpWithPhone } = useAuth();
+  // Re-read when the signed-in person changes: signing out clears the remembered donor, and without this
+  // the stale id kept showing "My profile" until a reload.
+  useEffect(() => {
+    setRememberedId(readMyDonorProfiles(donorStorage())[0]?.id ?? null);
+    setShowForm(false);
+  }, [user?.id]);
   const mineQuery = useGetDonorsQuery({ mine: true, pageSize: 1 }, { skip: !user });
   const [showForm, setShowForm] = useState(false);
   const activeId = showForm ? null : rememberedId ?? mineQuery.data?.donors[0]?.id ?? null;
