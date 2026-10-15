@@ -22,8 +22,6 @@ export const donors = {
   loadErrorTitle: 'Could not load donors',
   loadErrorDesc: 'The donor list could not be loaded. Check your connection and try again.',
   retry: 'Retry',
-  loadMore: 'Load more',
-  loadingMore: 'Loading...',
   available: 'Available now',
   unavailable: 'Not available now',
   lastDonationLabel: 'Last donation',

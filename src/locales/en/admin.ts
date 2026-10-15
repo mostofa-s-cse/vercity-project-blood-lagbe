@@ -201,9 +201,6 @@ export const admin = {
     callFailed: 'Could not load the phone number. Please try again.',
     empty: 'No donors match these filters.',
     demoNotice: 'Sample data: no database is connected, so these are examples.',
-    prevPage: 'Previous',
-    nextPage: 'Next',
-    pageOf: (page: number, pages: number) => `Page ${page} of ${pages}`,
   },
 
   requests: {

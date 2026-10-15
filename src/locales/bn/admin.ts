@@ -203,9 +203,6 @@ export const admin: Admin = {
     callFailed: 'ফোন নম্বর লোড করা যায়নি। আবার চেষ্টা করুন।',
     empty: 'এই ফিল্টারে কোনো ডোনার নেই।',
     demoNotice: 'নমুনা তথ্য: কোনো ডাটাবেস যুক্ত নেই, তাই এগুলো উদাহরণ।',
-    prevPage: 'আগের পাতা',
-    nextPage: 'পরের পাতা',
-    pageOf: (page: number, pages: number) => `পাতা ${page} / ${pages}`,
   },
 
   requests: {

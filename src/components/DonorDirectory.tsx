@@ -8,6 +8,8 @@ import { sampleContactPhone, sampleDonors } from '../data/sample';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useGeolocation } from '../hooks/useGeolocation';
+import { Pagination } from './Pagination';
+import { pageSlice } from '../lib/pagination';
 
 const NEAR_ME_RADIUS_KM = 50;
 
@@ -16,17 +18,10 @@ interface DonorDirectoryProps {
 }
 
 /** The API sends 20 donors per page. */
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 const SEARCH_DELAY_MS = 300;
 
 type GroupFilter = BloodGroupValue | 'ALL';
-
-/** Loaded pages for one set of filters. A new filter key starts again from page 1. */
-interface LoadedPages {
-  key: string;
-  pages: Record<number, DonorDto[]>;
-  total: number | null;
-}
 
 const initials = (name: string): string =>
   name
@@ -99,17 +94,6 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
     if (isDatabaseOff(error)) setDemo(true);
   }, [error]);
 
-  const [loaded, setLoaded] = useState<LoadedPages>({ key: filterKey, pages: {}, total: null });
-  useEffect(() => {
-    if (!currentData) return;
-    setLoaded((prev) => ({
-      key: filterKey,
-      pages: { ...(prev.key === filterKey ? prev.pages : {}), [page]: currentData.donors },
-      total: currentData.total,
-    }));
-    // Runs only when a new answer arrives; currentData always belongs to the current filters and page.
-  }, [currentData]);
-
   const [getContact] = useLazyGetDonorContactQuery();
   const samples = useMemo(() => sampleDonors(), []);
 
@@ -128,18 +112,12 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
       .sort((a, b) => Number(b.isAvailable) - Number(a.isAvailable));
   }, [samples, selectedGroup, onlyAvailable, search]);
 
-  const livePages = loaded.key === filterKey ? loaded : null;
-  const liveDonors: DonorDto[] = [];
-  if (livePages) {
-    for (let p = 1; p <= page; p += 1) liveDonors.push(...(livePages.pages[p] ?? []));
-  }
-
-  const donors = demo ? sampleMatches : liveDonors;
-  const total = demo ? sampleMatches.length : livePages?.total ?? null;
+  // One server page at a time: `currentData` always belongs to the current filters and page.
+  const liveDonors: DonorDto[] = currentData?.donors ?? [];
+  const total = demo ? sampleMatches.length : currentData?.total ?? null;
+  const donors = demo ? pageSlice(sampleMatches, page, PAGE_SIZE) : liveDonors;
   const loadFailed = !demo && !!error && !isDatabaseOff(error);
   const firstLoad = !demo && !loadFailed && liveDonors.length === 0 && (isFetching || total === null);
-  const canLoadMore = !demo && total !== null && donors.length < total;
-  const loadingMore = !demo && isFetching && page > 1 && !livePages?.pages[page];
 
   const resetFilters = () => {
     setSelectedGroup('ALL');
@@ -148,9 +126,10 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
     setSearch('');
   };
 
-  const loadMore = () => {
+  const goToPage = (next: number) => {
     sound.playTap();
-    setPageState({ key: filterKey, page: page + 1 });
+    setPageState({ key: filterKey, page: next });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCallDonor = async (donor: DonorDto, e: React.MouseEvent) => {
@@ -497,26 +476,8 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
         </div>
       )}
 
-      {/* Load more */}
-      {donors.length > 0 && (canLoadMore || (loadFailed && page > 1)) && (
-        <div className="flex flex-col items-center gap-2">
-          {loadFailed && (
-            <p role="alert" className="text-xs font-semibold text-red-600">
-              {t.donors.loadErrorDesc}
-            </p>
-          )}
-          <button
-            onClick={loadFailed ? () => refetch() : loadMore}
-            disabled={loadingMore}
-            className="px-6 py-2.5 rounded-xl bg-white border border-slate-300 hover:border-red-300 hover:text-red-600 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-sm transition-colors disabled:opacity-70 disabled:cursor-wait cursor-pointer"
-          >
-            <span className={`material-symbols-outlined text-base ${loadingMore ? 'animate-spin' : ''}`}>
-              {loadingMore ? 'progress_activity' : loadFailed ? 'refresh' : 'expand_more'}
-            </span>
-            <span>{loadingMore ? t.donors.loadingMore : loadFailed ? t.donors.retry : t.donors.loadMore}</span>
-          </button>
-        </div>
-      )}
+      {/* Pages */}
+      {total !== null && total > 0 && !firstLoad && <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={goToPage} />}
 
       {/* Empty */}
       {!firstLoad && !loadFailed && total === 0 && (

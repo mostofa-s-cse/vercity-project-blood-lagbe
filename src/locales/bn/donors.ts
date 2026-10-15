@@ -24,8 +24,6 @@ export const donors: Donors = {
   loadErrorTitle: 'ডোনার তালিকা লোড করা যায়নি',
   loadErrorDesc: 'ডোনার তালিকা লোড করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
   retry: 'আবার চেষ্টা করুন',
-  loadMore: 'আরও দেখুন',
-  loadingMore: 'লোড হচ্ছে...',
   available: 'এখন প্রস্তুত',
   unavailable: 'এখন প্রস্তুত নন',
   lastDonationLabel: 'শেষ রক্তদান',

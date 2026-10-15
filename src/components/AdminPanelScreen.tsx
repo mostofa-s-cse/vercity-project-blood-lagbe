@@ -9,6 +9,8 @@ import { useAlert } from '../context/AlertContext';
 import { useAuth } from '../context/AuthContext';
 import type { Permission } from '../lib/permissions';
 import { AdminRolesPanel } from './AdminRolesPanel';
+import { Pagination } from './Pagination';
+import { pageCount, pageSlice } from '../lib/pagination';
 import { HospitalOrgScreen } from './HospitalOrgScreen';
 import {
   useGetAdminStatsQuery,
@@ -69,6 +71,10 @@ interface AdminPanelScreenProps {
   onOpenRequisition: (demand: any) => void;
   onOpenCreateSos: () => void;
 }
+
+const HOSPITALS_PAGE_SIZE = 9;
+const FRAUD_PAGE_SIZE = 10;
+const AUDIT_PAGE_SIZE = 20;
 
 type AdminTab = 'overview' | 'alerts' | 'donors' | 'requests' | 'hospitals' | 'fraud' | 'logs' | 'access';
 
@@ -224,6 +230,11 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
   // Requests tab: real data, paged.
   const [requestPage, setRequestPage] = useState(1);
+  // A new filter or search starts again at the first page (the shared filters apply to both tabs).
+  useEffect(() => {
+    setDonorPage(1);
+    setRequestPage(1);
+  }, [bloodFilter, searchQuery, statusFilter]);
   const requestsArgs = useMemo(
     () => ({
       bloodGroup: bloodFilter !== 'ALL' ? bloodFilter : undefined,
@@ -259,6 +270,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     }
   };
 
+  const [hospitalPage, setHospitalPage] = useState(1);
   const handleToggleHospitalVerification = async (hospitalId: string) => {
     sound.playTap();
     const hospital = hospitals.find((h) => h.id === hospitalId);
@@ -298,6 +310,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     []
   );
   const fraudList: FraudIncidentDto[] = fraudDemo ? sampleFraudList : (fraudData?.incidents ?? []);
+  const [fraudPage, setFraudPage] = useState(1);
   const [resolveFraud, { isLoading: resolvingFraud }] = useResolveFraudIncidentMutation();
   const handleResolveFraud = async (id: string, action: 'banned' | 'dismissed') => {
     sound.playTap();
@@ -317,6 +330,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const { currentData: logsData, error: logsError } = useGetAuditLogQuery();
   const logsDemo = unavailable(logsError);
   const auditEntries = logsData?.entries ?? [];
+  const [auditPage, setAuditPage] = useState(1);
+
+  // A list that shrinks (a resolved incident, a reviewed hospital) steps back instead of showing an empty page.
+  useEffect(() => {
+    setHospitalPage((p) => Math.min(p, pageCount(hospitals.length, HOSPITALS_PAGE_SIZE)));
+    setFraudPage((p) => Math.min(p, pageCount(fraudList.length, FRAUD_PAGE_SIZE)));
+    setAuditPage((p) => Math.min(p, pageCount(auditEntries.length, AUDIT_PAGE_SIZE)));
+  }, [hospitals.length, fraudList.length, auditEntries.length]);
 
   // Overview tab: real counts.
   const { currentData: statsData, error: statsError } = useGetAdminStatsQuery();
@@ -1714,24 +1735,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </table>
           </div>
 
-          {!donorsDemo && donorsTotal > 20 && (
-            <div className="flex items-center justify-between text-xs text-slate-600">
-              <button
-                onClick={() => setDonorPage((p) => Math.max(1, p - 1))}
-                disabled={donorPage <= 1}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
-              >
-                {t.admin.donors.prevPage}
-              </button>
-              <span>{t.admin.donors.pageOf(donorPage, Math.ceil(donorsTotal / 20))}</span>
-              <button
-                onClick={() => setDonorPage((p) => (p * 20 < donorsTotal ? p + 1 : p))}
-                disabled={donorPage * 20 >= donorsTotal}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
-              >
-                {t.admin.donors.nextPage}
-              </button>
-            </div>
+          {!donorsDemo && (
+            <Pagination page={donorPage} pageSize={20} total={donorsTotal} onPage={(next) => { sound.playTap(); setDonorPage(next); }} />
           )}
         </div>
       )}
@@ -1902,24 +1907,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             )}
           </div>
 
-          {!requestsDemo && requestsTotal > 20 && (
-            <div className="flex items-center justify-between text-xs text-slate-600">
-              <button
-                onClick={() => setRequestPage((p) => Math.max(1, p - 1))}
-                disabled={requestPage <= 1}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
-              >
-                {t.admin.donors.prevPage}
-              </button>
-              <span>{t.admin.donors.pageOf(requestPage, Math.ceil(requestsTotal / 20))}</span>
-              <button
-                onClick={() => setRequestPage((p) => (p * 20 < requestsTotal ? p + 1 : p))}
-                disabled={requestPage * 20 >= requestsTotal}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold"
-              >
-                {t.admin.donors.nextPage}
-              </button>
-            </div>
+          {!requestsDemo && (
+            <Pagination page={requestPage} pageSize={20} total={requestsTotal} onPage={(next) => { sound.playTap(); setRequestPage(next); }} />
           )}
         </div>
       )}
@@ -1951,7 +1940,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {hospitals.map((hosp) => (
+            {pageSlice(hospitals, hospitalPage, HOSPITALS_PAGE_SIZE).map((hosp) => (
               <div 
                 key={hosp.id}
                 className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex flex-col justify-between"
@@ -2018,6 +2007,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               </div>
             ))}
           </div>
+
+          <Pagination page={hospitalPage} pageSize={HOSPITALS_PAGE_SIZE} total={hospitals.length} onPage={(next) => { sound.playTap(); setHospitalPage(next); }} />
         </div>
       )}
 
@@ -2042,7 +2033,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           )}
 
           <div className="space-y-4">
-            {fraudList.map((incident) => (
+            {pageSlice(fraudList, fraudPage, FRAUD_PAGE_SIZE).map((incident) => (
               <div
                 key={incident.id}
                 className="p-5 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
@@ -2110,6 +2101,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             ))}
             {fraudList.length === 0 && <p className="text-sm text-slate-500 text-center py-6">{t.admin.fraud.empty}</p>}
           </div>
+          <Pagination page={fraudPage} pageSize={FRAUD_PAGE_SIZE} total={fraudList.length} onPage={(next) => { sound.playTap(); setFraudPage(next); }} />
         </div>
       )}
 
@@ -2137,7 +2129,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             ) : auditEntries.length === 0 ? (
               <div className="text-slate-500">{t.admin.logs.empty}</div>
             ) : (
-              auditEntries.map((entry) => (
+              pageSlice(auditEntries, auditPage, AUDIT_PAGE_SIZE).map((entry) => (
                 <div key={entry.id} className="text-slate-400">
                   [{new Date(entry.createdAt).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'short', timeStyle: 'medium' })}]{' '}
                   <span className="text-emerald-400">[{entry.action}]</span> {entry.detail}
@@ -2146,6 +2138,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               ))
             )}
           </div>
+          {!logsDemo && (
+            <Pagination page={auditPage} pageSize={AUDIT_PAGE_SIZE} total={auditEntries.length} onPage={(next) => { sound.playTap(); setAuditPage(next); }} />
+          )}
         </div>
       )}
 
