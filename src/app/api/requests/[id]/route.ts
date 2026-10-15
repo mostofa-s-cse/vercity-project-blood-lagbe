@@ -6,33 +6,55 @@ import { canManageRequest, MANAGE_TOKEN_HEADER } from '@/lib/requestAccess';
 import { canTransition } from '@/lib/requestStatus';
 import { getClaims } from '@/lib/supabase/server';
 import { parseStatusInput } from '@/lib/validation';
+import { generateDonationCode, parseDonationsInput, planDonations, type DonationPlan, type DonationSelection } from '@/lib/donationConfirm';
 import type { RequestStatus } from '@/generated/prisma/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Writes a real donation for every responder who is a registered donor (has a `donorId`), and moves
- * that donor's `lastDonationAt` to now. A responder who only left a name and phone (no account) gets no
- * donation row — there is no donor profile to attach it to, and inventing one would be dishonest.
+ * Writes what the requester confirmed (see `planDonations`): a donation with a traceable code for every
+ * registered donor, the donor's `lastDonationAt`, and the units on each confirmed answer. A responder who
+ * only left a name and phone has no donor profile to attach a donation to, so only the units are kept.
  */
-async function recordDonations(prisma: ReturnType<typeof getPrisma>, requestId: string, headers: Headers): Promise<void> {
-  const [request, responses, claims] = await Promise.all([
-    prisma.sosRequest.findUnique({ where: { id: requestId }, select: { place: true } }),
-    prisma.requestResponse.findMany({ where: { requestId, donorId: { not: null } }, select: { donorId: true } }),
+async function recordDonations(prisma: ReturnType<typeof getPrisma>, requestId: string, plan: DonationPlan): Promise<void> {
+  if (plan.confirmed.length === 0) return;
+  const [request, claims] = await Promise.all([
+    prisma.sosRequest.findUnique({ where: { id: requestId }, select: { place: true, bloodGroup: true } }),
     getClaims(),
   ]);
-  if (!request || responses.length === 0) return;
+  if (!request) return;
 
   const confirmedBy = typeof claims?.email === 'string' ? claims.email : null;
-  const donorIds = [...new Set(responses.map((r) => r.donorId as string))];
   const now = new Date();
+  const codes = new Set<string>();
+  const nextCode = () => {
+    let code = generateDonationCode();
+    while (codes.has(code)) code = generateDonationCode();
+    codes.add(code);
+    return code;
+  };
 
   await prisma.$transaction([
-    prisma.donation.createMany({
-      data: donorIds.map((donorId) => ({ donorId, requestId, hospital: request.place, donatedAt: now, confirmedBy })),
-    }),
-    prisma.donor.updateMany({ where: { id: { in: donorIds } }, data: { lastDonationAt: now } }),
+    // One donation each, with the donor's "your donation was confirmed" notification created alongside.
+    ...plan.donations.map(({ donorId, units }) =>
+      prisma.donation.create({
+        data: {
+          donorId,
+          requestId,
+          units,
+          code: nextCode(),
+          hospital: request.place,
+          donatedAt: now,
+          confirmedBy,
+          notifications: { create: { donorId, requestId, bloodGroup: request.bloodGroup, type: 'donation_confirmed' } },
+        },
+      })
+    ),
+    prisma.donor.updateMany({ where: { id: { in: plan.donations.map((d) => d.donorId) } }, data: { lastDonationAt: now } }),
+    ...plan.confirmed.map(({ responseId, units }) =>
+      prisma.requestResponse.update({ where: { id: responseId }, data: { donatedUnits: units, donationRejected: false } })
+    ),
   ]);
 }
 
@@ -53,10 +75,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
     const canManage = await canManageRequest(row, request.headers);
+    // The traceable code of each confirmed donation, found by the registered donor who answered.
+    const gifts = row.status === 'COMPLETED' ? await getPrisma().donation.findMany({ where: { requestId: id }, select: { donorId: true, code: true } }) : [];
+    const codeByDonor = new Map(gifts.map((gift) => [gift.donorId, gift.code]));
     return NextResponse.json(
       {
         request: toRequestDto(row),
-        responses: row.responses.map((response) => toResponseDto(response, canManage)),
+        responses: row.responses.map((response) => toResponseDto(response, canManage, response.donorId ? codeByDonor.get(response.donorId) ?? null : null)),
         canManage,
       },
       { headers: { 'Cache-Control': 'no-store' } }
@@ -86,6 +111,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (parsed.error) return NextResponse.json({ error: 'invalid_input', field: parsed.error }, { status: 400 });
   const target = parsed.value.status;
 
+  // Who actually donated. Left out entirely = the older call that names nobody (see `planDonations`).
+  let selected: DonationSelection[] | null = null;
+  const rawDonations = (body as { donations?: unknown }).donations;
+  if (target === 'COMPLETED' && rawDonations !== undefined) {
+    const donations = parseDonationsInput(rawDonations);
+    if (donations.error) return NextResponse.json({ error: 'invalid_input', field: donations.error }, { status: 400 });
+    selected = donations.value;
+  }
+
   const { id } = await params;
   try {
     const prisma = getPrisma();
@@ -99,6 +133,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
     if (!canTransition(row.status, target)) return NextResponse.json({ error: 'invalid_transition' }, { status: 409 });
 
+    // Checked before anything is written, so a bad selection never leaves a half-completed request.
+    let plan: DonationPlan | null = null;
+    if (target === 'COMPLETED') {
+      const responders = await prisma.requestResponse.findMany({ where: { requestId: id }, select: { id: true, donorId: true } });
+      const planned = planDonations(responders, selected);
+      if (planned.error) return NextResponse.json({ error: 'invalid_input', field: planned.error }, { status: 400 });
+      plan = planned.value;
+    }
+
     // The old status is part of the condition, so two updates racing from the same state cannot both win.
     const changed = await prisma.sosRequest.updateMany({
       where: { id, status: row.status },
@@ -106,7 +149,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
     if (changed.count === 0) return NextResponse.json({ error: 'invalid_transition' }, { status: 409 });
 
-    if (target === 'COMPLETED') await recordDonations(prisma, id, request.headers);
+    if (plan) await recordDonations(prisma, id, plan);
 
     const updated = await prisma.sosRequest.findUniqueOrThrow({ where: { id }, include: { _count: { select: { responses: true } } } });
     return NextResponse.json({ request: toRequestDto(updated) });

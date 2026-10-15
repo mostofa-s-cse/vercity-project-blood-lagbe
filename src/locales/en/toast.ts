@@ -1,6 +1,8 @@
 export const toast = {
   sosBroadcast: (bloodGroup: string, hospital: string) =>
     `Broadcast Active: ${bloodGroup} SOS dispatched to 450+ donors near ${hospital}.`,
+  donationRemoved: 'Donation removed from your passport.',
+  donationRemoveFailed: 'Could not remove the donation. Please try again.',
   donorRegistered: (name: string, bloodGroup: string) =>
     `Welcome ${name}! Your ${bloodGroup} profile is now active on the donor roster.`,
 };

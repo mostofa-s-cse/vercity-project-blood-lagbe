@@ -3,6 +3,13 @@ export const common = {
   brandSub: 'Emergency Lifeline & Centralized Blood Rescue Network',
   banglaTag: 'রক্ত লাগবে?',
   close: 'Close',
+  pagination: {
+    label: 'Pages',
+    previous: 'Previous',
+    next: 'Next',
+    goTo: (page: number) => `Go to page ${page}`,
+    summary: (from: number, to: number, total: number) => `Showing ${from}-${to} of ${total}`,
+  },
   cancel: 'Cancel',
   metaTitle: 'Blood Lagbe? (রক্ত লাগবে?) - Emergency Lifeline Network',
   metaDescription:

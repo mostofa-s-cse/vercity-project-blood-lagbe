@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const [rows, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         where: { donorId: id },
-        include: { request: { select: { place: true } } },
+        include: { request: { select: { place: true } }, donation: { select: { code: true, units: true } } },
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),

@@ -131,8 +131,10 @@ model Notification {
   donor      Donor      @relation(fields: [donorId], references: [id], onDelete: Cascade)
   requestId  String     @map("request_id")
   request    SosRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  /// Only kind this package creates; room for more later, not invented now.
+  /// 'compatible_request' (a matching SOS) or 'donation_confirmed' (the requester confirmed this donor gave blood).
   type       String     @default("compatible_request")
+  donationId String?    @map("donation_id")
+  donation   Donation?  @relation(fields: [donationId], references: [id], onDelete: Cascade)
   bloodGroup BloodGroup @map("blood_group")
   isRead     Boolean    @default(false) @map("is_read")
   createdAt  DateTime   @default(now()) @map("created_at")
@@ -143,15 +145,19 @@ model Notification {
 
 /// Someone who said "I can donate" for a request.
 model RequestResponse {
-  id        String     @id @default(cuid())
-  requestId String     @map("request_id")
-  request   SosRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  name      String
-  phone     String
-  donorId   String?    @map("donor_id")
-  donor     Donor?     @relation(fields: [donorId], references: [id], onDelete: SetNull)
-  userId    String?    @map("user_id") @db.Uuid
-  createdAt DateTime   @default(now()) @map("created_at")
+  id               String     @id @default(cuid())
+  requestId        String     @map("request_id")
+  request          SosRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  name             String
+  phone            String
+  donorId          String?    @map("donor_id")
+  donor            Donor?     @relation(fields: [donorId], references: [id], onDelete: SetNull)
+  userId           String?    @map("user_id") @db.Uuid
+  /// Units this responder gave, as confirmed by whoever manages the request (0 until then).
+  /// The donor said the confirmed donation was not them (see DELETE /api/donors/[id]/donations/[donationId]).
+  donationRejected Boolean    @default(false) @map("donation_rejected")
+  donatedUnits     Int        @default(0) @map("donated_units")
+  createdAt        DateTime   @default(now()) @map("created_at")
 
   @@unique([requestId, phone])
   @@index([donorId])
@@ -229,15 +235,18 @@ model AuditLog {
 
 /// One real donation, written when a request a donor responded to is marked `COMPLETED`.
 model Donation {
-  id          String      @id @default(cuid())
-  donorId     String      @map("donor_id")
-  donor       Donor       @relation(fields: [donorId], references: [id], onDelete: Cascade)
-  requestId   String?     @map("request_id")
-  request     SosRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
-  hospital    String
-  units       Int         @default(1)
-  donatedAt   DateTime    @default(now()) @map("donated_at")
-  confirmedBy String?     @map("confirmed_by")
+  id            String         @id @default(cuid())
+  donorId       String         @map("donor_id")
+  donor         Donor          @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  requestId     String?        @map("request_id")
+  request       SosRequest?    @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  hospital      String
+  units         Int            @default(1)
+  /// Traceable code (BL-XXXXXX) that ties donor, request and hospital together.
+  code          String         @unique
+  notifications Notification[]
+  donatedAt     DateTime       @default(now()) @map("donated_at")
+  confirmedBy   String?        @map("confirmed_by")
 
   @@index([donorId, donatedAt])
   @@map("donations")

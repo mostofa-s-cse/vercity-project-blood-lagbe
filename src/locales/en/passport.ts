@@ -47,6 +47,10 @@ export const passport = {
   ledgerTitle: 'Past Transfusion Ledger & Certificates',
   bagVolume: '1 Bag (450 mL)',
   bagsVolume: (n: number) => `${n} Bag${n === 1 ? '' : 's'} (450 mL each)`,
+  donationCodeLabel: 'Donation code',
+  removeDonation: 'Not mine',
+  confirmRemoveDonation: 'Remove this donation from your passport? Use this only if you did not give blood. The person who posted the request will see that you disputed it.',
+  removeDonationFailed: 'Could not remove the donation. Please try again.',
   noDonationsYet: 'No donations recorded yet. Once a request you respond to is marked completed, it shows up here.',
   history: {
     h1: {

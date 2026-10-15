@@ -3,13 +3,16 @@ import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { api, useGetRequestQuery, useGetRequestsQuery, useUpdateRequestStatusMutation, type RequestsQuery } from '../store/api';
+import { api, useGetRequestQuery, useGetRequestsQuery, useUpdateRequestStatusMutation, useReopenRequestMutation } from '../store/api';
 import { useAppDispatch } from '../store/hooks';
 import { apiErrorCode, apiStatus, isDatabaseOff } from '../store/errors';
 import { browserStorage, readMyRequests, type RememberedRequest } from '../lib/myRequests';
-import { canTransition, type RequestStatusValue } from '../lib/requestStatus';
+import { canReopen, canTransition, type RequestStatusValue } from '../lib/requestStatus';
 import type { RequestDto } from '../lib/dtoTypes';
 import { sampleRequests } from '../data/sample';
+import { CompleteRequestModal } from './CompleteRequestModal';
+import { Pagination } from './Pagination';
+import { pageCount, pageSlice } from '../lib/pagination';
 
 interface RequestTrackingScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -17,9 +20,9 @@ interface RequestTrackingScreenProps {
 
 type TabId = 'MINE' | RequestStatusValue;
 
-const PAGE_SIZE = 20;
-/** The API's largest page: enough for every request one browser remembers. */
-const MINE_PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
+/** The API's largest page: enough for every request one browser remembers (shown PAGE_SIZE at a time). */
+const MINE_FETCH_SIZE = 50;
 
 /** The buttons a manager sees, per status, in this order. */
 const MANAGE_MOVES: Record<RequestStatusValue, RequestStatusValue[]> = {
@@ -59,9 +62,11 @@ const RequestCard: React.FC<RequestCardProps> = ({ req, manageable, demo, onToas
   const statusLabel = useStatusLabel();
   const dispatch = useAppDispatch();
   const [answersOpen, setAnswersOpen] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [updateStatus, { isLoading: saving }] = useUpdateRequestStatusMutation();
-  const detail = useGetRequestQuery(req.id, { skip: !answersOpen || demo });
+  const [reopen, { isLoading: reopening }] = useReopenRequestMutation();
+  const detail = useGetRequestQuery(req.id, { skip: !(answersOpen || completeOpen) || demo });
 
   const canManage = manageable && !demo;
   const moves = canManage ? MANAGE_MOVES[req.status].filter((next) => canTransition(req.status, next)) : [];
@@ -84,13 +89,35 @@ const RequestCard: React.FC<RequestCardProps> = ({ req, manageable, demo, onToas
     return t.tracking.errors.generic;
   };
 
-  const changeStatus = async (next: RequestStatusValue) => {
-    if (next === 'CANCELLED' && !window.confirm(t.tracking.confirmCancel)) return;
-    if (next === 'COMPLETED' && !window.confirm(t.tracking.confirmComplete)) return;
+  // A wrong "who donated" can be fixed for a short while after completing: the request goes back to
+  // "donor found" and can be completed again with the right people.
+  const canFix = canManage && canReopen(req.status, req.completedAt);
+  const fixDonations = async () => {
+    if (!window.confirm(t.tracking.confirmReopen)) return;
     sound.playTap();
     setActionError(null);
     try {
-      await updateStatus({ id: req.id, status: next }).unwrap();
+      await reopen({ id: req.id }).unwrap();
+      onToast(t.tracking.reopenedToast);
+    } catch (error) {
+      setActionError(apiErrorCode(error) === 'reopen_not_allowed' ? t.tracking.errors.reopenNotAllowed : errorMessage(error));
+      dispatch(api.util.invalidateTags(['Request']));
+    }
+  };
+
+  const changeStatus = async (next: RequestStatusValue, donations?: { responseId: string; units: number }[]) => {
+    if (next === 'CANCELLED' && !window.confirm(t.tracking.confirmCancel)) return;
+    // Completing asks first who actually donated (the modal), instead of a bare confirm.
+    if (next === 'COMPLETED' && !donations) {
+      sound.playTap();
+      setCompleteOpen(true);
+      return;
+    }
+    sound.playTap();
+    setActionError(null);
+    try {
+      await updateStatus({ id: req.id, status: next, donations }).unwrap();
+      setCompleteOpen(false);
       if (next === 'COMPLETED') sound.playSuccessTone();
       onToast(t.tracking.statusChangedToast(statusLabel(next)));
     } catch (error) {
@@ -295,7 +322,24 @@ const RequestCard: React.FC<RequestCardProps> = ({ req, manageable, demo, onToas
                     key={response.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-blue-200/80"
                   >
-                    <span className="font-extrabold text-slate-900">{response.name}</span>
+                    <span className="font-extrabold text-slate-900">
+                      {response.name}
+                      {response.donatedUnits > 0 && (
+                        <span className="ml-2 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                          {t.tracking.donatedUnits(response.donatedUnits)}
+                        </span>
+                      )}
+                      {response.donationRejected && (
+                        <span className="ml-2 px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-bold">
+                          {t.tracking.donationRejected}
+                        </span>
+                      )}
+                      {response.donationCode && (
+                        <span className="ml-2 font-mono text-[10px] text-slate-500" title={t.tracking.donationCode}>
+                          {response.donationCode}
+                        </span>
+                      )}
+                    </span>
                     {response.phone && (
                       <a
                         href={`tel:${response.phone}`}
@@ -314,6 +358,16 @@ const RequestCard: React.FC<RequestCardProps> = ({ req, manageable, demo, onToas
         )}
       </div>
 
+      {completeOpen && (
+        <CompleteRequestModal
+          responses={detail.data?.responses}
+          failed={detail.isError}
+          saving={saving}
+          onConfirm={(donations) => void changeStatus('COMPLETED', donations)}
+          onClose={() => setCompleteOpen(false)}
+        />
+      )}
+
       {actionError && (
         <p role="alert" className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
           {actionError}
@@ -330,6 +384,18 @@ const RequestCard: React.FC<RequestCardProps> = ({ req, manageable, demo, onToas
           <span className="material-symbols-outlined text-sm">share</span>
           <span>{t.tracking.share}</span>
         </button>
+
+        {canFix && (
+          <button
+            type="button"
+            disabled={reopening}
+            onClick={fixDonations}
+            className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-sm" aria-hidden="true">edit_note</span>
+            <span>{reopening ? t.tracking.manage.saving : t.tracking.manage.fixDonations}</span>
+          </button>
+        )}
 
         {moves.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
@@ -353,45 +419,13 @@ const RequestCard: React.FC<RequestCardProps> = ({ req, manageable, demo, onToas
 
 // ---------- Pages after the first ("Load more") ----------
 
-interface MorePageProps {
-  query: RequestsQuery;
-  /** Already shown above (My requests merges two lists). */
-  excludeIds?: Set<string>;
-  isManageable: (req: RequestDto) => boolean;
-  onToast: (message: string) => void;
-}
-
-const MorePage: React.FC<MorePageProps> = ({ query, excludeIds, isManageable, onToast }) => {
-  const { t } = useLanguage();
-  const { data, isLoading, isError, refetch } = useGetRequestsQuery(query);
-  if (isLoading) return <p className="text-center text-xs text-slate-500 py-4">{t.tracking.loading}</p>;
-  if (isError)
-    return (
-      <p className="text-center text-xs text-rose-700 py-4" role="alert">
-        {t.tracking.loadError}{' '}
-        <button type="button" onClick={() => refetch()} className="underline font-bold cursor-pointer">
-          {t.tracking.retry}
-        </button>
-      </p>
-    );
-  return (
-    <>
-      {(data?.requests ?? [])
-        .filter((req) => !excludeIds?.has(req.id))
-        .map((req) => (
-          <RequestCard key={req.id} req={req} manageable={isManageable(req)} demo={false} onToast={onToast} />
-        ))}
-    </>
-  );
-};
-
 // ---------- Screen ----------
 
 export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('PENDING');
-  const [pages, setPages] = useState(1);
+  const [page, setPage] = useState(1);
   const [remembered, setRemembered] = useState<RememberedRequest[]>([]);
   const [storageRead, setStorageRead] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -422,12 +456,12 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({ on
   const countQueries = [pendingCount, donorFoundCount, completedCount, cancelledCount];
 
   const statusQuery = useGetRequestsQuery(
-    { status: isMine ? undefined : activeTab, page: 1, pageSize: PAGE_SIZE },
+    { status: isMine ? undefined : activeTab, page, pageSize: PAGE_SIZE },
     { skip: isMine }
   );
-  const idsQuery = useGetRequestsQuery({ ids: rememberedIds, pageSize: MINE_PAGE_SIZE }, { skip: !isMine || rememberedIds.length === 0 });
+  const idsQuery = useGetRequestsQuery({ ids: rememberedIds, pageSize: MINE_FETCH_SIZE }, { skip: !isMine || rememberedIds.length === 0 });
   // Always loaded when signed in, so the person's own requests show manage buttons in every tab.
-  const mineQuery = useGetRequestsQuery({ mine: true, pageSize: MINE_PAGE_SIZE }, { skip: !user });
+  const mineQuery = useGetRequestsQuery({ mine: true, pageSize: MINE_FETCH_SIZE }, { skip: !user });
 
   const demo = [...countQueries, statusQuery, idsQuery, mineQuery].some((query) => isDatabaseOff(query.error));
   const samples = useMemo(() => (demo ? sampleRequests() : []), [demo]);
@@ -440,25 +474,27 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({ on
     for (const req of [...(idsQuery.data?.requests ?? []), ...(mineQuery.data?.requests ?? [])]) byId.set(req.id, req);
     return [...byId.values()].sort(newestFirst);
   }, [idsQuery.data, mineQuery.data]);
-  const mineShownIds = useMemo(() => new Set(mineList.map((req) => req.id)), [mineList]);
 
   // A signed-out or expired session answers 401 to `mine`: that is not an error worth showing.
   const mineError = mineQuery.isError && apiStatus(mineQuery.error) !== 401 && !demo;
 
+  // Status tabs are paged by the server (`page` and `total`); the sample list and "My requests" (this
+  // browser's remembered requests plus the signed-in person's own, at most MINE_FETCH_SIZE) are paged here.
   let list: RequestDto[];
   let loading: boolean;
   let failed: boolean;
   let total: number;
   if (demo) {
-    list = isMine ? [] : samples.filter((req) => req.status === activeTab);
+    const all = isMine ? [] : samples.filter((req) => req.status === activeTab);
+    list = pageSlice(all, page, PAGE_SIZE);
     loading = false;
     failed = false;
-    total = list.length;
+    total = all.length;
   } else if (isMine) {
-    list = mineList;
+    list = pageSlice(mineList, page, PAGE_SIZE);
     loading = !storageRead || idsQuery.isLoading || mineQuery.isLoading;
     failed = idsQuery.isError || mineError;
-    total = mineQuery.data?.total ?? 0;
+    total = mineList.length;
   } else {
     list = statusQuery.data?.requests ?? [];
     loading = !storageRead || statusQuery.isLoading;
@@ -475,24 +511,10 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({ on
     }
   };
 
-  // Load more: status tabs page through `total`; My requests pages through the signed-in list.
-  const pageSize = isMine ? MINE_PAGE_SIZE : PAGE_SIZE;
-  const hasMore = !demo && !loading && !failed && pages * pageSize < total;
-  const morePages = demo
-    ? []
-    : Array.from({ length: pages - 1 }, (_, index) => {
-        const page = index + 2;
-        const query: RequestsQuery = isMine ? { mine: true, page, pageSize: MINE_PAGE_SIZE } : { status: activeTab, page, pageSize: PAGE_SIZE };
-        return (
-          <MorePage
-            key={`${activeTab}-${page}`}
-            query={query}
-            excludeIds={isMine ? mineShownIds : undefined}
-            isManageable={isManageable}
-            onToast={setToastMessage}
-          />
-        );
-      });
+  // The last request on a page can move to another tab (completed, cancelled): step back instead of showing an empty page.
+  useEffect(() => {
+    if (!loading && !failed && page > pageCount(total, PAGE_SIZE)) setPage(pageCount(total, PAGE_SIZE));
+  }, [loading, failed, page, total]);
 
   const countFor = (status: RequestStatusValue, index: number) =>
     demo ? samples.filter((req) => req.status === status).length : countQueries[index].data?.total;
@@ -564,7 +586,7 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({ on
                 aria-selected={isActive}
                 onClick={() => {
                   setActiveTab(tab.id);
-                  setPages(1);
+                  setPage(1);
                   sound.playTap();
                 }}
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
@@ -634,19 +656,17 @@ export const RequestTrackingScreen: React.FC<RequestTrackingScreenProps> = ({ on
           ))
         )}
 
-        {!loading && !failed && morePages}
-
-        {hasMore && (
-          <button
-            type="button"
-            onClick={() => {
+        {!loading && !failed && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onPage={(next) => {
               sound.playTap();
-              setPages((count) => count + 1);
+              setPage(next);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="justify-self-center px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold cursor-pointer"
-          >
-            {t.tracking.loadMore}
-          </button>
+          />
         )}
       </div>
     </div>

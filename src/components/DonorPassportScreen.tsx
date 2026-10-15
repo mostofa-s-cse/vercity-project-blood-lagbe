@@ -3,7 +3,7 @@ import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { useGetDonorDonationsQuery, useGetDonorQuery, useGetDonorsQuery } from '../store/api';
+import { useGetDonorDonationsQuery, useRemoveDonationMutation, useGetDonorQuery, useGetDonorsQuery } from '../store/api';
 import { DONATION_COOLDOWN_DAYS } from '../lib/eligibility';
 import { browserStorage as donorStorage, readMyDonorProfiles } from '../lib/myDonorProfile';
 
@@ -42,6 +42,8 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
   const isEligible = realDonor ? realDonor.isEligible : currentElapsed >= DONATION_COOLDOWN_DAYS;
   const cooldownPct = Math.min(100, Math.round((currentElapsed / DONATION_COOLDOWN_DAYS) * 100));
   const donations = donationsQuery.data?.donations ?? [];
+  const [removeDonation, { isLoading: removing }] = useRemoveDonationMutation();
+  const [removeError, setRemoveError] = useState(false);
 
   const handleDownloadCertificate = () => {
     sound.playSuccessChime();
@@ -350,10 +352,30 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                       <span className="text-[10px] font-mono text-slate-400 mt-1 block">
                         {new Date(donation.donatedAt).toLocaleDateString()}
                       </span>
+                      <span className="text-[10px] font-mono font-bold text-slate-500 mt-0.5 block" title={t.passport.donationCodeLabel}>
+                        {donation.code}
+                      </span>
                     </div>
                   </div>
+                  {activeDonorId && (
+                    <button
+                      type="button"
+                      disabled={removing}
+                      onClick={() => {
+                        if (!window.confirm(t.passport.confirmRemoveDonation)) return;
+                        setRemoveError(false);
+                        void removeDonation({ donorId: activeDonorId, donationId: donation.id })
+                          .unwrap()
+                          .catch(() => setRemoveError(true));
+                      }}
+                      className="self-start sm:self-center px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {t.passport.removeDonation}
+                    </button>
+                  )}
                 </div>
               ))}
+              {removeError && <p role="alert" className="text-xs font-semibold text-rose-700">{t.passport.removeDonationFailed}</p>}
             </div>
           ) : (
             <p className="text-xs text-slate-500">{t.passport.noDonationsYet}</p>

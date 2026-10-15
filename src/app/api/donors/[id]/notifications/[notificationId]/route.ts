@@ -41,7 +41,7 @@ export async function PATCH(
     const updated = await prisma.notification.update({
       where: { id: notificationId },
       data: { isRead: true },
-      include: { request: { select: { place: true } } },
+      include: { request: { select: { place: true } }, donation: { select: { code: true, units: true } } },
     });
     return NextResponse.json({ notification: toNotificationDto(updated) });
   } catch (error) {

@@ -128,7 +128,7 @@ export function createApiSlice({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
     keepUnusedDataFor,
-    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification'],
+    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification', 'Donation'],
     endpoints: (build) => ({
       getDonors: build.query<DonorListResponse, DonorQuery | void>({
         query: (args) => {
@@ -167,7 +167,17 @@ export function createApiSlice({
       /** A donor's real donation history, newest first. */
       getDonorDonations: build.query<{ donations: DonationDto[] }, string>({
         query: (id) => `donors/${encodeURIComponent(id)}/donations`,
-        providesTags: ['Donor'],
+        providesTags: ['Donor', 'Donation'],
+      }),
+
+      /** The donor says a confirmed donation was not them: removes it (and its notification). Sends this browser's manage token for the donor. */
+      removeDonation: build.mutation<{ removed: true }, { donorId: string; donationId: string; token?: string }>({
+        query: ({ donorId, donationId, token }) => ({
+          url: `donors/${encodeURIComponent(donorId)}/donations/${encodeURIComponent(donationId)}`,
+          method: 'DELETE',
+          headers: donorTokenHeaders(donorId, token),
+        }),
+        invalidatesTags: ['Donor', 'Donation', 'Notification', 'Request'],
       }),
 
       /** A donor's compatible-request alerts (WP4). Sends this browser's manage token for it, same pattern as `getRequest`. */
@@ -251,14 +261,24 @@ export function createApiSlice({
         invalidatesTags: ['Request'],
       }),
 
-      updateRequestStatus: build.mutation<{ request: RequestDto }, { id: string; status: RequestStatusValue; token?: string }>({
-        query: ({ id, status, token }) => ({
+      updateRequestStatus: build.mutation<{ request: RequestDto }, { id: string; status: RequestStatusValue; token?: string; donations?: { responseId: string; units: number }[] }>({
+        query: ({ id, status, token, donations }) => ({
           url: `requests/${encodeURIComponent(id)}`,
           method: 'PATCH',
-          body: { status },
+          body: donations ? { status, donations } : { status },
           headers: tokenHeaders(id, token),
         }),
         invalidatesTags: ['Request'],
+      }),
+
+      /** Takes a completed request back (within `REOPEN_WINDOW_HOURS`) so who donated can be confirmed again. */
+      reopenRequest: build.mutation<{ request: RequestDto }, { id: string; token?: string }>({
+        query: ({ id, token }) => ({
+          url: `requests/${encodeURIComponent(id)}/reopen`,
+          method: 'POST',
+          headers: tokenHeaders(id, token),
+        }),
+        invalidatesTags: ['Request', 'Notification'],
       }),
 
       /** Real counts for the Admin Panel's Overview tab. */
@@ -328,5 +348,7 @@ export const {
   useApplyOrganizationMutation,
   useReviewOrganizationMutation,
   useGetDonorNotificationsQuery,
+  useReopenRequestMutation,
+  useRemoveDonationMutation,
   useMarkNotificationReadMutation,
 } = api;

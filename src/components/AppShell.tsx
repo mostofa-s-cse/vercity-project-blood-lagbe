@@ -29,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       notifications={app.notifications}
       onMarkAsRead={app.markNotificationRead}
       onClearAll={app.clearAllNotifications}
+      onRemoveDonation={app.removeDonation}
       onNavigate={app.navigate}
     />
   );

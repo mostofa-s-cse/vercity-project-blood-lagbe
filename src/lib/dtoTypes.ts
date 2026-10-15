@@ -65,6 +65,12 @@ export interface ResponseDto {
   createdAt: string;
   /** Only sent to whoever manages the request. */
   phone?: string;
+  /** Units this responder gave, confirmed by whoever manages the request (0 if not confirmed). */
+  donatedUnits: number;
+  /** The donor said the confirmed donation was not them. */
+  donationRejected: boolean;
+  /** Traceable code of the donation, for a registered donor whose gift was confirmed. */
+  donationCode: string | null;
 }
 
 export interface Paged {
@@ -121,6 +127,7 @@ export interface AuditLogDto {
 /** One real donation (WP5), from the Donor Passport's history list. */
 export interface DonationDto {
   id: string;
+  code: string;
   hospital: string;
   units: number;
   donatedAt: string;
@@ -134,6 +141,10 @@ export interface NotificationDto {
   bloodGroup: BloodGroupValue;
   /** The request's `place` (hospital/location text), for a readable notification. */
   place: string;
+  /** Set on a donation-confirmed notification: the donation's traceable code and units. */
+  donationId: string | null;
+  donationCode: string | null;
+  donationUnits: number | null;
   isRead: boolean;
   createdAt: string;
 }

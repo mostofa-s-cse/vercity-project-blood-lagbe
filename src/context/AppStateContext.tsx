@@ -10,7 +10,7 @@ import { pathToScreen, screenPath } from '../utils/routes';
 import { usePersistentState } from '../utils/persistentState';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { useGetDonorNotificationsQuery, useGetDonorsQuery, useMarkNotificationReadMutation } from '../store/api';
+import { useGetDonorNotificationsQuery, useGetDonorsQuery, useMarkNotificationReadMutation, useRemoveDonationMutation } from '../store/api';
 
 interface RequisitionModalState {
   isOpen: boolean;
@@ -49,6 +49,7 @@ interface AppStateValue {
   closeNotifications: () => void;
   markNotificationRead: (id: string) => void;
   clearAllNotifications: () => void;
+  removeDonation: (donationId: string) => void;
   toastMessage: string | null;
   dismissToast: () => void;
   requisitionModal: RequisitionModalState;
@@ -97,6 +98,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const notificationsQuery = useGetDonorNotificationsQuery({ id: activeDonorId ?? '' }, { skip: !activeDonorId, pollingInterval: 30_000 });
   const [markRead] = useMarkNotificationReadMutation();
+  const [removeDonationMutation] = useRemoveDonationMutation();
   const notifications = activeDonorId ? notificationsQuery.data?.notifications ?? [] : [];
   const unreadCount = activeDonorId ? notificationsQuery.data?.unreadCount ?? 0 : 0;
 
@@ -146,6 +148,14 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     markRead({ donorId: activeDonorId, id });
   };
 
+  const removeDonation = (donationId: string) => {
+    if (!activeDonorId) return;
+    void removeDonationMutation({ donorId: activeDonorId, donationId })
+      .unwrap()
+      .then(() => showToast(t.toast.donationRemoved))
+      .catch(() => showToast(t.toast.donationRemoveFailed));
+  };
+
   const clearAllNotifications = () => {
     if (!activeDonorId) return;
     for (const notification of notifications) {
@@ -167,6 +177,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     closeNotifications: () => setIsNotificationsOpen(false),
     markNotificationRead,
     clearAllNotifications,
+    removeDonation,
     toastMessage,
     dismissToast: () => setToastMessage(null),
     requisitionModal,

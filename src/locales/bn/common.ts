@@ -4,6 +4,13 @@ export const common: Common = {
   brandName: 'Blood Lagbe?',
   brandSub: 'জরুরি লাইফলাইন ও ব্লাড রেসকিউ নেটওয়ার্ক',
   banglaTag: 'রক্ত লাগবে?',
+  pagination: {
+    label: 'পৃষ্ঠা',
+    previous: 'আগের',
+    next: 'পরের',
+    goTo: (page: number) => `${page} নম্বর পৃষ্ঠায় যান`,
+    summary: (from: number, to: number, total: number) => `মোট ${total}টির মধ্যে ${from}-${to} দেখানো হচ্ছে`,
+  },
   close: 'বন্ধ করুন',
   cancel: 'বাতিল',
   metaTitle: 'Blood Lagbe? (রক্ত লাগবে?) - জরুরি লাইফলাইন নেটওয়ার্ক',

@@ -62,11 +62,14 @@ export function toRequestDto(row: RequestRow, distanceKm: number | null = null):
 }
 
 /** `includePhone` is true only for whoever manages the request. */
-export function toResponseDto(row: RequestResponse, includePhone: boolean): ResponseDto {
+export function toResponseDto(row: RequestResponse, includePhone: boolean, donationCode: string | null = null): ResponseDto {
   return {
     id: row.id,
     name: row.name,
     createdAt: row.createdAt.toISOString(),
+    donatedUnits: row.donatedUnits,
+    donationRejected: row.donationRejected,
+    donationCode,
     ...(includePhone ? { phone: row.phone } : {}),
   };
 }
@@ -100,13 +103,14 @@ export function toAuditLogDto(row: AuditLog): AuditLogDto {
 export function toDonationDto(row: Donation): DonationDto {
   return {
     id: row.id,
+    code: row.code,
     hospital: row.hospital,
     units: row.units,
     donatedAt: row.donatedAt.toISOString(),
   };
 }
 
-type NotificationRow = Notification & { request: { place: string } };
+type NotificationRow = Notification & { request: { place: string }; donation: { code: string; units: number } | null };
 
 export function toNotificationDto(row: NotificationRow): NotificationDto {
   return {
@@ -115,6 +119,9 @@ export function toNotificationDto(row: NotificationRow): NotificationDto {
     type: row.type,
     bloodGroup: BLOOD_GROUP_FROM_DB[row.bloodGroup],
     place: row.request.place,
+    donationId: row.donationId,
+    donationCode: row.donation?.code ?? null,
+    donationUnits: row.donation?.units ?? null,
     isRead: row.isRead,
     createdAt: row.createdAt.toISOString(),
   };

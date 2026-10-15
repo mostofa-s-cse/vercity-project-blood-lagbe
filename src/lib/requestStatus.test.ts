@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REQUEST_STATUSES, canTransition, remainingSeconds } from './requestStatus.ts';
+import { REOPEN_WINDOW_HOURS, REQUEST_STATUSES, canReopen, canTransition, remainingSeconds } from './requestStatus.ts';
 
 test('the four statuses, in life order', () => {
   assert.deepEqual([...REQUEST_STATUSES], ['PENDING', 'DONOR_FOUND', 'COMPLETED', 'CANCELLED']);
@@ -62,4 +62,24 @@ test('a clock before the request was made does not give more than the full windo
 test('works with ISO strings and rounds down to whole seconds', () => {
   assert.equal(remainingSeconds('2026-01-01T00:00:00.000Z', true, new Date(T0.getTime() + 1500)), 3598);
   assert.equal(remainingSeconds('not a date', true, T0), 0);
+});
+
+test('a completed request can be reopened for a limited time, so a wrong confirmation can be fixed', () => {
+  const done = new Date('2026-10-15T10:00:00Z');
+  const within = new Date(done.getTime() + (REOPEN_WINDOW_HOURS - 1) * 3600_000);
+  const after = new Date(done.getTime() + (REOPEN_WINDOW_HOURS + 1) * 3600_000);
+  assert.equal(canReopen('COMPLETED', done, within), true);
+  assert.equal(canReopen('COMPLETED', done, after), false);
+  assert.equal(canReopen('COMPLETED', done.toISOString(), within), true);
+});
+
+test('only a completed request with a readable date can be reopened', () => {
+  const done = new Date('2026-10-15T10:00:00Z');
+  for (const status of ['PENDING', 'DONOR_FOUND', 'CANCELLED', 'nope', null]) assert.equal(canReopen(status, done, done), false, String(status));
+  assert.equal(canReopen('COMPLETED', null, done), false);
+  assert.equal(canReopen('COMPLETED', 'not a date', done), false);
+});
+
+test('completed is still final for the normal status moves', () => {
+  assert.equal(canTransition('COMPLETED', 'DONOR_FOUND'), false);
 });
