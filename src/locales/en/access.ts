@@ -4,6 +4,7 @@ export const access = {
   adminUnavailable: 'This area is not available in this demo.',
   adminNotAdmin: (name: string) => `You are signed in as ${name}, but this account does not have a role that can open this page.`,
   userTitle: 'Sign in to continue',
+  userDescTracking: 'Request tracking is only for signed-in people, so you need to sign in to see and manage requests.',
   userDesc: 'Your donor passport is personal to you, so you need to sign in to see it.',
 };
 export type Access = typeof access;

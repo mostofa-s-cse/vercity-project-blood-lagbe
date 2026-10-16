@@ -109,6 +109,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
         </h1>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          {/* Phone sign-in is hidden for now. Uncomment this block to bring the Email / Phone switch back.
           <div className="flex gap-2">
             <button
               type="button"
@@ -129,6 +130,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
               {t.register.claimPhoneMethod}
             </button>
           </div>
+          */}
 
           {method === 'email' ? (
             <div>
@@ -216,6 +218,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
           </button>
         </form>
 
+        {/* Google sign-in is hidden for now. Uncomment this block (the divider and the button) to bring it back.
         <div className="mt-5 flex items-center gap-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
           <div className="h-px flex-1 bg-slate-200" />
           <span>{t.auth.orDivider}</span>
@@ -234,6 +237,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
           </svg>
           <span>{t.auth.continueWithGoogle}</span>
         </button>
+        */}
 
         {mode === 'signin' && (
           <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">

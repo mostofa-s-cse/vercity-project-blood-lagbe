@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScreenId } from '../types/blood';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { safeNextPath } from '../lib/safeRedirect';
-import { localizedPath } from '../utils/routes';
+import { localizedPath, splitLanguage } from '../utils/routes';
 
 interface NoAccessScreenProps {
   need: 'admin' | 'user';
@@ -27,7 +27,14 @@ export const NoAccessScreen: React.FC<NoAccessScreenProps> = ({ need, onNavigate
   };
 
   const title = need === 'admin' ? a.adminTitle : a.userTitle;
-  let message: string = need === 'admin' ? a.adminDesc : a.userDesc;
+  // The sign-in prompt names the page they were trying to open (the proxy puts it in `from`).
+  // Read after mount so the server-rendered markup and the first browser render match.
+  const [fromPath, setFromPath] = useState('');
+  useEffect(() => {
+    setFromPath(splitLanguage((new URLSearchParams(window.location.search).get('from') ?? '').split('?')[0]).path);
+  }, []);
+  const userDesc = fromPath.startsWith('/tracking') ? a.userDescTracking : a.userDesc;
+  let message: string = need === 'admin' ? a.adminDesc : userDesc;
   let action: 'signIn' | 'signOut' | null = null;
 
   if (!configured) {

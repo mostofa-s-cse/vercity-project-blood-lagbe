@@ -6,11 +6,13 @@ import { can, canAccessPath, canManageHospital, hospitalIdOf, isSignedInClaims, 
 const claims = (app_metadata: unknown, sub = 'u1') => ({ sub, app_metadata });
 const custom = (permissions: unknown[], hospital_id?: string) => claims({ permissions, hospital_id });
 
-test('only the admin panel, Ops Command and the passport are protected', () => {
+test('only the admin panel, Ops Command, the passport and request tracking are protected', () => {
   assert.deepEqual(requiredAccess('/admin'), { level: 'admin', permission: 'panel.open' });
   assert.deepEqual(requiredAccess('/command'), { level: 'admin', permission: 'ops.command' });
   assert.deepEqual(requiredAccess('/passport'), { level: 'user' });
-  for (const open of ['/', '/donors', '/sos', '/tracking', '/register', '/tracker', '/hospitals', '/deck', '/docs', '/no-access/admin', '/constructor', '/__proto__']) {
+  assert.deepEqual(requiredAccess('/tracking'), { level: 'user' });
+  assert.deepEqual(requiredAccess('/tracking/anything'), { level: 'user' });
+  for (const open of ['/', '/donors', '/sos', '/register', '/tracker', '/hospitals', '/deck', '/docs', '/no-access/admin', '/constructor', '/__proto__']) {
     assert.equal(requiredAccess(open), null, open);
   }
 });

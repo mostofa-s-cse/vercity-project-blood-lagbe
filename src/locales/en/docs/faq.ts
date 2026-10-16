@@ -45,7 +45,7 @@ export const faq: DocFaq = {
     },
     q12: {
       q: 'Who can open the Admin Panel, Ops Command and Donor Passport?',
-      a: 'It depends on the permissions in your role. The Admin Panel opens for people whose role includes the Admin Panel permission, and inside it each tab needs its own permission. Ops Command opens for people whose role includes the Ops Command permission. The built-in Admin role has every permission. If the site has no sign-in set up, both stay closed unless the site owner opens them for a demo. The Donor Passport needs you to sign in once sign-in is switched on. Every other page is open to everyone, because nobody should need an account in an emergency.',
+      a: 'It depends on the permissions in your role. The Admin Panel opens for people whose role includes the Admin Panel permission, and inside it each tab needs its own permission. Ops Command opens for people whose role includes the Ops Command permission. The built-in Admin role has every permission. If the site has no sign-in set up, both stay closed unless the site owner opens them for a demo. The Donor Passport and Request Tracking need you to sign in once sign-in is switched on. Every other page is open to everyone, because nobody should need an account in an emergency.',
     },
     q13: {
       q: 'How do I create a role and give it to someone?',
