@@ -400,6 +400,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       badgeColor: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
       description: t.admin.tabs.hospitalsDesc
     },
+    // Fraud tab is hidden for now (nothing creates incidents yet). Uncomment to bring it back.
+    /*
     { 
       id: 'fraud', 
       label: t.admin.tabs.fraud, 
@@ -408,6 +410,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       badgeColor: 'bg-amber-500 text-black font-black',
       description: t.admin.tabs.fraudDesc
     },
+    */
     { 
       id: 'logs', 
       label: t.admin.tabs.logs, 
@@ -969,6 +972,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               </div>
             </div>
 
+            {/* Syndicates-blocked card is hidden with the Fraud tab. Uncomment to bring it back.
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
@@ -984,6 +988,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span className="material-symbols-outlined text-2xl">shield</span>
               </div>
             </div>
+            */}
           </div>
 
           {/* Blood Group Matrix and Shortage Alert */}

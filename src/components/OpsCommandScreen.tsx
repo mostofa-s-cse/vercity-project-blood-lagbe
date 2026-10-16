@@ -48,7 +48,8 @@ interface OpsCommandScreenProps {
   onOpenRequisition: (demand: any) => void;
 }
 
-const OPS_TABS: OpsSubTab[] = ['overview', 'sos-queue', 'hospitals-stocks', 'anti-fraud', 'system-gateways'];
+// 'anti-fraud' is hidden for now (see the tab list below); add it back here too.
+const OPS_TABS: OpsSubTab[] = ['overview', 'sos-queue', 'hospitals-stocks', 'system-gateways'];
 
 export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
   onNavigate,
@@ -231,7 +232,8 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
             { id: 'overview' as OpsSubTab, label: t.command.tabs.overview, icon: 'grid_view' },
             { id: 'sos-queue' as OpsSubTab, label: t.command.tabs.sosQueue, icon: 'emergency' },
             { id: 'hospitals-stocks' as OpsSubTab, label: t.command.tabs.hospitalsStocks, icon: 'ac_unit' },
-            { id: 'anti-fraud' as OpsSubTab, label: t.command.tabs.antiFraud, icon: 'security' },
+            // Anti-Fraud tab is hidden for now. Uncomment this line and 'anti-fraud' in OPS_TABS to bring it back.
+            // { id: 'anti-fraud' as OpsSubTab, label: t.command.tabs.antiFraud, icon: 'security' },
             { id: 'system-gateways' as OpsSubTab, label: t.command.tabs.systemGateways, icon: 'settings_input_antenna' },
           ].map((tab) => {
             const isSelected = activeTab === tab.id;
@@ -312,6 +314,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
               </span>
             </div>
 
+            {/* Syndicates-intercepted card is hidden with the Anti-Fraud tab. Uncomment to bring it back.
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex justify-between items-start">
                 <div>
@@ -328,6 +331,7 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                 {t.command.syndicatesInterceptedNote}
               </span>
             </div>
+            */}
           </div>
 
           {/* Blood Stock Matrix Table */}
