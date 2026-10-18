@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "devwizard-video-studio": {
+      "source": {
+        "source": "github",
+        "repo": "DevWizardHQ/claude-video-studio"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "claude-video-studio@devwizard-video-studio": true
+  }
+}
