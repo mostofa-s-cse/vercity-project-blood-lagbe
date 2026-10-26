@@ -81,7 +81,7 @@ export const tracking = {
   retry: 'Try again',
   emptyStatus: 'No requests with this status right now.',
   emptyMine: 'You have no requests here yet. Requests you post from this browser appear here.',
-  mineHint: 'This browser remembers the requests you post, so you can manage them without an account.',
+  mineHint: 'This browser remembers the requests you post, so you can manage them here.',
   mineHintSignedIn: 'Requests you posted while signed in are listed too, on any device.',
   demoNotice: 'Sample data: no database is connected, so these are example requests and they cannot be changed.',
   demoMine: 'No database is connected, so requests are not saved and this list stays empty.',

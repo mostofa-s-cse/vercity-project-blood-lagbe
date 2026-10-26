@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { buildSosPost } from '../utils/sosPost';
 import { isValidBdPhone } from '../utils/phone';
 import { useCreateSosMutation } from '../store/api';
+import { apiStatus } from '../store/errors';
 import { browserStorage, rememberRequest } from '../lib/myRequests';
 import type { SosCreatedInfo } from '../context/AppStateContext';
 import { TurnstileWidget } from './TurnstileWidget';
@@ -74,6 +75,8 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
   const [postedText, setPostedText] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  // The server said the sign-in ran out (401): the request was NOT saved, so never show the success page.
+  const [signInExpired, setSignInExpired] = useState(false);
   const submitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -127,6 +130,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
     }
 
     setIsSubmitting(true);
+    setSignInExpired(false);
     sound.playSosSiren();
 
     const finalPost = postText;
@@ -156,7 +160,12 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
     })
       .unwrap()
       .then((created) => rememberRequest(browserStorage(), { id: created.id, token: created.manageToken }))
-      .catch(() => undefined);
+      .catch((error) => {
+        if (apiStatus(error) !== 401) return;
+        if (submitTimer.current) clearTimeout(submitTimer.current);
+        setIsSubmitting(false);
+        setSignInExpired(true);
+      });
 
     submitTimer.current = setTimeout(() => {
       onSosCreated(info);
@@ -688,6 +697,11 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
 
         {/* Submit */}
         <div className="flex flex-col gap-2">
+          {signInExpired && (
+            <p role="alert" className={errorClass}>
+              {t.sos.errors.signInExpired}
+            </p>
+          )}
           <button
             type="submit"
             aria-disabled={!canSubmit || isSubmitting}

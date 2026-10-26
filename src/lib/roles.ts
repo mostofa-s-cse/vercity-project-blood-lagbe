@@ -11,9 +11,8 @@ import { ADMIN_PERMISSIONS, HOSPITAL_PERMISSIONS, isPermission, type Permission 
  * Every page is public except:
  * - the Admin Panel (`panel.open`) and Ops Command (`ops.command`). Without Supabase nobody can prove a
  *   permission, so they stay closed unless the demo switch `NEXT_PUBLIC_ADMIN_OPEN=true` is on.
- * - the Donor Passport and Request Tracking, which need sign-in once Supabase is configured (posting an SOS
- *   and searching donors still never do).
- * An emergency must never need a login, so nothing else is protected.
+ * - the Donor Passport, Request Tracking and the SOS form, which need sign-in once Supabase is configured
+ *   (`POST /api/sos` checks the same on the server). Searching donors and registering as a donor stay open.
  */
 export type Requirement = { level: 'admin'; permission: Permission } | { level: 'user' };
 
@@ -23,6 +22,7 @@ const PROTECTED_PATHS: Record<string, Requirement> = {
   '/command': { level: 'admin', permission: 'ops.command' },
   '/passport': { level: 'user' },
   '/tracking': { level: 'user' },
+  '/sos': { level: 'user' },
 };
 
 export function requiredAccess(path: string): Requirement | null {

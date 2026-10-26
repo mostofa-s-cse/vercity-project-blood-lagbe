@@ -23,7 +23,7 @@ the server (not just present in the UI):
 | Donor registry | Done — donors are saved to Postgres, read back everywhere they're shown |
 | Smart donor search | Done — blood-group/area filters, distance-based "near me" search (`src/lib/geo.ts`) |
 | Blood request management | Done — real request lifecycle (`PENDING`/`DONOR_FOUND`/`COMPLETED`/`CANCELLED`) |
-| Emergency requests (SOS) | Done — open to signed-out users by design, matched against eligible donors |
+| Emergency requests (SOS) | Done — needs sign-in once Supabase is configured (open in demo mode), matched against eligible donors |
 | Donor notifications | Done for in-app (real bell, real matching logic); email/SMS are a tested, honest no-op switch without a provider key |
 | Donation history | Done — donor passport shows real donation records |
 | Request tracking | Done — manage tokens let a signed-out requester track/cancel their own request |

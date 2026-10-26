@@ -43,6 +43,7 @@ export const sos = {
     patientName: 'Write 2 to 80 characters, or leave it empty.',
     patientAge: 'Enter an age between 0 and 120, or leave it empty.',
     attendantName: 'Write 2 to 80 characters, or leave it empty.',
+    signInExpired: 'Your sign-in has ended, so the request was NOT posted. Sign in again and post it again.',
   },
   previewTitle: 'Your post',
   previewHint: 'This is what people will see when you share it.',

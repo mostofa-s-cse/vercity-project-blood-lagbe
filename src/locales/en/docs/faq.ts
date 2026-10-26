@@ -41,7 +41,7 @@ export const faq: DocFaq = {
     },
     q11: {
       q: 'Do I need to sign in?',
-      a: 'No. You can post an SOS and register as a donor without signing in, so nobody has to sign in during an emergency. If the site owner has switched on Google sign-in, a Sign in with Google button appears in the top bar. Signing in links what you save to your account. Without it, the site works as a demo.',
+      a: 'Posting a blood request needs sign-in. Searching for donors, registering as a donor and answering a request do not. If the site owner has switched on Google sign-in, a Sign in with Google button appears in the top bar. Signing in links what you save to your account. Without it, the site works as a demo.',
     },
     q12: {
       q: 'Who can open the Admin Panel, Ops Command and Donor Passport?',

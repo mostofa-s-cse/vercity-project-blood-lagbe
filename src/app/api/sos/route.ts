@@ -8,6 +8,7 @@ import { sendEmail, sendSms } from '@/lib/notifyChannels';
 import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { checkRateLimit, clientKey } from '@/lib/rateLimit';
+import { getSupabaseEnv } from '@/lib/supabase/env';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { turnstileTokenFromBody, verifyTurnstileToken } from '@/lib/turnstile';
 import { BLOOD_GROUP_FROM_DB, DB_BLOOD_GROUP, parseSosInput } from '@/lib/validation';
@@ -17,9 +18,9 @@ export const runtime = 'nodejs';
 const MAX_BODY_BYTES = 20_000;
 
 /**
- * Saves an SOS request. Works signed out (people in an emergency should not have to sign in); when signed
- * in it is linked to the profile. The answer carries a one-time `manageToken` that lets the person
- * complete or cancel the request later without an account; only its hash is stored.
+ * Saves an SOS request, linked to the signed-in person's profile. Once Supabase is configured it needs a
+ * sign-in (401 `sign_in_required`); with no Supabase (demo mode) it stays open. The answer carries a
+ * one-time `manageToken` for managing the request from this browser; only its hash is stored.
  */
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 });
@@ -31,6 +32,8 @@ export async function POST(request: Request) {
     );
   }
   if (!isDatabaseConfigured()) return NextResponse.json({ error: 'database_not_configured' }, { status: 503 });
+  const userId = await getCurrentUserId();
+  if (!userId && getSupabaseEnv()) return NextResponse.json({ error: 'sign_in_required' }, { status: 401 });
   if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
     return NextResponse.json({ error: 'too_large' }, { status: 413 });
   }
@@ -51,7 +54,6 @@ export async function POST(request: Request) {
 
   try {
     const prisma = getPrisma();
-    const userId = await getCurrentUserId();
     const profile = userId ? await prisma.profile.findUnique({ where: { id: userId }, select: { id: true } }) : null;
 
     const manageToken = newManageToken();

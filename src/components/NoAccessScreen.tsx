@@ -33,7 +33,7 @@ export const NoAccessScreen: React.FC<NoAccessScreenProps> = ({ need, onNavigate
   useEffect(() => {
     setFromPath(splitLanguage((new URLSearchParams(window.location.search).get('from') ?? '').split('?')[0]).path);
   }, []);
-  const userDesc = fromPath.startsWith('/tracking') ? a.userDescTracking : a.userDesc;
+  const userDesc = fromPath.startsWith('/tracking') ? a.userDescTracking : fromPath.startsWith('/sos') ? a.userDescSos : a.userDesc;
   let message: string = need === 'admin' ? a.adminDesc : userDesc;
   let action: 'signIn' | 'signOut' | null = null;
 

@@ -134,7 +134,7 @@ The list of permissions is fixed in the code (`src/lib/permissions.ts`), because
 | `stock.all` | Change the blood stock of **every** hospital |
 | `camps.create` | Create donation camps |
 
-Everyone else, signed in or not, can use every other screen: SOS, donors, hospitals (view only), the guide. **Nobody needs an account in an emergency.** The Donor Passport and Request Tracking need sign-in once Supabase is set up (posting an SOS never does; a request you posted without an account stays manageable from the same browser after you sign in).
+Everyone else, signed in or not, can use every other screen: SOS, donors, hospitals (view only), the guide. The SOS form (and `POST /api/sos`), the Donor Passport and Request Tracking need sign-in once Supabase is set up; searching donors, registering as a donor and answering a request do not. With no Supabase everything stays open (demo mode).
 
 ### Roles that already exist
 

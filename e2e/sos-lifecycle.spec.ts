@@ -5,7 +5,8 @@ import { test, expect } from '@playwright/test';
  * playwright.config.ts and Task 6). Skips itself gracefully, rather than failing confusingly, when none
  * is configured.
  *
- * The core "emergencies must never need an account" flow: a signed-out visitor posts an SOS, it appears
+ * The signed-out SOS flow, which only exists with no Supabase configured (demo mode; with Supabase the SOS
+ * form and `POST /api/sos` need sign-in, see src/lib/roles.ts): a visitor posts an SOS, it appears
  * on the Emergency Hub for every other signed-out visitor, a second signed-out visitor answers "I can
  * donate", and the status flips from "Looking for donors" to "Donor found" — all without either person
  * ever signing in.
