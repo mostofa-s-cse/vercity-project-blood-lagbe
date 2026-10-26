@@ -17,6 +17,7 @@ export const admin = {
     alertIncomplete: 'Enter the hospital name and the bed or ward first.',
     alertLimit: 'Alert limit reached. Delete one first.',
     alertSaveFailed: 'Could not save the alert. Check you are signed in with permission.',
+    radiusIncomplete: 'Enter the zone name and the key hospitals first.',
     alertSaved: '🚨 Emergency Alert updated and broadcasted live to all users!',
     radiusSaved: '📡 Emergency Radius updated and synced with Emergency Hub!',
     requestStatusFailed: 'Could not update the request. Please try again.',

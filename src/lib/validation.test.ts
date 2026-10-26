@@ -13,6 +13,7 @@ import {
   parseSosInput,
   parseDonorUpdateInput,
   parseAlertInput,
+  parseRadiusInput,
   parseAlertUpdateInput,
   parseFraudStatusInput,
   parseOrganizationApplyInput,
@@ -334,6 +335,37 @@ test('an alert update takes any subset of fields but at least one', () => {
   assert.equal(parseAlertUpdateInput({ bags: 99 }).error, 'bags');
   assert.equal(parseAlertUpdateInput({ urgency: 'x' }).error, 'urgency');
   assert.equal(parseAlertUpdateInput([]).error, 'body');
+});
+
+const radiusBody = { zone: ' Dhaka Central ', radiusKm: 5, requestCount: 14, hospitals: 'DMCH, BSMMU', isActive: true };
+
+test('the emergency radius needs zone, km, count, hospitals and the on/off switch; trims text', () => {
+  const result = parseRadiusInput(radiusBody);
+  assert.equal(result.error, null);
+  assert.deepEqual(result.value, { zone: 'Dhaka Central', radiusKm: 5, requestCount: 14, hospitals: 'DMCH, BSMMU', isActive: true });
+  const custom = parseRadiusInput({ ...radiusBody, customTextBn: ' বার্তা ', customTextEn: '' });
+  assert.equal(custom.value.customTextBn, 'বার্তা');
+  assert.equal(custom.value.customTextEn, '', 'an empty custom text is kept so it clears the saved one');
+  assert.equal(parseRadiusInput({ ...radiusBody, requestCount: 0 }).error, null, 'zero requests is allowed');
+});
+
+test('the emergency radius names the first bad field', () => {
+  const bad: [object, string][] = [
+    [{ ...radiusBody, zone: ' ' }, 'zone'],
+    [{ ...radiusBody, zone: 'x'.repeat(121) }, 'zone'],
+    [{ ...radiusBody, radiusKm: 0 }, 'radiusKm'],
+    [{ ...radiusBody, radiusKm: 51 }, 'radiusKm'],
+    [{ ...radiusBody, radiusKm: 2.5 }, 'radiusKm'],
+    [{ ...radiusBody, requestCount: -1 }, 'requestCount'],
+    [{ ...radiusBody, requestCount: 101 }, 'requestCount'],
+    [{ ...radiusBody, hospitals: '' }, 'hospitals'],
+    [{ ...radiusBody, customTextBn: 'x'.repeat(301) }, 'customTextBn'],
+    [{ ...radiusBody, isActive: 1 }, 'isActive'],
+  ];
+  for (const [body, field] of bad) assert.equal(parseRadiusInput(body).error, field, JSON.stringify(body));
+  assert.equal(parseRadiusInput(null).error, 'body');
+  const { isActive, ...noSwitch } = radiusBody;
+  assert.equal(parseRadiusInput(noSwitch).error, 'isActive');
 });
 
 const params = (query: string) => new URLSearchParams(query);

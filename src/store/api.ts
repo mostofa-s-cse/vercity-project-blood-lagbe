@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { CriticalAlert, CriticalAlertInput } from '../lib/alertList.ts';
+import type { CriticalAlert, CriticalAlertInput, EmergencyRadiusConfig, EmergencyRadiusInput } from '../lib/alertList.ts';
 import type { DonorPayload, SosPayload } from '../lib/api.ts';
 import type {
   AdminStatsDto,
@@ -129,7 +129,7 @@ export function createApiSlice({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
     keepUnusedDataFor,
-    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification', 'Donation', 'Alert'],
+    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification', 'Donation', 'Alert', 'Radius'],
     endpoints: (build) => ({
       getDonors: build.query<DonorListResponse, DonorQuery | void>({
         query: (args) => {
@@ -349,6 +349,17 @@ export function createApiSlice({
         query: (id) => ({ url: `admin/alerts/${encodeURIComponent(id)}`, method: 'DELETE' }),
         invalidatesTags: ['Alert'],
       }),
+
+      /** The saved emergency radius, `null` until an admin saves one (needs `panel.alerts`). */
+      getRadius: build.query<{ radius: EmergencyRadiusConfig | null }, void>({
+        query: () => 'admin/radius',
+        providesTags: ['Radius'],
+      }),
+
+      saveRadius: build.mutation<{ radius: EmergencyRadiusConfig }, EmergencyRadiusInput>({
+        query: (body) => ({ url: 'admin/radius', method: 'PUT', body }),
+        invalidatesTags: ['Radius'],
+      }),
     }),
   });
 }
@@ -380,6 +391,8 @@ export const {
   useAddAlertMutation,
   useUpdateAlertMutation,
   useRemoveAlertMutation,
+  useGetRadiusQuery,
+  useSaveRadiusMutation,
   useGetDonorNotificationsQuery,
   useReopenRequestMutation,
   useRemoveDonationMutation,

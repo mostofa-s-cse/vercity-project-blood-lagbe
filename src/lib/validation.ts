@@ -666,3 +666,41 @@ export function parseAlertUpdateInput(raw: unknown): ParseResult<Partial<AlertIn
   if (Object.keys(parsed.value).length === 0) return { value: null, error: 'body' };
   return parsed;
 }
+
+export interface RadiusInput {
+  zone: string;
+  radiusKm: number;
+  requestCount: number;
+  hospitals: string;
+  /** Empty means "no custom text" and clears a saved one. */
+  customTextBn?: string;
+  customTextEn?: string;
+  isActive: boolean;
+}
+
+const intIn = (value: unknown, min: number, max: number): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+
+/** The one emergency radius setting, saved whole: every field but the custom texts is required. */
+export function parseRadiusInput(raw: unknown): ParseResult<RadiusInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  const text = (field: 'zone' | 'hospitals', max: number): string | null => {
+    const value = typeof raw[field] === 'string' ? (raw[field] as string).trim() : '';
+    return value.length > 0 && value.length <= max ? value : null;
+  };
+  const zone = text('zone', 120);
+  if (zone === null) return { value: null, error: 'zone' };
+  if (!intIn(raw.radiusKm, 1, 50)) return { value: null, error: 'radiusKm' };
+  if (!intIn(raw.requestCount, 0, 100)) return { value: null, error: 'requestCount' };
+  const hospitals = text('hospitals', 200);
+  if (hospitals === null) return { value: null, error: 'hospitals' };
+  const value: RadiusInput = { zone, radiusKm: raw.radiusKm, requestCount: raw.requestCount, hospitals, isActive: true };
+  for (const field of ['customTextBn', 'customTextEn'] as const) {
+    if (raw[field] === undefined) continue;
+    if (typeof raw[field] !== 'string' || (raw[field] as string).trim().length > 300) return { value: null, error: field };
+    value[field] = (raw[field] as string).trim();
+  }
+  if (typeof raw.isActive !== 'boolean') return { value: null, error: 'isActive' };
+  value.isActive = raw.isActive;
+  return { error: null, value };
+}

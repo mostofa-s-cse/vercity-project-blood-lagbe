@@ -317,3 +317,21 @@ model EmergencyAlert {
   @@index([createdAt])
   @@map("emergency_alerts")
 }
+
+/// The one emergency radius setting (a single row, id "default"). Saved whole by an admin with `panel.alerts`.
+model EmergencyRadius {
+  id            String   @id @default("default")
+  zone          String
+  radiusKm      Int      @map("radius_km")
+  requestCount  Int      @map("request_count")
+  hospitals     String
+  /// Replaces the generated sentence when set.
+  customTextBn  String?  @map("custom_text_bn")
+  customTextEn  String?  @map("custom_text_en")
+  isActive      Boolean  @default(true) @map("is_active")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  /// Email of whoever last changed it.
+  updatedBy     String?  @map("updated_by")
+
+  @@map("emergency_radius")
+}

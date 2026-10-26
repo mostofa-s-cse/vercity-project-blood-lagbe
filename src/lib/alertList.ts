@@ -13,6 +13,20 @@ export interface CriticalAlert {
   updatedAt: string;
 }
 
+/** The one emergency radius setting, as the Alerts tab and the overview read it. */
+export interface EmergencyRadiusConfig {
+  zone: string;
+  radiusKm: number;
+  requestCount: number;
+  hospitals: string;
+  customTextBn?: string;
+  customTextEn?: string;
+  isActive: boolean;
+  updatedAt: string;
+}
+
+export type EmergencyRadiusInput = Omit<EmergencyRadiusConfig, 'updatedAt'>;
+
 export type CriticalAlertInput = Omit<CriticalAlert, 'id' | 'updatedAt'>;
 
 /** A ribbon with more than this many messages stops being readable. */

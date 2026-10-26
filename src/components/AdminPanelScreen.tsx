@@ -104,6 +104,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     updateCriticalAlert,
     removeCriticalAlert,
     updateEmergencyRadius,
+    isDemo,
     resetAlertDefaults,
     getAlertText,
     getActiveAlertTexts,
@@ -1151,18 +1152,20 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span>{t.admin.alerts.testSiren}</span>
               </button>
 
-              <button
-                onClick={() => {
-                  resetAlertDefaults();
-                  sound.playTap();
-                  showToast(t.admin.toasts.alertsReset);
-                }}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-bold text-xs flex items-center gap-2 border border-slate-800 cursor-pointer transition-all"
-                title={t.admin.alerts.resetTitle}
-              >
-                <span className="material-symbols-outlined text-base">restart_alt</span>
-                <span>{t.admin.alerts.reset}</span>
-              </button>
+              {isDemo && (
+                <button
+                  onClick={() => {
+                    resetAlertDefaults();
+                    sound.playTap();
+                    showToast(t.admin.toasts.alertsReset);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white font-bold text-xs flex items-center gap-2 border border-slate-800 cursor-pointer transition-all"
+                  title={t.admin.alerts.resetTitle}
+                >
+                  <span className="material-symbols-outlined text-base">restart_alt</span>
+                  <span>{t.admin.alerts.reset}</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1650,16 +1653,24 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               {/* Submit Button */}
               <button
                 type="button"
-                onClick={() => {
-                  updateEmergencyRadius({
-                    zone: radiusZone,
+                onClick={async () => {
+                  if (!radiusZone.trim() || !radiusHospitals.trim()) {
+                    showToast(t.admin.toasts.radiusIncomplete);
+                    return;
+                  }
+                  const error = await updateEmergencyRadius({
+                    zone: radiusZone.trim(),
                     radiusKm: radiusKm,
                     requestCount: radiusCount,
-                    hospitals: radiusHospitals,
-                    customTextBn: radiusCustomBn || undefined,
-                    customTextEn: radiusCustomEn || undefined,
+                    hospitals: radiusHospitals.trim(),
+                    customTextBn: radiusCustomBn,
+                    customTextEn: radiusCustomEn,
                     isActive: radiusIsActive,
                   });
+                  if (error) {
+                    showToast(t.admin.toasts.alertSaveFailed);
+                    return;
+                  }
                   sound.playBeacon();
                   showToast(
                     t.admin.toasts.radiusSaved

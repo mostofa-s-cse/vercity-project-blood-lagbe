@@ -1,6 +1,6 @@
-import type { AuditLog, Donation, EmergencyAlert, Donor, FraudIncident, Notification, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
+import type { AuditLog, Donation, EmergencyAlert, EmergencyRadius, Donor, FraudIncident, Notification, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
 import type { AuditLogDto, DonationDto, DonorDto, FraudIncidentDto, NotificationDto, OrganizationDto, RequestDto, ResponseDto } from './dtoTypes';
-import type { CriticalAlert } from './alertList';
+import type { CriticalAlert, EmergencyRadiusConfig } from './alertList';
 import { isEligible } from './eligibility';
 import { maskPhone } from './phoneMask';
 import { BLOOD_GROUP_FROM_DB } from './validation';
@@ -163,6 +163,19 @@ export function toAlertDto(row: EmergencyAlert): CriticalAlert {
     urgency: row.urgency as CriticalAlert['urgency'],
     customMessageBn: row.customMessageBn ?? undefined,
     customMessageEn: row.customMessageEn ?? undefined,
+    isActive: row.isActive,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function toRadiusDto(row: EmergencyRadius): EmergencyRadiusConfig {
+  return {
+    zone: row.zone,
+    radiusKm: row.radiusKm,
+    requestCount: row.requestCount,
+    hospitals: row.hospitals,
+    customTextBn: row.customTextBn ?? undefined,
+    customTextEn: row.customTextEn ?? undefined,
     isActive: row.isActive,
     updatedAt: row.updatedAt.toISOString(),
   };

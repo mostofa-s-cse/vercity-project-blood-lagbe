@@ -9,12 +9,15 @@ import {
   parseStoredAlerts,
   type CriticalAlert,
   type CriticalAlertInput,
+  type EmergencyRadiusConfig,
 } from '../lib/alertList';
 import { useAuth } from './AuthContext';
 import {
   useAddAlertMutation,
   useGetAdminAlertsQuery,
   useGetAlertsQuery,
+  useGetRadiusQuery,
+  useSaveRadiusMutation,
   useRemoveAlertMutation,
   useUpdateAlertMutation,
 } from '../store/api';
@@ -22,16 +25,7 @@ import { apiErrorCode, isDatabaseOff } from '../store/errors';
 
 export type { CriticalAlert, CriticalAlertInput };
 
-export interface EmergencyRadiusConfig {
-  zone: string;
-  radiusKm: number;
-  requestCount: number;
-  hospitals: string;
-  customTextBn?: string;
-  customTextEn?: string;
-  isActive: boolean;
-  updatedAt: string;
-}
+export type { EmergencyRadiusConfig };
 
 interface AlertContextType {
   alerts: CriticalAlert[];
@@ -42,7 +36,10 @@ interface AlertContextType {
   addCriticalAlert: (input: CriticalAlertInput) => Promise<string | null>;
   updateCriticalAlert: (id: string, updates: Partial<CriticalAlertInput>) => Promise<string | null>;
   removeCriticalAlert: (id: string) => Promise<string | null>;
-  updateEmergencyRadius: (updates: Partial<EmergencyRadiusConfig>) => void;
+  /** Answers like the alert changes: `null` when saved, otherwise `'save_failed'`. */
+  updateEmergencyRadius: (updates: Partial<EmergencyRadiusConfig>) => Promise<string | null>;
+  /** True with no database: alerts and radius then live in this browser only, and "reset" is offered. */
+  isDemo: boolean;
   resetAlertDefaults: () => void;
   /** The ribbon text of one alert. */
   getAlertText: (alert: CriticalAlert, lang: 'bn' | 'en') => string;
@@ -67,14 +64,15 @@ const DEFAULT_RADIUS: EmergencyRadiusConfig = {
   radiusKm: 5,
   requestCount: 14,
   hospitals: 'DMCH, BSMMU, বারডেম',
-  customTextBn: 'ঢাকা সেন্ট্রাল জোনে ৫ কিমি এর মধ্যে ১৪টি জরুরি রক্তের রিকোয়েস্ট (DMCH, BSMMU, বারডেম)',
-  customTextEn: '14 Urgent blood requests within 5 km in Dhaka Central Zone (DMCH, BSMMU, BIRDEM)',
   isActive: true,
   updatedAt: new Date().toISOString(),
 };
 
 const ALERTS_KEY = 'blood_lagbe_critical_alerts';
 const LEGACY_ALERT_KEY = 'blood_lagbe_critical_alert';
+
+/** What the Alerts tab shows with a database but nothing saved yet: the sample values, switched off. */
+const UNSAVED_RADIUS: EmergencyRadiusConfig = { ...DEFAULT_RADIUS, isActive: false };
 
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
@@ -91,7 +89,10 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // The Alerts tab's list: every alert, including switched-off ones, when the admin list is available.
   const alerts = demo ? localAlerts : (adminQuery.data?.alerts ?? publicQuery.data?.alerts ?? []);
   const alertsLoading = !demo && publicQuery.isLoading;
-  const [emergencyRadius, setEmergencyRadius] = useState<EmergencyRadiusConfig>(DEFAULT_RADIUS);
+  const [localRadius, setLocalRadius] = useState<EmergencyRadiusConfig>(DEFAULT_RADIUS);
+  const radiusQuery = useGetRadiusQuery(undefined, { skip: !canManage || demo });
+  const emergencyRadius = demo ? localRadius : (radiusQuery.data?.radius ?? UNSAVED_RADIUS);
+  const [saveRadiusMutation] = useSaveRadiusMutation();
   const [addMutation] = useAddAlertMutation();
   const [updateMutation] = useUpdateAlertMutation();
   const [removeMutation] = useRemoveAlertMutation();
@@ -113,7 +114,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     try {
       const savedRadius = localStorage.getItem('blood_lagbe_emergency_radius');
-      if (savedRadius) setEmergencyRadius(JSON.parse(savedRadius));
+      if (savedRadius) setLocalRadius(JSON.parse(savedRadius));
     } catch (e) {
       console.error('Error loading emergency radius', e);
     }
@@ -145,32 +146,25 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return null;
   };
 
-  const updateEmergencyRadius = (updates: Partial<EmergencyRadiusConfig>) => {
-    setEmergencyRadius(prev => {
-      const next: EmergencyRadiusConfig = {
-        ...prev,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
-      if (!updates.customTextBn && (updates.zone || updates.radiusKm || updates.requestCount || updates.hospitals)) {
-        const z = updates.zone || prev.zone;
-        const r = updates.radiusKm || prev.radiusKm;
-        const count = updates.requestCount || prev.requestCount;
-        const h = updates.hospitals || prev.hospitals;
-        next.customTextBn = `${z}ে ${r} কিমি এর মধ্যে ${count}টি জরুরি রক্তের রিকোয়েস্ট (${h})`;
-        next.customTextEn = `${count} Urgent blood requests within ${r} km in ${z} (${h})`;
-      }
-      try {
-        localStorage.setItem('blood_lagbe_emergency_radius', JSON.stringify(next));
-      } catch (e) {}
-      return next;
-    });
+  const updateEmergencyRadius = async (updates: Partial<EmergencyRadiusConfig>): Promise<string | null> => {
+    const next: EmergencyRadiusConfig = { ...emergencyRadius, ...updates, updatedAt: new Date().toISOString() };
+    if (!demo) {
+      const { updatedAt, ...input } = next;
+      // An empty text is sent as is, so saving can clear a custom one.
+      return failure(await saveRadiusMutation({ ...input, customTextBn: next.customTextBn ?? '', customTextEn: next.customTextEn ?? '' }));
+    }
+    setLocalRadius(next);
+    try {
+      localStorage.setItem('blood_lagbe_emergency_radius', JSON.stringify(next));
+    } catch (e) {}
+    return null;
   };
 
+  // Demo mode only: with a database the saved alerts and radius are real data.
   const resetAlertDefaults = () => {
-    // Saved alerts in the database are real: only the demo list goes back to the sample.
-    if (demo) saveLocalAlerts([DEFAULT_ALERT]);
-    setEmergencyRadius(DEFAULT_RADIUS);
+    if (!demo) return;
+    saveLocalAlerts([DEFAULT_ALERT]);
+    setLocalRadius(DEFAULT_RADIUS);
     try {
       localStorage.setItem('blood_lagbe_emergency_radius', JSON.stringify(DEFAULT_RADIUS));
     } catch (e) {}
@@ -209,6 +203,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateCriticalAlert,
         removeCriticalAlert,
         updateEmergencyRadius,
+        isDemo: demo,
         resetAlertDefaults,
         getAlertText,
         getActiveAlertTexts,

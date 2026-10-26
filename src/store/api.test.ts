@@ -333,3 +333,18 @@ test('alerts: public list, admin list, add, update and delete are wired up with 
   pub.unsubscribe();
   admin.unsubscribe();
 });
+
+test('radius: admin read and save are wired up with tag invalidation', async () => {
+  const { slice, store, calls } = fakeServer((call) => [200, call.method === 'GET' ? { radius: null } : { radius: { zone: 'Z' } }]);
+  const sub = store.dispatch(slice.endpoints.getRadius.initiate());
+  await sub;
+  assert.equal(calls[0].path, '/api/admin/radius');
+  const fields = { zone: 'Z', radiusKm: 5, requestCount: 1, hospitals: 'H', isActive: true };
+  await store.dispatch(slice.endpoints.saveRadius.initiate(fields));
+  await settle();
+  const put = calls.find((c) => c.method === 'PUT')!;
+  assert.equal(put.path, '/api/admin/radius');
+  assert.deepEqual(put.body, fields);
+  assert.equal(calls.filter((c) => c.method === 'GET').length, 2, 'the radius was fetched again after saving');
+  sub.unsubscribe();
+});
