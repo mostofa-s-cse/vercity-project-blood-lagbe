@@ -10,6 +10,15 @@ import {
   type CriticalAlert,
   type CriticalAlertInput,
 } from '../lib/alertList';
+import { useAuth } from './AuthContext';
+import {
+  useAddAlertMutation,
+  useGetAdminAlertsQuery,
+  useGetAlertsQuery,
+  useRemoveAlertMutation,
+  useUpdateAlertMutation,
+} from '../store/api';
+import { apiErrorCode, isDatabaseOff } from '../store/errors';
 
 export type { CriticalAlert, CriticalAlertInput };
 
@@ -27,10 +36,12 @@ export interface EmergencyRadiusConfig {
 interface AlertContextType {
   alerts: CriticalAlert[];
   emergencyRadius: EmergencyRadiusConfig;
-  /** `'limit'` when the list is full. */
-  addCriticalAlert: (input: CriticalAlertInput) => string | null;
-  updateCriticalAlert: (id: string, updates: Partial<CriticalAlertInput>) => void;
-  removeCriticalAlert: (id: string) => void;
+  /** True while the saved alerts are still loading. */
+  alertsLoading: boolean;
+  /** The three changes answer `null` when done, `'limit'` when the list is full, otherwise `'save_failed'`. */
+  addCriticalAlert: (input: CriticalAlertInput) => Promise<string | null>;
+  updateCriticalAlert: (id: string, updates: Partial<CriticalAlertInput>) => Promise<string | null>;
+  removeCriticalAlert: (id: string) => Promise<string | null>;
   updateEmergencyRadius: (updates: Partial<EmergencyRadiusConfig>) => void;
   resetAlertDefaults: () => void;
   /** The ribbon text of one alert. */
@@ -68,10 +79,25 @@ const LEGACY_ALERT_KEY = 'blood_lagbe_critical_alert';
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [alerts, setAlerts] = useState<CriticalAlert[]>([DEFAULT_ALERT]);
+  // Alerts live in the database. With no database (demo mode) they live in this browser's local storage.
+  const { can } = useAuth();
+  const canManage = can('panel.alerts');
+  // The ribbon always reads the public list (active alerts), so it stays right even if the admin list fails.
+  const publicQuery = useGetAlertsQuery();
+  const adminQuery = useGetAdminAlertsQuery(undefined, { skip: !canManage });
+  const demo = isDatabaseOff(publicQuery.error);
+  const [localAlerts, setLocalAlerts] = useState<CriticalAlert[]>([DEFAULT_ALERT]);
+  const ribbonAlerts = demo ? localAlerts : (publicQuery.data?.alerts ?? []);
+  // The Alerts tab's list: every alert, including switched-off ones, when the admin list is available.
+  const alerts = demo ? localAlerts : (adminQuery.data?.alerts ?? publicQuery.data?.alerts ?? []);
+  const alertsLoading = !demo && publicQuery.isLoading;
   const [emergencyRadius, setEmergencyRadius] = useState<EmergencyRadiusConfig>(DEFAULT_RADIUS);
+  const [addMutation] = useAddAlertMutation();
+  const [updateMutation] = useUpdateAlertMutation();
+  const [removeMutation] = useRemoveAlertMutation();
 
-  const saveAlerts = (next: CriticalAlert[]) => {
+  const saveLocalAlerts = (next: CriticalAlert[]) => {
+    setLocalAlerts(next);
     try {
       localStorage.setItem(ALERTS_KEY, JSON.stringify(next));
     } catch (e) {}
@@ -81,7 +107,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     try {
       const saved = parseStoredAlerts(localStorage.getItem(ALERTS_KEY), localStorage.getItem(LEGACY_ALERT_KEY));
-      if (saved) setAlerts(saved);
+      if (saved) setLocalAlerts(saved);
     } catch (e) {
       console.error('Error loading critical alerts', e);
     }
@@ -93,25 +119,30 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const addCriticalAlert = (input: CriticalAlertInput): string | null => {
+  const failure = (result: { error?: unknown }): string | null => {
+    if (!result.error) return null;
+    return apiErrorCode(result.error) === 'limit' ? 'limit' : 'save_failed';
+  };
+
+  const addCriticalAlert = async (input: CriticalAlertInput): Promise<string | null> => {
+    if (!demo) return failure(await addMutation(input));
     const id = `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-    const result = addAlert(alerts, input, id, new Date().toISOString());
+    const result = addAlert(localAlerts, input, id, new Date().toISOString());
     if (result.error) return result.error;
-    setAlerts(result.value);
-    saveAlerts(result.value);
+    saveLocalAlerts(result.value);
     return null;
   };
 
-  const updateCriticalAlert = (id: string, updates: Partial<CriticalAlertInput>) => {
-    const next = updateAlert(alerts, id, updates, new Date().toISOString());
-    setAlerts(next);
-    saveAlerts(next);
+  const updateCriticalAlert = async (id: string, updates: Partial<CriticalAlertInput>): Promise<string | null> => {
+    if (!demo) return failure(await updateMutation({ id, ...updates }));
+    saveLocalAlerts(updateAlert(localAlerts, id, updates, new Date().toISOString()));
+    return null;
   };
 
-  const removeCriticalAlert = (id: string) => {
-    const next = removeAlert(alerts, id);
-    setAlerts(next);
-    saveAlerts(next);
+  const removeCriticalAlert = async (id: string): Promise<string | null> => {
+    if (!demo) return failure(await removeMutation(id));
+    saveLocalAlerts(removeAlert(localAlerts, id));
+    return null;
   };
 
   const updateEmergencyRadius = (updates: Partial<EmergencyRadiusConfig>) => {
@@ -137,10 +168,10 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const resetAlertDefaults = () => {
-    setAlerts([DEFAULT_ALERT]);
+    // Saved alerts in the database are real: only the demo list goes back to the sample.
+    if (demo) saveLocalAlerts([DEFAULT_ALERT]);
     setEmergencyRadius(DEFAULT_RADIUS);
     try {
-      localStorage.setItem(ALERTS_KEY, JSON.stringify([DEFAULT_ALERT]));
       localStorage.setItem('blood_lagbe_emergency_radius', JSON.stringify(DEFAULT_RADIUS));
     } catch (e) {}
   };
@@ -151,7 +182,8 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const getActiveAlertTexts = (lang: 'bn' | 'en'): string[] => {
-    const active = activeAlerts(alerts);
+    if (alertsLoading) return [];
+    const active = activeAlerts(ribbonAlerts);
     if (active.length === 0) return [TRANSLATIONS[lang].common.alertInactive];
     return active.map((a) => getAlertText(a, lang));
   };
@@ -171,6 +203,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <AlertContext.Provider
       value={{
         alerts,
+        alertsLoading,
         emergencyRadius,
         addCriticalAlert,
         updateCriticalAlert,

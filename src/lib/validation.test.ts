@@ -12,6 +12,8 @@ import {
   parseRoleInput,
   parseSosInput,
   parseDonorUpdateInput,
+  parseAlertInput,
+  parseAlertUpdateInput,
   parseFraudStatusInput,
   parseOrganizationApplyInput,
   parseOrganizationDecisionInput,
@@ -295,6 +297,43 @@ test('a fraud incident is resolved as banned or dismissed, nothing else', () => 
   for (const bad of [{ status: 'pending' }, { status: 'BANNED' }, { status: 'throttled' }, { status: 7 }, {}, null]) {
     assert.notEqual(parseFraudStatusInput(bad).error, null, JSON.stringify(bad));
   }
+});
+
+const alertBody = { hospital: ' Square Hospital ', bed: 'Ward 3', bloodGroup: 'O-', bags: 2, urgency: 'code_red' };
+
+test('an emergency alert needs hospital, bed, blood group, bags and urgency; trims text and defaults to active', () => {
+  const result = parseAlertInput(alertBody);
+  assert.equal(result.error, null);
+  assert.deepEqual(result.value, { hospital: 'Square Hospital', bed: 'Ward 3', bloodGroup: 'O-', bags: 2, urgency: 'code_red', isActive: true });
+  const full = parseAlertInput({ ...alertBody, customMessageBn: ' বার্তা ', customMessageEn: 'msg', isActive: false });
+  assert.equal(full.value.customMessageBn, 'বার্তা');
+  assert.equal(full.value.isActive, false);
+});
+
+test('an emergency alert names the first bad field', () => {
+  const bad: [object, string][] = [
+    [{ ...alertBody, hospital: '  ' }, 'hospital'],
+    [{ ...alertBody, hospital: 'x'.repeat(121) }, 'hospital'],
+    [{ ...alertBody, bed: '' }, 'bed'],
+    [{ ...alertBody, bloodGroup: 'Z+' }, 'bloodGroup'],
+    [{ ...alertBody, bags: 0 }, 'bags'],
+    [{ ...alertBody, bags: 11 }, 'bags'],
+    [{ ...alertBody, bags: 1.5 }, 'bags'],
+    [{ ...alertBody, urgency: 'panic' }, 'urgency'],
+    [{ ...alertBody, customMessageBn: 'x'.repeat(301) }, 'customMessageBn'],
+    [{ ...alertBody, isActive: 'yes' }, 'isActive'],
+  ];
+  for (const [body, field] of bad) assert.equal(parseAlertInput(body).error, field, JSON.stringify(body));
+  assert.equal(parseAlertInput(null).error, 'body');
+});
+
+test('an alert update takes any subset of fields but at least one', () => {
+  assert.deepEqual(parseAlertUpdateInput({ isActive: false }).value, { isActive: false });
+  assert.deepEqual(parseAlertUpdateInput({ bags: 3, bed: ' ICU ' }).value, { bags: 3, bed: 'ICU' });
+  assert.equal(parseAlertUpdateInput({}).error, 'body');
+  assert.equal(parseAlertUpdateInput({ bags: 99 }).error, 'bags');
+  assert.equal(parseAlertUpdateInput({ urgency: 'x' }).error, 'urgency');
+  assert.equal(parseAlertUpdateInput([]).error, 'body');
 });
 
 const params = (query: string) => new URLSearchParams(query);

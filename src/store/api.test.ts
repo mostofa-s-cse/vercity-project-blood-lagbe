@@ -303,3 +303,33 @@ test('admin stats and the audit log are simple reads', async () => {
   assert.equal((logs.data as { entries: unknown[] }).entries.length, 1);
   assert.deepEqual(calls.map((call) => call.path).sort(), ['/api/admin/logs', '/api/admin/stats']);
 });
+
+test('alerts: public list, admin list, add, update and delete are wired up with tag invalidation', async () => {
+  const { slice, store, calls } = fakeServer((call) => (call.method === 'GET' ? [200, { alerts: [] }] : [200, { alert: { id: 'a1' } }]));
+  const pub = store.dispatch(slice.endpoints.getAlerts.initiate());
+  const admin = store.dispatch(slice.endpoints.getAdminAlerts.initiate());
+  await pub;
+  await admin;
+  assert.deepEqual(calls.map((c) => c.path).sort(), ['/api/admin/alerts', '/api/alerts']);
+
+  const fields = { hospital: 'H', bed: 'B', bloodGroup: 'O-', bags: 1, urgency: 'code_red' as const, isActive: true };
+  await store.dispatch(slice.endpoints.addAlert.initiate(fields));
+  await settle();
+  const post = calls.find((c) => c.method === 'POST')!;
+  assert.equal(post.path, '/api/admin/alerts');
+  assert.deepEqual(post.body, fields);
+  assert.equal(calls.filter((c) => c.method === 'GET').length, 4, 'both lists were fetched again after adding');
+
+  await store.dispatch(slice.endpoints.updateAlert.initiate({ id: 'a 1', isActive: false }));
+  await settle();
+  const patch = calls.find((c) => c.method === 'PATCH')!;
+  assert.equal(patch.path, '/api/admin/alerts/a%201');
+  assert.deepEqual(patch.body, { isActive: false });
+
+  await store.dispatch(slice.endpoints.removeAlert.initiate('a1'));
+  await settle();
+  assert.equal(calls.find((c) => c.method === 'DELETE')!.path, '/api/admin/alerts/a1');
+  assert.equal(calls.filter((c) => c.method === 'GET').length, 8, 'both lists were fetched again after every change');
+  pub.unsubscribe();
+  admin.unsubscribe();
+});

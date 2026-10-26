@@ -1,5 +1,6 @@
-import type { AuditLog, Donation, Donor, FraudIncident, Notification, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
+import type { AuditLog, Donation, EmergencyAlert, Donor, FraudIncident, Notification, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
 import type { AuditLogDto, DonationDto, DonorDto, FraudIncidentDto, NotificationDto, OrganizationDto, RequestDto, ResponseDto } from './dtoTypes';
+import type { CriticalAlert } from './alertList';
 import { isEligible } from './eligibility';
 import { maskPhone } from './phoneMask';
 import { BLOOD_GROUP_FROM_DB } from './validation';
@@ -148,5 +149,21 @@ export function toOrganizationDto(row: Organization, distanceKm: number | null =
     latitude: row.latitude,
     longitude: row.longitude,
     distanceKm,
+  };
+}
+
+/** An emergency alert as the header ribbon and the Alerts tab read it. */
+export function toAlertDto(row: EmergencyAlert): CriticalAlert {
+  return {
+    id: row.id,
+    hospital: row.hospital,
+    bed: row.bed,
+    bloodGroup: row.bloodGroup,
+    bags: row.bags,
+    urgency: row.urgency as CriticalAlert['urgency'],
+    customMessageBn: row.customMessageBn ?? undefined,
+    customMessageEn: row.customMessageEn ?? undefined,
+    isActive: row.isActive,
+    updatedAt: row.updatedAt.toISOString(),
   };
 }

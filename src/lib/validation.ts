@@ -593,3 +593,76 @@ export function parseOrganizationQuery(params: Params): ParseResult<Organization
   if (near.error) return { value: null, error: near.error };
   return { error: null, value: { near: near.value } };
 }
+
+const ALERT_URGENCIES = ['code_red', 'critical', 'urgent'] as const;
+export type AlertUrgency = (typeof ALERT_URGENCIES)[number];
+
+export interface AlertInput {
+  hospital: string;
+  bed: string;
+  bloodGroup: BloodGroupValue;
+  bags: number;
+  urgency: AlertUrgency;
+  customMessageBn?: string;
+  customMessageEn?: string;
+  isActive: boolean;
+}
+
+/** Longest text each alert field may hold. */
+const ALERT_TEXT_LIMITS = { hospital: 120, bed: 60, customMessageBn: 300, customMessageEn: 300 } as const;
+
+function parseAlertFields(raw: Raw): ParseResult<Partial<AlertInput>> {
+  const out: Partial<AlertInput> = {};
+  for (const field of ['hospital', 'bed'] as const) {
+    if (raw[field] === undefined) continue;
+    const text = typeof raw[field] === 'string' ? (raw[field] as string).trim() : '';
+    if (text.length === 0 || text.length > ALERT_TEXT_LIMITS[field]) return { value: null, error: field };
+    out[field] = text;
+  }
+  if (raw.bloodGroup !== undefined) {
+    if (!isBloodGroup(raw.bloodGroup)) return { value: null, error: 'bloodGroup' };
+    out.bloodGroup = raw.bloodGroup;
+  }
+  if (raw.bags !== undefined) {
+    if (typeof raw.bags !== 'number' || !Number.isInteger(raw.bags) || raw.bags < 1 || raw.bags > 10) return { value: null, error: 'bags' };
+    out.bags = raw.bags;
+  }
+  if (raw.urgency !== undefined) {
+    if (typeof raw.urgency !== 'string' || !(ALERT_URGENCIES as readonly string[]).includes(raw.urgency)) return { value: null, error: 'urgency' };
+    out.urgency = raw.urgency as AlertUrgency;
+  }
+  for (const field of ['customMessageBn', 'customMessageEn'] as const) {
+    if (raw[field] === undefined) continue;
+    if (typeof raw[field] !== 'string' || (raw[field] as string).trim().length > ALERT_TEXT_LIMITS[field]) return { value: null, error: field };
+    out[field] = (raw[field] as string).trim();
+  }
+  if (raw.isActive !== undefined) {
+    if (typeof raw.isActive !== 'boolean') return { value: null, error: 'isActive' };
+    out.isActive = raw.isActive;
+  }
+  return { error: null, value: out };
+}
+
+/** A new emergency alert for the header ribbon. Active unless said otherwise; an empty custom message is dropped. */
+export function parseAlertInput(raw: unknown): ParseResult<AlertInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  for (const field of ['hospital', 'bed', 'bloodGroup', 'bags', 'urgency'] as const) {
+    if (raw[field] === undefined) return { value: null, error: field };
+  }
+  const parsed = parseAlertFields(raw);
+  if (parsed.error) return { value: null, error: parsed.error };
+  const { customMessageBn, customMessageEn, ...rest } = parsed.value;
+  const value = { ...rest, isActive: rest.isActive ?? true } as AlertInput;
+  if (customMessageBn) value.customMessageBn = customMessageBn;
+  if (customMessageEn) value.customMessageEn = customMessageEn;
+  return { error: null, value };
+}
+
+/** Any subset of an alert's fields, at least one. An empty custom message clears it. */
+export function parseAlertUpdateInput(raw: unknown): ParseResult<Partial<AlertInput>> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  const parsed = parseAlertFields(raw);
+  if (parsed.error) return parsed;
+  if (Object.keys(parsed.value).length === 0) return { value: null, error: 'body' };
+  return parsed;
+}

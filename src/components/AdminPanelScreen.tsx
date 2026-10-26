@@ -98,6 +98,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const { language, toggleLanguage, t } = useLanguage();
   const {
     alerts,
+    alertsLoading,
     emergencyRadius,
     addCriticalAlert,
     updateCriticalAlert,
@@ -1237,7 +1238,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 </h3>
                 <span className="text-[11px] font-bold text-slate-500">{alerts.length}</span>
               </div>
-              {alerts.length === 0 && (
+              {alerts.length === 0 && !alertsLoading && (
                 <p className="text-xs text-slate-500 py-2">{t.admin.alerts.listEmpty}</p>
               )}
               {alerts.map((a) => (
@@ -1253,7 +1254,10 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </span>
                   <button
                     type="button"
-                    onClick={() => updateCriticalAlert(a.id, { isActive: !a.isActive })}
+                    onClick={async () => {
+                      const error = await updateCriticalAlert(a.id, { isActive: !a.isActive });
+                      if (error) showToast(t.admin.toasts.alertSaveFailed);
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer ${a.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}
                   >
                     {a.isActive ? t.admin.alerts.active : t.admin.alerts.inactive}
@@ -1269,9 +1273,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!window.confirm(t.admin.alerts.confirmDelete)) return;
-                      removeCriticalAlert(a.id);
+                      if (await removeCriticalAlert(a.id)) {
+                        showToast(t.admin.toasts.alertSaveFailed);
+                        return;
+                      }
                       if (editingAlertId === a.id) resetAlertForm();
                       showToast(t.admin.toasts.alertDeleted);
                     }}
@@ -1453,7 +1460,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               {/* Submit Button */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (!alertHospital.trim() || !alertBed.trim()) {
                     showToast(t.admin.toasts.alertIncomplete);
                     return;
@@ -1464,14 +1471,14 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     bloodGroup: alertBlood,
                     bags: alertBags,
                     urgency: alertUrgency,
-                    customMessageBn: alertCustomBn || undefined,
-                    customMessageEn: alertCustomEn || undefined,
+                    // An empty message is sent as is, so editing can clear a custom one.
+                    customMessageBn: alertCustomBn,
+                    customMessageEn: alertCustomEn,
                     isActive: alertIsActive,
                   };
-                  if (editingAlertId) {
-                    updateCriticalAlert(editingAlertId, fields);
-                  } else if (addCriticalAlert(fields)) {
-                    showToast(t.admin.toasts.alertLimit);
+                  const error = editingAlertId ? await updateCriticalAlert(editingAlertId, fields) : await addCriticalAlert(fields);
+                  if (error) {
+                    showToast(error === 'limit' ? t.admin.toasts.alertLimit : t.admin.toasts.alertSaveFailed);
                     return;
                   }
                   resetAlertForm();

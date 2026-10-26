@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { CriticalAlert, CriticalAlertInput } from '../lib/alertList.ts';
 import type { DonorPayload, SosPayload } from '../lib/api.ts';
 import type {
   AdminStatsDto,
@@ -128,7 +129,7 @@ export function createApiSlice({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
     keepUnusedDataFor,
-    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification', 'Donation'],
+    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification', 'Donation', 'Alert'],
     endpoints: (build) => ({
       getDonors: build.query<DonorListResponse, DonorQuery | void>({
         query: (args) => {
@@ -321,6 +322,33 @@ export function createApiSlice({
         query: ({ id, decision }) => ({ url: `admin/organizations/${encodeURIComponent(id)}`, method: 'PATCH', body: { decision } }),
         invalidatesTags: ['Organization'],
       }),
+
+      /** The alerts the header ribbon shows (active only). Public. */
+      getAlerts: build.query<{ alerts: CriticalAlert[] }, void>({
+        query: () => 'alerts',
+        providesTags: ['Alert'],
+      }),
+
+      /** Every alert, for the Admin Panel's Alerts tab (needs `panel.alerts`). */
+      getAdminAlerts: build.query<{ alerts: CriticalAlert[] }, void>({
+        query: () => 'admin/alerts',
+        providesTags: ['Alert'],
+      }),
+
+      addAlert: build.mutation<{ alert: CriticalAlert }, CriticalAlertInput>({
+        query: (body) => ({ url: 'admin/alerts', method: 'POST', body }),
+        invalidatesTags: ['Alert'],
+      }),
+
+      updateAlert: build.mutation<{ alert: CriticalAlert }, { id: string } & Partial<CriticalAlertInput>>({
+        query: ({ id, ...body }) => ({ url: `admin/alerts/${encodeURIComponent(id)}`, method: 'PATCH', body }),
+        invalidatesTags: ['Alert'],
+      }),
+
+      removeAlert: build.mutation<{ ok: true }, string>({
+        query: (id) => ({ url: `admin/alerts/${encodeURIComponent(id)}`, method: 'DELETE' }),
+        invalidatesTags: ['Alert'],
+      }),
     }),
   });
 }
@@ -347,6 +375,11 @@ export const {
   useGetOrganizationsQuery,
   useApplyOrganizationMutation,
   useReviewOrganizationMutation,
+  useGetAlertsQuery,
+  useGetAdminAlertsQuery,
+  useAddAlertMutation,
+  useUpdateAlertMutation,
+  useRemoveAlertMutation,
   useGetDonorNotificationsQuery,
   useReopenRequestMutation,
   useRemoveDonationMutation,
