@@ -518,7 +518,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           </div>
         </div>
 
-        {/* Global Search input (desktop) */}
+        {/* Global Search input (desktop): commented out. The Donors and Requests tabs have their own search boxes (same `searchQuery`).
+        Uncomment this block to bring the top search back.
         <div className="hidden md:flex items-center max-w-md w-full mx-4">
           <div className="relative w-full">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-sm">search</span>
@@ -531,6 +532,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             />
           </div>
         </div>
+        */}
 
         {/* Right Top Actions */}
         <div className="flex items-center gap-2.5">
