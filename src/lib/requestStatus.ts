@@ -16,6 +16,11 @@ export function canTransition(from: unknown, to: unknown): boolean {
   return (MOVES[from as RequestStatusValue] as readonly string[]).includes(to);
 }
 
+/** Requests that are not finished yet: still waiting for a donor, or a donor was found but nobody has completed it. */
+export function openRequestCount(byStatus: Record<RequestStatusValue, number>): number {
+  return byStatus.PENDING + byStatus.DONOR_FOUND;
+}
+
 /** A critical request should be answered within an hour, any other within four. */
 const WINDOW_SECONDS = { critical: 3600, normal: 4 * 3600 };
 

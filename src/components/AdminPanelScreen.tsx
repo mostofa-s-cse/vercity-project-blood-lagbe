@@ -31,7 +31,7 @@ const unavailable = (error: unknown): boolean => isDatabaseOff(error) || apiStat
 import { fetchHospitalStock, type HospitalStockMap } from '../lib/api';
 import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
 import { sampleContactPhone, sampleDonors, sampleRequests } from '../data/sample';
-import { canTransition, type RequestStatusValue } from '../lib/requestStatus';
+import { canTransition, openRequestCount, type RequestStatusValue } from '../lib/requestStatus';
 import type { DonorDto, FraudIncidentDto, RequestDto } from '../lib/dtoTypes';
 
 const initials = (name: string): string =>
@@ -460,7 +460,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       id: 'requests', 
       label: t.admin.tabs.requests, 
       icon: 'emergency', 
-      count: stats?.requestsByStatus.PENDING ?? 0,
+      // Open = waiting or donor found: the badge used to count only the waiting ones and showed 0 while requests were open.
+      count: stats ? openRequestCount(stats.requestsByStatus) : 0,
       badgeColor: 'bg-red-600 text-white',
       description: t.admin.tabs.requestsDesc
     },

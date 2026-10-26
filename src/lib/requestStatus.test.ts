@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REOPEN_WINDOW_HOURS, REQUEST_STATUSES, canReopen, canTransition, remainingSeconds } from './requestStatus.ts';
+import { REOPEN_WINDOW_HOURS, REQUEST_STATUSES, canReopen, canTransition, openRequestCount, remainingSeconds } from './requestStatus.ts';
 
 test('the four statuses, in life order', () => {
   assert.deepEqual([...REQUEST_STATUSES], ['PENDING', 'DONOR_FOUND', 'COMPLETED', 'CANCELLED']);
@@ -82,4 +82,10 @@ test('only a completed request with a readable date can be reopened', () => {
 
 test('completed is still final for the normal status moves', () => {
   assert.equal(canTransition('COMPLETED', 'DONOR_FOUND'), false);
+});
+
+test('open requests are the ones still waiting or with a donor found', () => {
+  assert.equal(openRequestCount({ PENDING: 0, DONOR_FOUND: 6, COMPLETED: 0, CANCELLED: 0 }), 6);
+  assert.equal(openRequestCount({ PENDING: 2, DONOR_FOUND: 3, COMPLETED: 10, CANCELLED: 4 }), 5);
+  assert.equal(openRequestCount({ PENDING: 0, DONOR_FOUND: 0, COMPLETED: 3, CANCELLED: 1 }), 0);
 });
