@@ -97,12 +97,15 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 }) => {
   const { language, toggleLanguage, t } = useLanguage();
   const {
-    criticalAlert,
+    alerts,
     emergencyRadius,
+    addCriticalAlert,
     updateCriticalAlert,
+    removeCriticalAlert,
     updateEmergencyRadius,
     resetAlertDefaults,
-    getActiveAlertText,
+    getAlertText,
+    getActiveAlertTexts,
     getActiveRadiusText,
   } = useAlert();
   const { can, user, signOut } = useAuth();
@@ -121,14 +124,39 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   // Emergency Alert Form State
-  const [alertHospital, setAlertHospital] = useState(criticalAlert.hospital);
-  const [alertBed, setAlertBed] = useState(criticalAlert.bed);
-  const [alertBlood, setAlertBlood] = useState(criticalAlert.bloodGroup);
-  const [alertBags, setAlertBags] = useState(criticalAlert.bags);
-  const [alertUrgency, setAlertUrgency] = useState(criticalAlert.urgency);
-  const [alertCustomBn, setAlertCustomBn] = useState(criticalAlert.customMessageBn || '');
-  const [alertCustomEn, setAlertCustomEn] = useState(criticalAlert.customMessageEn || '');
-  const [alertIsActive, setAlertIsActive] = useState(criticalAlert.isActive);
+  // `null` id = the form adds a new alert; otherwise it edits that one.
+  const [editingAlertId, setEditingAlertId] = useState<string | null>(null);
+  const [alertHospital, setAlertHospital] = useState('');
+  const [alertBed, setAlertBed] = useState('');
+  const [alertBlood, setAlertBlood] = useState('O-');
+  const [alertBags, setAlertBags] = useState(1);
+  const [alertUrgency, setAlertUrgency] = useState<'code_red' | 'critical' | 'urgent'>('code_red');
+  const [alertCustomBn, setAlertCustomBn] = useState('');
+  const [alertCustomEn, setAlertCustomEn] = useState('');
+  const [alertIsActive, setAlertIsActive] = useState(true);
+
+  const resetAlertForm = () => {
+    setEditingAlertId(null);
+    setAlertHospital('');
+    setAlertBed('');
+    setAlertBlood('O-');
+    setAlertBags(1);
+    setAlertUrgency('code_red');
+    setAlertCustomBn('');
+    setAlertCustomEn('');
+    setAlertIsActive(true);
+  };
+  const editAlert = (a: (typeof alerts)[number]) => {
+    setEditingAlertId(a.id);
+    setAlertHospital(a.hospital);
+    setAlertBed(a.bed);
+    setAlertBlood(a.bloodGroup);
+    setAlertBags(a.bags);
+    setAlertUrgency(a.urgency);
+    setAlertCustomBn(a.customMessageBn || '');
+    setAlertCustomEn(a.customMessageEn || '');
+    setAlertIsActive(a.isActive);
+  };
 
   // Emergency Radius Form State
   const [radiusZone, setRadiusZone] = useState(emergencyRadius.zone);
@@ -140,17 +168,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [radiusIsActive, setRadiusIsActive] = useState(emergencyRadius.isActive);
 
   // Sync state if context changes externally
-  useEffect(() => {
-    setAlertHospital(criticalAlert.hospital);
-    setAlertBed(criticalAlert.bed);
-    setAlertBlood(criticalAlert.bloodGroup);
-    setAlertBags(criticalAlert.bags);
-    setAlertUrgency(criticalAlert.urgency);
-    setAlertCustomBn(criticalAlert.customMessageBn || '');
-    setAlertCustomEn(criticalAlert.customMessageEn || '');
-    setAlertIsActive(criticalAlert.isActive);
-  }, [criticalAlert]);
-
   useEffect(() => {
     setRadiusZone(emergencyRadius.zone);
     setRadiusKm(emergencyRadius.radiusKm);
@@ -460,7 +477,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         <div className="flex-1 overflow-hidden relative">
           <div className="inline-block whitespace-nowrap animate-marquee">
             <span>
-              {getActiveAlertText(language)} • <span className="text-amber-400 font-extrabold">{t.admin.marquee.emergencyRadius}</span>{getActiveRadiusText(language)} • {t.admin.marquee.telemetry}
+              {getActiveAlertTexts(language).join(' • ')} • <span className="text-amber-400 font-extrabold">{t.admin.marquee.emergencyRadius}</span>{getActiveRadiusText(language)} • {t.admin.marquee.telemetry}
             </span>
           </div>
         </div>
@@ -881,7 +898,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     {t.admin.overview.liveAlertBadge}
                   </span>
                   <span className="text-xs font-mono font-bold text-red-300">
-                    {criticalAlert.isActive ? t.admin.overview.active : t.admin.overview.paused}
+                    {alerts.some((a) => a.isActive) ? t.admin.overview.active : t.admin.overview.paused}
                   </span>
                 </div>
                 <h3 className="text-base font-black text-white mt-1">
@@ -890,7 +907,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <div className="mt-1 flex flex-col gap-0.5 text-xs text-slate-300">
                   <div className="flex items-center gap-1.5 truncate">
                     <span className="text-red-400 font-bold shrink-0">{t.admin.overview.emergencyAlert}</span>
-                    <span className="truncate text-slate-200">{getActiveAlertText(language)}</span>
+                    <span className="truncate text-slate-200">{getActiveAlertTexts(language).join(' • ')}</span>
                   </div>
                   <div className="flex items-center gap-1.5 truncate">
                     <span className="text-amber-400 font-bold shrink-0">{t.admin.overview.emergencyRadius}</span>
@@ -1171,7 +1188,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {t.admin.alerts.preview1}
                 </span>
                 <span className="text-[10px] font-mono text-slate-500">
-                  {criticalAlert.isActive ? t.admin.alerts.statusActive : t.admin.alerts.statusInactive}
+                  {t.admin.alerts.activeCount(alerts.filter((a) => a.isActive).length, alerts.length)}
                 </span>
               </div>
               <div className="bg-red-600 text-white rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center gap-3 shadow-inner overflow-hidden">
@@ -1180,7 +1197,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   {t.admin.alerts.emergencyAlertLabel}
                 </span>
                 <span className="truncate font-medium text-red-50">
-                  {getActiveAlertText(language)}
+                  {getActiveAlertTexts(language).join(' • ')}
                 </span>
               </div>
             </div>
@@ -1211,6 +1228,63 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
           {/* Two-Column Editor: 1. Emergency Alert Form | 2. Emergency Radius Form */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
+            {/* All alerts: each one can be switched on/off, edited or deleted */}
+            <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col gap-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-red-600">list</span>
+                  {t.admin.alerts.listTitle}
+                </h3>
+                <span className="text-[11px] font-bold text-slate-500">{alerts.length}</span>
+              </div>
+              {alerts.length === 0 && (
+                <p className="text-xs text-slate-500 py-2">{t.admin.alerts.listEmpty}</p>
+              )}
+              {alerts.map((a) => (
+                <div
+                  key={a.id}
+                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${
+                    editingAlertId === a.id ? 'border-red-400 bg-red-50/50' : 'border-slate-200 bg-slate-50'
+                  }`}
+                >
+                  <span className="px-2 py-0.5 rounded-md bg-red-600 text-white text-[10px] font-black shrink-0">{a.bloodGroup}</span>
+                  <span className={`flex-1 min-w-0 text-xs font-semibold truncate ${a.isActive ? 'text-slate-900' : 'text-slate-400 line-through'}`} title={getAlertText(a, language)}>
+                    {getAlertText(a, language)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => updateCriticalAlert(a.id, { isActive: !a.isActive })}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer ${a.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}
+                  >
+                    {a.isActive ? t.admin.alerts.active : t.admin.alerts.inactive}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editAlert(a)}
+                    title={t.admin.alerts.editAlert}
+                    aria-label={t.admin.alerts.editAlert}
+                    className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-red-600 flex items-center justify-center cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-base">edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!window.confirm(t.admin.alerts.confirmDelete)) return;
+                      removeCriticalAlert(a.id);
+                      if (editingAlertId === a.id) resetAlertForm();
+                      showToast(t.admin.toasts.alertDeleted);
+                    }}
+                    title={t.admin.alerts.deleteAlert}
+                    aria-label={t.admin.alerts.deleteAlert}
+                    className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-300 flex items-center justify-center cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-base">delete</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
             {/* CARD 1: জরুরি সতর্কতা (CRITICAL EMERGENCY ALERT FORM) */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between gap-6">
               <div className="flex flex-col gap-5">
@@ -1222,7 +1296,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     </div>
                     <div>
                       <h3 className="text-base font-black text-slate-900">
-                        {t.admin.alerts.alertSetupTitle}
+                        {editingAlertId ? t.admin.alerts.editAlertTitle : t.admin.alerts.alertSetupTitle}
                       </h3>
                       <span className="text-[11px] text-slate-500 font-medium">
                         {t.admin.alerts.alertSetupDesc}
@@ -1380,26 +1454,44 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  updateCriticalAlert({
-                    hospital: alertHospital,
-                    bed: alertBed,
+                  if (!alertHospital.trim() || !alertBed.trim()) {
+                    showToast(t.admin.toasts.alertIncomplete);
+                    return;
+                  }
+                  const fields = {
+                    hospital: alertHospital.trim(),
+                    bed: alertBed.trim(),
                     bloodGroup: alertBlood,
                     bags: alertBags,
                     urgency: alertUrgency,
                     customMessageBn: alertCustomBn || undefined,
                     customMessageEn: alertCustomEn || undefined,
                     isActive: alertIsActive,
-                  });
+                  };
+                  if (editingAlertId) {
+                    updateCriticalAlert(editingAlertId, fields);
+                  } else if (addCriticalAlert(fields)) {
+                    showToast(t.admin.toasts.alertLimit);
+                    return;
+                  }
+                  resetAlertForm();
                   sound.playSosSiren();
-                  showToast(
-                    t.admin.toasts.alertSaved
-                  );
+                  showToast(t.admin.toasts.alertSaved);
                 }}
                 className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 cursor-pointer transition-all hover:scale-[1.01] active:scale-95"
               >
                 <span className="material-symbols-outlined text-base animate-pulse">campaign</span>
-                <span>{t.admin.alerts.saveAlert}</span>
+                <span>{editingAlertId ? t.admin.alerts.saveChanges : t.admin.alerts.saveAlert}</span>
               </button>
+              {editingAlertId && (
+                <button
+                  type="button"
+                  onClick={resetAlertForm}
+                  className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+                >
+                  {t.admin.alerts.cancelEdit}
+                </button>
+              )}
             </div>
 
 

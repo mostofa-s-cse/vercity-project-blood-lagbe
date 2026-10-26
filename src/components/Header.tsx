@@ -29,9 +29,9 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, toggleLanguage, t } = useLanguage();
-  const { getActiveAlertText } = useAlert();
+  const { getActiveAlertTexts } = useAlert();
   const { can } = useAuth();
-  const activeAlertMessage = getActiveAlertText(language);
+  const alertMessages = getActiveAlertTexts(language);
 
   const allNavItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
     { id: 'emergency-hub', label: t.header.nav.emergencyHub, icon: 'emergency_home' },
@@ -65,34 +65,22 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Continuous Sliding / Marquee Ticker */}
-          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={activeAlertMessage}>
+          <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative py-0.5 select-none" title={alertMessages.join(' • ')}>
             <div className="animate-marquee-infinite flex items-center shrink-0">
-              {/* Set 1 */}
-              <div className="flex items-center gap-6 px-3 shrink-0">
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
-                  <span>{activeAlertMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">bloodtype</span>
-                  <span>{activeAlertMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-              </div>
-              {/* Set 2 (Identical for seamless infinite continuous sliding loop) */}
-              <div className="flex items-center gap-6 px-3 shrink-0" aria-hidden="true">
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
-                  <span>{activeAlertMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
-                  <span className="material-symbols-outlined text-sm text-amber-300">bloodtype</span>
-                  <span>{activeAlertMessage}</span>
-                </span>
-                <span className="text-red-300/80 font-bold">•</span>
-              </div>
+              {/* Two identical sets for a seamless infinite sliding loop */}
+              {[false, true].map((copy) => (
+                <div key={String(copy)} className="flex items-center gap-6 px-3 shrink-0" aria-hidden={copy || undefined}>
+                  {alertMessages.map((message, i) => (
+                    <React.Fragment key={i}>
+                      <span className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-red-50 hover:text-white">
+                        <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
+                        <span>{message}</span>
+                      </span>
+                      <span className="text-red-300/80 font-bold">•</span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
 

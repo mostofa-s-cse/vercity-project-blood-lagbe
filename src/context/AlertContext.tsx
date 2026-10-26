@@ -1,18 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { sound } from '../utils/audio';
 import { TRANSLATIONS } from '../locales';
+import {
+  addAlert,
+  removeAlert,
+  updateAlert,
+  activeAlerts,
+  parseStoredAlerts,
+  type CriticalAlert,
+  type CriticalAlertInput,
+} from '../lib/alertList';
 
-export interface CriticalAlertConfig {
-  hospital: string;
-  bed: string;
-  bloodGroup: string;
-  bags: number;
-  urgency: 'code_red' | 'critical' | 'urgent';
-  customMessageBn?: string;
-  customMessageEn?: string;
-  isActive: boolean;
-  updatedAt: string;
-}
+export type { CriticalAlert, CriticalAlertInput };
 
 export interface EmergencyRadiusConfig {
   zone: string;
@@ -26,23 +25,28 @@ export interface EmergencyRadiusConfig {
 }
 
 interface AlertContextType {
-  criticalAlert: CriticalAlertConfig;
+  alerts: CriticalAlert[];
   emergencyRadius: EmergencyRadiusConfig;
-  updateCriticalAlert: (updates: Partial<CriticalAlertConfig>) => void;
+  /** `'limit'` when the list is full. */
+  addCriticalAlert: (input: CriticalAlertInput) => string | null;
+  updateCriticalAlert: (id: string, updates: Partial<CriticalAlertInput>) => void;
+  removeCriticalAlert: (id: string) => void;
   updateEmergencyRadius: (updates: Partial<EmergencyRadiusConfig>) => void;
   resetAlertDefaults: () => void;
-  getActiveAlertText: (lang: 'bn' | 'en') => string;
+  /** The ribbon text of one alert. */
+  getAlertText: (alert: CriticalAlert, lang: 'bn' | 'en') => string;
+  /** One line per active alert; the "no alert" line when none is active. */
+  getActiveAlertTexts: (lang: 'bn' | 'en') => string[];
   getActiveRadiusText: (lang: 'bn' | 'en') => string;
 }
 
-const DEFAULT_ALERT: CriticalAlertConfig = {
+const DEFAULT_ALERT: CriticalAlert = {
+  id: 'default',
   hospital: 'ঢাকা মেডিকেল কলেজ হাসপাতাল',
   bed: 'ICU বেড ১৪',
   bloodGroup: 'O-',
   bags: 2,
   urgency: 'code_red',
-  customMessageBn: 'ঢাকা মেডিকেল কলেজ হাসপাতালে (ICU বেড ১৪) ও-নেগেটিভ রক্ত অতি জরুরি • ২ ব্যাগ প্রয়োজন',
-  customMessageEn: 'Dhaka Medical College Hospital (ICU Bed 14) O-Negative blood urgently required • 2 Bags needed',
   isActive: true,
   updatedAt: new Date().toISOString(),
 };
@@ -58,19 +62,28 @@ const DEFAULT_RADIUS: EmergencyRadiusConfig = {
   updatedAt: new Date().toISOString(),
 };
 
+const ALERTS_KEY = 'blood_lagbe_critical_alerts';
+const LEGACY_ALERT_KEY = 'blood_lagbe_critical_alert';
+
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [criticalAlert, setCriticalAlert] = useState<CriticalAlertConfig>(DEFAULT_ALERT);
+  const [alerts, setAlerts] = useState<CriticalAlert[]>([DEFAULT_ALERT]);
   const [emergencyRadius, setEmergencyRadius] = useState<EmergencyRadiusConfig>(DEFAULT_RADIUS);
+
+  const saveAlerts = (next: CriticalAlert[]) => {
+    try {
+      localStorage.setItem(ALERTS_KEY, JSON.stringify(next));
+    } catch (e) {}
+  };
 
   // Load saved config after mount so server and first client render match.
   useEffect(() => {
     try {
-      const savedAlert = localStorage.getItem('blood_lagbe_critical_alert');
-      if (savedAlert) setCriticalAlert(JSON.parse(savedAlert));
+      const saved = parseStoredAlerts(localStorage.getItem(ALERTS_KEY), localStorage.getItem(LEGACY_ALERT_KEY));
+      if (saved) setAlerts(saved);
     } catch (e) {
-      console.error('Error loading critical alert', e);
+      console.error('Error loading critical alerts', e);
     }
     try {
       const savedRadius = localStorage.getItem('blood_lagbe_emergency_radius');
@@ -80,27 +93,25 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const updateCriticalAlert = (updates: Partial<CriticalAlertConfig>) => {
-    setCriticalAlert(prev => {
-      const next: CriticalAlertConfig = {
-        ...prev,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
-      // Auto-compute text if custom text isn't explicitly provided
-      if (!updates.customMessageBn && (updates.hospital || updates.bed || updates.bloodGroup || updates.bags)) {
-        const h = updates.hospital || prev.hospital;
-        const b = updates.bed || prev.bed;
-        const bg = updates.bloodGroup || prev.bloodGroup;
-        const bags = updates.bags || prev.bags;
-        next.customMessageBn = `${h}ে (${b}) ${bg} রক্ত অতি জরুরি • ${bags} ব্যাগ প্রয়োজন`;
-        next.customMessageEn = `${h} (${b}) ${bg} blood urgently required • ${bags} Bag(s) needed`;
-      }
-      try {
-        localStorage.setItem('blood_lagbe_critical_alert', JSON.stringify(next));
-      } catch (e) {}
-      return next;
-    });
+  const addCriticalAlert = (input: CriticalAlertInput): string | null => {
+    const id = `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const result = addAlert(alerts, input, id, new Date().toISOString());
+    if (result.error) return result.error;
+    setAlerts(result.value);
+    saveAlerts(result.value);
+    return null;
+  };
+
+  const updateCriticalAlert = (id: string, updates: Partial<CriticalAlertInput>) => {
+    const next = updateAlert(alerts, id, updates, new Date().toISOString());
+    setAlerts(next);
+    saveAlerts(next);
+  };
+
+  const removeCriticalAlert = (id: string) => {
+    const next = removeAlert(alerts, id);
+    setAlerts(next);
+    saveAlerts(next);
   };
 
   const updateEmergencyRadius = (updates: Partial<EmergencyRadiusConfig>) => {
@@ -126,23 +137,23 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const resetAlertDefaults = () => {
-    setCriticalAlert(DEFAULT_ALERT);
+    setAlerts([DEFAULT_ALERT]);
     setEmergencyRadius(DEFAULT_RADIUS);
     try {
-      localStorage.setItem('blood_lagbe_critical_alert', JSON.stringify(DEFAULT_ALERT));
+      localStorage.setItem(ALERTS_KEY, JSON.stringify([DEFAULT_ALERT]));
       localStorage.setItem('blood_lagbe_emergency_radius', JSON.stringify(DEFAULT_RADIUS));
     } catch (e) {}
   };
 
-  const getActiveAlertText = (lang: 'bn' | 'en'): string => {
-    if (!criticalAlert.isActive) {
-      return TRANSLATIONS[lang].common.alertInactive;
-    }
-    const fallback = TRANSLATIONS[lang].common.alertFallback(criticalAlert.hospital, criticalAlert.bed, criticalAlert.bloodGroup, criticalAlert.bags);
-    if (lang === 'bn') {
-      return criticalAlert.customMessageBn || fallback;
-    }
-    return criticalAlert.customMessageEn || fallback;
+  const getAlertText = (alert: CriticalAlert, lang: 'bn' | 'en'): string => {
+    const fallback = TRANSLATIONS[lang].common.alertFallback(alert.hospital, alert.bed, alert.bloodGroup, alert.bags);
+    return (lang === 'bn' ? alert.customMessageBn : alert.customMessageEn) || fallback;
+  };
+
+  const getActiveAlertTexts = (lang: 'bn' | 'en'): string[] => {
+    const active = activeAlerts(alerts);
+    if (active.length === 0) return [TRANSLATIONS[lang].common.alertInactive];
+    return active.map((a) => getAlertText(a, lang));
   };
 
   const getActiveRadiusText = (lang: 'bn' | 'en'): string => {
@@ -159,12 +170,15 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <AlertContext.Provider
       value={{
-        criticalAlert,
+        alerts,
         emergencyRadius,
+        addCriticalAlert,
         updateCriticalAlert,
+        removeCriticalAlert,
         updateEmergencyRadius,
         resetAlertDefaults,
-        getActiveAlertText,
+        getAlertText,
+        getActiveAlertTexts,
         getActiveRadiusText,
       }}
     >
