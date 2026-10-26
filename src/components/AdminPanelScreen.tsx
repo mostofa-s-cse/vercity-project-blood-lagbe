@@ -66,6 +66,42 @@ const mergeSavedStock = (base: HospitalOrganization[], saved: HospitalStockMap):
     return { ...h, bloodStock, availableBags: sumStock(bloodStock) };
   });
 
+/** A dialog over the dashboard: closes on Escape, on a click outside it, or with its close button. */
+const AdminModal: React.FC<{ label: string; closeLabel: string; onClose: () => void; children: React.ReactNode }> = ({
+  label,
+  closeLabel,
+  onClose,
+  children,
+}) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="relative max-w-xl mx-auto">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={closeLabel}
+          className="sticky top-0 ml-auto mb-2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer shadow-md"
+        >
+          <span className="material-symbols-outlined text-base">close</span>
+          <span>{closeLabel}</span>
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 interface AdminPanelScreenProps {
   onNavigate: (screen: ScreenId) => void;
   onOpenRequisition: (demand: any) => void;
@@ -137,6 +173,9 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [alertCustomEn, setAlertCustomEn] = useState('');
   const [alertIsActive, setAlertIsActive] = useState(true);
 
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [radiusModalOpen, setRadiusModalOpen] = useState(false);
+
   const resetAlertForm = () => {
     setEditingAlertId(null);
     setAlertHospital('');
@@ -148,7 +187,16 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setAlertCustomEn('');
     setAlertIsActive(true);
   };
+  const openAddAlert = () => {
+    resetAlertForm();
+    setAlertModalOpen(true);
+  };
+  const closeAlertModal = () => {
+    resetAlertForm();
+    setAlertModalOpen(false);
+  };
   const editAlert = (a: (typeof alerts)[number]) => {
+    setAlertModalOpen(true);
     setEditingAlertId(a.id);
     setAlertHospital(a.hospital);
     setAlertBed(a.bed);
@@ -170,7 +218,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [radiusIsActive, setRadiusIsActive] = useState(emergencyRadius.isActive);
 
   // Sync state if context changes externally
-  useEffect(() => {
+  const loadRadiusForm = () => {
     setRadiusZone(emergencyRadius.zone);
     setRadiusKm(emergencyRadius.radiusKm);
     setRadiusCount(emergencyRadius.requestCount);
@@ -178,7 +226,12 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setRadiusCustomBn(emergencyRadius.customTextBn || '');
     setRadiusCustomEn(emergencyRadius.customTextEn || '');
     setRadiusIsActive(emergencyRadius.isActive);
-  }, [emergencyRadius]);
+  };
+  useEffect(loadRadiusForm, [emergencyRadius]);
+  const openRadiusModal = () => {
+    loadRadiusForm();
+    setRadiusModalOpen(true);
+  };
 
   // Hospitals tab: real organizations once they load (sample until then), real (seeded) stock merged
   // over it on load — same pattern as HospitalOrgScreen.
@@ -1231,7 +1284,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </div>
           </div>
 
-          {/* Two-Column Editor: 1. Emergency Alert Form | 2. Emergency Radius Form */}
+          {/* The alert list and the radius summary; their forms open in modals */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* All alerts: each one can be switched on/off, edited or deleted */}
@@ -1241,7 +1294,17 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <span className="material-symbols-outlined text-red-600">list</span>
                   {t.admin.alerts.listTitle}
                 </h3>
-                <span className="text-[11px] font-bold text-slate-500">{alerts.length}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-bold text-slate-500">{alerts.length}</span>
+                  <button
+                    type="button"
+                    onClick={openAddAlert}
+                    className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-red-600/20"
+                  >
+                    <span className="material-symbols-outlined text-base">add</span>
+                    <span>{t.admin.alerts.addAlert}</span>
+                  </button>
+                </div>
               </div>
               {alerts.length === 0 && !alertsLoading && (
                 <p className="text-xs text-slate-500 py-2">{t.admin.alerts.listEmpty}</p>
@@ -1284,7 +1347,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                         showToast(t.admin.toasts.alertSaveFailed);
                         return;
                       }
-                      if (editingAlertId === a.id) resetAlertForm();
+                      if (editingAlertId === a.id) closeAlertModal();
                       showToast(t.admin.toasts.alertDeleted);
                     }}
                     title={t.admin.alerts.deleteAlert}
@@ -1297,6 +1360,34 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               ))}
             </div>
 
+
+            {/* Emergency radius: the current setting; the form opens in a modal */}
+            <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-xl">radar</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  {t.admin.alerts.radiusSetupTitle}
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${emergencyRadius.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                    {emergencyRadius.isActive ? t.admin.alerts.active : t.admin.alerts.inactive}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 truncate" title={getActiveRadiusText(language)}>{getActiveRadiusText(language)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={openRadiusModal}
+                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-base">edit</span>
+                <span>{t.admin.alerts.editRadius}</span>
+              </button>
+            </div>
+          </div>
+
+          {alertModalOpen && (
+            <AdminModal label={editingAlertId ? t.admin.alerts.editAlertTitle : t.admin.alerts.alertSetupTitle} closeLabel={t.admin.alerts.closeForm} onClose={closeAlertModal}>
             {/* CARD 1: জরুরি সতর্কতা (CRITICAL EMERGENCY ALERT FORM) */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between gap-6">
               <div className="flex flex-col gap-5">
@@ -1455,7 +1546,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                       rows={2}
                       value={alertCustomBn}
                       onChange={(e) => setAlertCustomBn(e.target.value)}
-                      placeholder={`${alertHospital}ে (${alertBed}) ${alertBlood} রক্ত অতি জরুরি • ${alertBags} ব্যাগ প্রয়োজন`}
+                      placeholder={alertHospital && alertBed ? `${alertHospital}ে (${alertBed}) ${alertBlood} রক্ত অতি জরুরি • ${alertBags} ব্যাগ প্রয়োজন` : t.admin.alerts.customAlertPlaceholder}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-red-500 focus:bg-white resize-none"
                     />
                   </div>
@@ -1486,7 +1577,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     showToast(error === 'limit' ? t.admin.toasts.alertLimit : t.admin.toasts.alertSaveFailed);
                     return;
                   }
-                  resetAlertForm();
+                  closeAlertModal();
                   sound.playSosSiren();
                   showToast(t.admin.toasts.alertSaved);
                 }}
@@ -1495,18 +1586,19 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span className="material-symbols-outlined text-base animate-pulse">campaign</span>
                 <span>{editingAlertId ? t.admin.alerts.saveChanges : t.admin.alerts.saveAlert}</span>
               </button>
-              {editingAlertId && (
-                <button
-                  type="button"
-                  onClick={resetAlertForm}
-                  className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
-                >
-                  {t.admin.alerts.cancelEdit}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={closeAlertModal}
+                className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+              >
+                {editingAlertId ? t.admin.alerts.cancelEdit : t.admin.alerts.cancel}
+              </button>
             </div>
+            </AdminModal>
+          )}
 
-
+          {radiusModalOpen && (
+            <AdminModal label={t.admin.alerts.radiusSetupTitle} closeLabel={t.admin.alerts.closeForm} onClose={() => setRadiusModalOpen(false)}>
             {/* CARD 2: জরুরি ব্যাসার্ধ (EMERGENCY RADIUS & GEO-DISPATCH FORM) */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between gap-6">
               <div className="flex flex-col gap-5">
@@ -1673,6 +1765,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                     showToast(t.admin.toasts.alertSaveFailed);
                     return;
                   }
+                  setRadiusModalOpen(false);
                   sound.playBeacon();
                   showToast(
                     t.admin.toasts.radiusSaved
@@ -1684,8 +1777,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 <span>{t.admin.alerts.updateRadius}</span>
               </button>
             </div>
-
-          </div>
+            </AdminModal>
+          )}
         </div>
       )}
 
