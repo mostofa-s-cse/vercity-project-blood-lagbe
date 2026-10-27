@@ -174,7 +174,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [alertIsActive, setAlertIsActive] = useState(true);
 
   const [alertModalOpen, setAlertModalOpen] = useState(false);
-  const [radiusModalOpen, setRadiusModalOpen] = useState(false);
 
   const resetAlertForm = () => {
     setEditingAlertId(null);
@@ -206,31 +205,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
     setAlertCustomBn(a.customMessageBn || '');
     setAlertCustomEn(a.customMessageEn || '');
     setAlertIsActive(a.isActive);
-  };
-
-  // Emergency Radius Form State
-  const [radiusZone, setRadiusZone] = useState(emergencyRadius.zone);
-  const [radiusKm, setRadiusKm] = useState(emergencyRadius.radiusKm);
-  const [radiusCount, setRadiusCount] = useState(emergencyRadius.requestCount);
-  const [radiusHospitals, setRadiusHospitals] = useState(emergencyRadius.hospitals);
-  const [radiusCustomBn, setRadiusCustomBn] = useState(emergencyRadius.customTextBn || '');
-  const [radiusCustomEn, setRadiusCustomEn] = useState(emergencyRadius.customTextEn || '');
-  const [radiusIsActive, setRadiusIsActive] = useState(emergencyRadius.isActive);
-
-  // Sync state if context changes externally
-  const loadRadiusForm = () => {
-    setRadiusZone(emergencyRadius.zone);
-    setRadiusKm(emergencyRadius.radiusKm);
-    setRadiusCount(emergencyRadius.requestCount);
-    setRadiusHospitals(emergencyRadius.hospitals);
-    setRadiusCustomBn(emergencyRadius.customTextBn || '');
-    setRadiusCustomEn(emergencyRadius.customTextEn || '');
-    setRadiusIsActive(emergencyRadius.isActive);
-  };
-  useEffect(loadRadiusForm, [emergencyRadius]);
-  const openRadiusModal = () => {
-    loadRadiusForm();
-    setRadiusModalOpen(true);
   };
 
   // Hospitals tab: real organizations once they load (sample until then), real (seeded) stock merged
@@ -444,7 +418,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       id: 'alerts', 
       label: t.admin.tabs.alerts, 
       icon: 'crisis_alert',
-      count: emergencyRadius.requestCount,
+      // The number of active ribbon alerts. It used to show the radius's "request count" field (14 in the sample).
+      count: alerts.filter((a) => a.isActive).length,
       badgeColor: 'bg-red-600 text-white font-black animate-pulse',
       description: t.admin.tabs.alertsDesc
     },
@@ -1256,36 +1231,30 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                   <span className="material-symbols-outlined text-xs animate-pulse">emergency</span>
                   {t.admin.alerts.emergencyAlertLabel}
                 </span>
-                <span className="truncate font-medium text-red-50">
-                  {getActiveAlertTexts(language).join(' • ')}
-                </span>
+                {/* Same sliding ticker as the header ribbon, so the preview moves like the public one */}
+                <div className="flex-1 overflow-hidden min-w-0 marquee-mask relative select-none" title={getActiveAlertTexts(language).join(' • ')}>
+                  <div className="animate-marquee-infinite flex items-center shrink-0">
+                    {[false, true].map((copy) => (
+                      <div key={String(copy)} className="flex items-center gap-6 px-3 shrink-0" aria-hidden={copy || undefined}>
+                        {getActiveAlertTexts(language).map((message, i) => (
+                          <React.Fragment key={i}>
+                            <span className="inline-flex items-center gap-1.5 font-medium text-red-50">
+                              <span className="material-symbols-outlined text-sm text-amber-300">emergency</span>
+                              <span>{message}</span>
+                            </span>
+                            <span className="text-red-300/80 font-bold">•</span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Preview 2: Emergency Hub Radar Strip */}
-            <div className="flex flex-col gap-1.5 mt-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-amber-500 text-sm">radar</span>
-                  {t.admin.alerts.preview2}
-                </span>
-                <span className="text-[10px] font-mono text-slate-500">
-                  {emergencyRadius.isActive ? t.admin.alerts.statusActive : t.admin.alerts.statusInactive}
-                </span>
-              </div>
-              <div className="bg-red-700 text-white rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center gap-3 shadow-inner overflow-hidden">
-                <span className="bg-red-800 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-xs animate-spin" style={{ animationDuration: '3s' }}>radar</span>
-                  {t.admin.alerts.emergencyRadiusLabel}
-                </span>
-                <span className="truncate font-medium text-red-50">
-                  {getActiveRadiusText(language)}
-                </span>
-              </div>
-            </div>
           </div>
 
-          {/* The alert list and the radius summary; their forms open in modals */}
+          {/* The alert list; its form opens in a modal */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* All alerts: each one can be switched on/off, edited or deleted */}
@@ -1361,30 +1330,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
               ))}
             </div>
 
-
-            {/* Emergency radius: the current setting; the form opens in a modal */}
-            <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-xl">radar</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  {t.admin.alerts.radiusSetupTitle}
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${emergencyRadius.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
-                    {emergencyRadius.isActive ? t.admin.alerts.active : t.admin.alerts.inactive}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 truncate" title={getActiveRadiusText(language)}>{getActiveRadiusText(language)}</p>
-              </div>
-              <button
-                type="button"
-                onClick={openRadiusModal}
-                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
-              >
-                <span className="material-symbols-outlined text-base">edit</span>
-                <span>{t.admin.alerts.editRadius}</span>
-              </button>
-            </div>
           </div>
 
           {alertModalOpen && (
@@ -1598,188 +1543,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
             </AdminModal>
           )}
 
-          {radiusModalOpen && (
-            <AdminModal label={t.admin.alerts.radiusSetupTitle} closeLabel={t.admin.alerts.closeForm} onClose={() => setRadiusModalOpen(false)}>
-            {/* CARD 2: জরুরি ব্যাসার্ধ (EMERGENCY RADIUS & GEO-DISPATCH FORM) */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between gap-6">
-              <div className="flex flex-col gap-5">
-                {/* Card Title & Toggle */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-                      <span className="material-symbols-outlined text-xl">radar</span>
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-slate-900">
-                        {t.admin.alerts.radiusSetupTitle}
-                      </h3>
-                      <span className="text-[11px] text-slate-500 font-medium">
-                        {t.admin.alerts.radiusSetupDesc}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Active Switch */}
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <span className="text-xs font-bold text-slate-600">
-                      {radiusIsActive ? t.admin.alerts.active : t.admin.alerts.inactive}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={radiusIsActive}
-                      onChange={(e) => setRadiusIsActive(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 relative"></div>
-                  </label>
-                </div>
-
-                {/* Form Fields */}
-                <div className="flex flex-col gap-4">
-                  {/* Zone Name */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                      {t.admin.alerts.zoneName}
-                    </label>
-                    <input
-                      type="text"
-                      value={radiusZone}
-                      onChange={(e) => setRadiusZone(e.target.value)}
-                      placeholder={t.admin.alerts.zonePlaceholder}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
-                    />
-                    {/* Quick Zone Chips */}
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {['ঢাকা সেন্ট্রাল জোন', 'ঢাকা উত্তর জোন (মিরপুর-উত্তরা)', 'ঢাকা দক্ষিণ জোন (ধানমন্ডি-পুরান ঢাকা)', 'চট্টগ্রাম বন্দর জোন', 'সিলেট সদর জোন'].map((z) => (
-                        <button
-                          key={z}
-                          type="button"
-                          onClick={() => setRadiusZone(z)}
-                          className="px-2 py-0.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-[10px] font-bold text-slate-600 rounded-md transition-colors"
-                        >
-                          {z}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Radius Slider + Number Input */}
-                  <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-200/60 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-black text-amber-900 flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-amber-600 text-sm">adjust</span>
-                        <span>{t.admin.alerts.radiusDistance}</span>
-                      </label>
-                      <span className="px-3 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-xs">
-                        {t.admin.alerts.radiusKmBadge(radiusKm)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-4 mt-2">
-                      <input
-                        type="range"
-                        min="1"
-                        max="25"
-                        step="1"
-                        value={radiusKm}
-                        onChange={(e) => setRadiusKm(parseInt(e.target.value) || 5)}
-                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                      />
-                      <input
-                        type="number"
-                        min="1"
-                        max="50"
-                        value={radiusKm}
-                        onChange={(e) => setRadiusKm(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 bg-white border border-amber-300 rounded-xl px-2 py-1.5 text-center text-xs font-black text-amber-900"
-                      />
-                    </div>
-                    <span className="text-[10px] text-amber-700/80 font-medium">
-                      {t.admin.alerts.radiusHint}
-                    </span>
-                  </div>
-
-                  {/* Urgent Requests Count & Hospitals */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">
-                        {t.admin.alerts.requestCount}
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={radiusCount}
-                        onChange={(e) => setRadiusCount(Math.max(0, parseInt(e.target.value) || 0))}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">
-                        {t.admin.alerts.keyHospitals}
-                      </label>
-                      <input
-                        type="text"
-                        value={radiusHospitals}
-                        onChange={(e) => setRadiusHospitals(e.target.value)}
-                        placeholder={t.admin.alerts.keyHospitalsPlaceholder}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:border-amber-500 focus:bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Custom Message (Optional Override) */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                      {t.admin.alerts.customRadiusText}
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={radiusCustomBn}
-                      onChange={(e) => setRadiusCustomBn(e.target.value)}
-                      placeholder={`${radiusZone}ে ${radiusKm} কিমি এর মধ্যে ${radiusCount}টি জরুরি রক্তের রিকোয়েস্ট (${radiusHospitals})`}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!radiusZone.trim() || !radiusHospitals.trim()) {
-                    showToast(t.admin.toasts.radiusIncomplete);
-                    return;
-                  }
-                  const error = await updateEmergencyRadius({
-                    zone: radiusZone.trim(),
-                    radiusKm: radiusKm,
-                    requestCount: radiusCount,
-                    hospitals: radiusHospitals.trim(),
-                    customTextBn: radiusCustomBn,
-                    customTextEn: radiusCustomEn,
-                    isActive: radiusIsActive,
-                  });
-                  if (error) {
-                    showToast(t.admin.toasts.alertSaveFailed);
-                    return;
-                  }
-                  setRadiusModalOpen(false);
-                  sound.playBeacon();
-                  showToast(
-                    t.admin.toasts.radiusSaved
-                  );
-                }}
-                className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 cursor-pointer transition-all hover:scale-[1.01] active:scale-95"
-              >
-                <span className="material-symbols-outlined text-base">radar</span>
-                <span>{t.admin.alerts.updateRadius}</span>
-              </button>
-            </div>
-            </AdminModal>
-          )}
         </div>
       )}
 
