@@ -11,6 +11,7 @@ import {
   type CriticalAlertInput,
   type EmergencyRadiusConfig,
 } from '../lib/alertList';
+import { SAMPLE_ALERTS, SAMPLE_RADIUS } from '../data/mockData';
 import { useAuth } from './AuthContext';
 import {
   useAddAlertMutation,
@@ -48,25 +49,9 @@ interface AlertContextType {
   getActiveRadiusText: (lang: 'bn' | 'en') => string;
 }
 
-const DEFAULT_ALERT: CriticalAlert = {
-  id: 'default',
-  hospital: 'ঢাকা মেডিকেল কলেজ হাসপাতাল',
-  bed: 'ICU বেড ১৪',
-  bloodGroup: 'O-',
-  bags: 2,
-  urgency: 'code_red',
-  isActive: true,
-  updatedAt: new Date().toISOString(),
-};
+const DEFAULT_ALERTS: CriticalAlert[] = SAMPLE_ALERTS.map(({ ageMinutes, ...alert }) => ({ ...alert, updatedAt: new Date().toISOString() }));
 
-const DEFAULT_RADIUS: EmergencyRadiusConfig = {
-  zone: 'ঢাকা সেন্ট্রাল জোন',
-  radiusKm: 5,
-  requestCount: 14,
-  hospitals: 'DMCH, BSMMU, বারডেম',
-  isActive: true,
-  updatedAt: new Date().toISOString(),
-};
+const DEFAULT_RADIUS: EmergencyRadiusConfig = { ...SAMPLE_RADIUS, updatedAt: new Date().toISOString() };
 
 const ALERTS_KEY = 'blood_lagbe_critical_alerts';
 const LEGACY_ALERT_KEY = 'blood_lagbe_critical_alert';
@@ -84,7 +69,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const publicQuery = useGetAlertsQuery();
   const adminQuery = useGetAdminAlertsQuery(undefined, { skip: !canManage });
   const demo = isDatabaseOff(publicQuery.error);
-  const [localAlerts, setLocalAlerts] = useState<CriticalAlert[]>([DEFAULT_ALERT]);
+  const [localAlerts, setLocalAlerts] = useState<CriticalAlert[]>(DEFAULT_ALERTS);
   const ribbonAlerts = demo ? localAlerts : (publicQuery.data?.alerts ?? []);
   // The Alerts tab's list: every alert, including switched-off ones, when the admin list is available.
   const alerts = demo ? localAlerts : (adminQuery.data?.alerts ?? publicQuery.data?.alerts ?? []);
@@ -163,7 +148,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Demo mode only: with a database the saved alerts and radius are real data.
   const resetAlertDefaults = () => {
     if (!demo) return;
-    saveLocalAlerts([DEFAULT_ALERT]);
+    saveLocalAlerts(DEFAULT_ALERTS);
     setLocalRadius(DEFAULT_RADIUS);
     try {
       localStorage.setItem('blood_lagbe_emergency_radius', JSON.stringify(DEFAULT_RADIUS));

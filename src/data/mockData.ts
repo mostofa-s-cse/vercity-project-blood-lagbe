@@ -1,3 +1,4 @@
+import type { CriticalAlert, EmergencyRadiusInput } from '../lib/alertList';
 import { EmergencyDemand, Donor, ChillerUnit, HospitalStock, FraudIncident, BloodRequest, HospitalOrganization, DonationCamp, DonationRecord } from '../types/blood';
 
 export const INITIAL_DEMANDS: EmergencyDemand[] = [
@@ -793,3 +794,38 @@ export const SAMPLE_DONATIONS: DonationRecord[] = [
   }
 ];
 
+/**
+ * Sample ribbon alerts: the demo-mode starting list (no database) and the rows `npm run db:seed` writes,
+ * so both show the same thing. `ageMinutes` only sets how old the seeded row looks.
+ */
+export const SAMPLE_ALERTS: (Omit<CriticalAlert, 'updatedAt'> & { ageMinutes: number })[] = [
+  {
+    id: 'seed-alert-dmch',
+    hospital: 'ঢাকা মেডিকেল কলেজ হাসপাতাল',
+    bed: 'ICU বেড ১৪',
+    bloodGroup: 'O-',
+    bags: 2,
+    urgency: 'code_red',
+    isActive: true,
+    ageMinutes: 30,
+  },
+  {
+    id: 'seed-alert-bsmmu',
+    hospital: 'বঙ্গবন্ধু শেখ মুজিব মেডিকেল বিশ্ববিদ্যালয়',
+    bed: 'সার্জারি ওয়ার্ড ৩',
+    bloodGroup: 'B+',
+    bags: 3,
+    urgency: 'urgent',
+    isActive: true,
+    ageMinutes: 10,
+  },
+];
+
+/** Sample emergency radius, used the same way as `SAMPLE_ALERTS`. */
+export const SAMPLE_RADIUS: EmergencyRadiusInput = {
+  zone: 'ঢাকা সেন্ট্রাল জোন',
+  radiusKm: 5,
+  requestCount: 14,
+  hospitals: 'DMCH, BSMMU, বারডেম',
+  isActive: true,
+};

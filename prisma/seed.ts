@@ -20,7 +20,7 @@
 import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import type { BloodGroup, RequestStatus } from '../src/generated/prisma/client';
-import { INITIAL_DEMANDS, INITIAL_DONORS, SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../src/data/mockData';
+import { INITIAL_DEMANDS, INITIAL_DONORS, SAMPLE_ALERTS, SAMPLE_RADIUS, SAMPLE_HOSPITAL_ORGS, FRAUD_INCIDENTS } from '../src/data/mockData';
 import { getPrisma } from '../src/lib/prisma';
 import { DB_BLOOD_GROUP } from '../src/lib/validation';
 import { getSupabaseEnv } from '../src/lib/supabase/env';
@@ -242,18 +242,47 @@ async function main() {
     });
   }
 
+  for (const { ageMinutes, ...alert } of SAMPLE_ALERTS) {
+    await prisma.emergencyAlert.upsert({
+      where: { id: alert.id },
+      create: { ...alert, updatedBy: 'seed', createdAt: new Date(now - ageMinutes * MINUTE) },
+      update: {},
+    });
+  }
+
+  // The radius setting is one row (id "default"), so there is one seed row, not two.
+  await prisma.emergencyRadius.upsert({
+    where: { id: 'default' },
+    create: { id: 'default', ...SAMPLE_RADIUS, updatedBy: 'seed' },
+    update: {},
+  });
+
+  const auditLines = [
+    { id: 'seed-audit-alert', action: 'alert.create', detail: 'Seed: DMCH ICU বেড ১৪ O- alert added', ageMinutes: 30 },
+    { id: 'seed-audit-radius', action: 'radius.update', detail: 'Seed: emergency radius set to 5 km (ঢাকা সেন্ট্রাল জোন)', ageMinutes: 25 },
+  ];
+  for (const { ageMinutes, ...line } of auditLines) {
+    await prisma.auditLog.upsert({
+      where: { id: line.id },
+      create: { ...line, actorEmail: 'seed', createdAt: new Date(now - ageMinutes * MINUTE) },
+      update: {},
+    });
+  }
+
   await seedDemoUsers(prisma);
 
-  const [donors, requests, responses, stockRows, fraudRows, orgs] = await Promise.all([
+  const [donors, requests, responses, stockRows, fraudRows, orgs, alertRows, auditRows] = await Promise.all([
     prisma.donor.count(),
     prisma.sosRequest.count(),
     prisma.requestResponse.count(),
     prisma.hospitalStock.count(),
     prisma.fraudIncident.count(),
     prisma.organization.count(),
+    prisma.emergencyAlert.count(),
+    prisma.auditLog.count(),
   ]);
   console.log(
-    `Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses, ${stockRows} hospital stock rows, ${fraudRows} fraud incidents, ${orgs} organizations.`
+    `Seeded. Database now has ${donors} donors, ${requests} requests, ${responses} responses, ${stockRows} hospital stock rows, ${fraudRows} fraud incidents, ${orgs} organizations, ${alertRows} alerts, ${auditRows} audit log lines.`
   );
   await prisma.$disconnect();
 }
