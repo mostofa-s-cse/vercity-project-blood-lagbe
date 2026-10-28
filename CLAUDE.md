@@ -25,7 +25,7 @@ Next.js 16 (App Router, Turbopack), React 19, TypeScript (non-strict), Tailwind 
 - Non-strict TypeScript does not narrow `{ ok: true } | { ok: false }` unions; results use `{ value, error }`.
 - Every check is enforced **on the server** (`src/proxy.ts`, API routes). UI hiding is only convenience.
 - Secrets: `SUPABASE_SERVICE_ROLE_KEY` is server-only (`import 'server-only'`), never `NEXT_PUBLIC_`. No real keys in the repo.
-- Posting an SOS request needs sign-in once Supabase is configured (page `/sos` in `src/proxy.ts`, `POST /api/sos` returns 401); with no Supabase (demo mode) it stays open. Searching donors, registering as a donor and responding to a request stay open to signed-out people. (Changed 2026-10-26 on the owner's instruction; it used to be "emergencies must never need an account".)
+- Posting an SOS request needs sign-in once Supabase is configured (page `/sos` in `src/proxy.ts`, `POST /api/sos` returns 401); with no Supabase (demo mode) it stays open. Responding to a request ("I can donate") needs sign-in too (`POST /api/requests/[id]/respond` returns 401; the button sends signed-out people to sign-in and back, 2026-10-28, owner's instruction). Searching donors and registering as a donor stay open to signed-out people. (Changed 2026-10-26 on the owner's instruction; it used to be "emergencies must never need an account".)
 - Bengali strings: natural Bengali, keep acronyms (SOS, OTP, ICU) and blood groups.
 - Route files may only export HTTP methods and route config; put helpers in `src/lib`.
 

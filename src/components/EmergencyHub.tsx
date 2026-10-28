@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { BloodGroup, ScreenId } from '../types/blood';
 import type { RequestDto } from '../lib/dtoTypes';
 import { REQUEST_STATUSES, remainingSeconds } from '../lib/requestStatus';
@@ -9,6 +10,7 @@ import { isValidBdPhone } from '../utils/phone';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { localizedPath } from '../utils/routes';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { MapView } from './MapView';
 import { TurnstileWidget } from './TurnstileWidget';
@@ -89,7 +91,9 @@ function ExtraRequestsPage({
 }
 
 export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedBlood, setSelectedBlood] = useState<BloodGroup | 'ALL'>('ALL');
   const [emergencyOnly, setEmergencyOnly] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -112,7 +116,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   const [form, setForm] = useState<Responder>({ name: '', phone: '' });
   // A signed-in person answers with the name and phone from their account, and cannot change them here
   // (change them in the account). A field the account does not have yet stays editable.
-  const { user } = useAuth();
+  const { user, configured, loading: authLoading } = useAuth();
   const nameLocked = Boolean(user?.name);
   const phoneLocked = Boolean(user?.phone);
   const [formError, setFormError] = useState<string | null>(null);
@@ -211,6 +215,16 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
 
   const openRespond = (request: RequestDto) => {
     sound.playTap();
+    // Answering needs an account (once sign-in is available): signed-out people go to sign-in first and
+    // come back to this request's form (`?respond=<id>`, picked up by the effect below).
+    if (configured) {
+      if (authLoading) return;
+      if (!user) {
+        const back = `${pathname}?respond=${encodeURIComponent(request.id)}`;
+        router.push(`${localizedPath(language, '/sign-in')}?next=${encodeURIComponent(back)}`);
+        return;
+      }
+    }
     const remembered = readResponder();
     setForm({ name: user?.name || remembered.name, phone: user?.phone || remembered.phone });
     setFormError(null);
@@ -221,6 +235,18 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   const closeRespond = useCallback(() => {
     if (!isSending) setRespondTarget(null);
   }, [isSending]);
+
+  // Back from sign-in with `?respond=<id>`: open that request's form once it is on screen.
+  useEffect(() => {
+    if (!user || respondTarget) return;
+    const id = new URLSearchParams(window.location.search).get('respond');
+    if (!id) return;
+    const request = firstPage.find((r) => r.id === id);
+    if (!request) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    if (!isClosed(request)) openRespond(request);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, firstPage]);
 
   useEffect(() => {
     if (!respondTarget) return;
@@ -236,6 +262,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
     const code = apiErrorCode(err);
     if (code === 'already_responded') return t.hub.errAlreadyResponded;
     if (code === 'request_closed') return t.hub.errRequestClosed;
+    if (code === 'sign_in_required') return t.hub.errSignIn;
     if (code === 'invalid_input') {
       const field = (err as { data?: { field?: unknown } }).data?.field;
       if (field === 'phone') return t.hub.errInvalidPhone;

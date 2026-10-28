@@ -3,6 +3,7 @@ import { toResponseDto } from '@/lib/dto';
 import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { checkRateLimit, clientKey } from '@/lib/rateLimit';
+import { getSupabaseEnv } from '@/lib/supabase/env';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { turnstileTokenFromBody, verifyTurnstileToken } from '@/lib/turnstile';
 import { parseRespondInput } from '@/lib/validation';
@@ -12,7 +13,7 @@ export const runtime = 'nodejs';
 const MAX_BODY_BYTES = 5_000;
 
 /**
- * "I can donate": records that someone answered a blood request. Open to everyone. The first answer moves
+ * "I can donate": records that someone answered a blood request. Needs a sign-in once Supabase is configured. The first answer moves
  * a pending request to "donor found". The same phone number can answer a request only once, and closed
  * (completed or cancelled) requests take no answers.
  */
@@ -47,6 +48,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const prisma = getPrisma();
     const userId = await getCurrentUserId();
+    // Like posting an SOS: once Supabase is configured, answering needs a sign-in (demo mode stays open).
+    if (!userId && getSupabaseEnv()) return NextResponse.json({ error: 'sign_in_required' }, { status: 401 });
     // Link the answer to the signed-in person's own donor profile first, else to a donor with this phone.
     const donor = await prisma.donor.findFirst({
       where: userId ? { OR: [{ userId }, { phone }] } : { phone },
