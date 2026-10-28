@@ -53,6 +53,7 @@ export const hub = {
   namePlaceholder: 'Full name',
   phoneLabel: 'Your phone number',
   phonePlaceholder: '01XXXXXXXXX',
+  accountDetailsLocked: 'Filled in from your account, so it cannot be changed here.',
   respondPrivacy: 'Your phone number is shown only to the person who posted this request, not on the public list.',
   respondSubmit: 'Send',
   respondSending: 'Sending…',

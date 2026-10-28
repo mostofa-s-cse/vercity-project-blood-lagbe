@@ -10,7 +10,7 @@ import { pathToScreen, screenPath } from '../utils/routes';
 import { usePersistentState } from '../utils/persistentState';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { useGetDonorNotificationsQuery, useGetDonorsQuery, useMarkNotificationReadMutation, useRemoveDonationMutation } from '../store/api';
+import { useGetDonorNotificationsQuery, useGetRequesterNotificationsQuery, useGetDonorsQuery, useMarkNotificationReadMutation, useRemoveDonationMutation } from '../store/api';
 
 interface RequisitionModalState {
   isOpen: boolean;
@@ -97,10 +97,43 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const activeDonorId = rememberedDonorId ?? mineDonorQuery.data?.donors[0]?.id ?? null;
 
   const notificationsQuery = useGetDonorNotificationsQuery({ id: activeDonorId ?? '' }, { skip: !activeDonorId, pollingInterval: 30_000 });
+  // Answers to the signed-in person's own requests ("a donor can help"): whoever posted a request is
+  // notified too, not only donors. Their read state lives in this browser.
+  const requesterQuery = useGetRequesterNotificationsQuery(undefined, { skip: !user, pollingInterval: 30_000 });
+  const readKey = user ? `bloodlagbe.readResponses.${user.id}` : null;
+  const [readResponseIds, setReadResponseIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!readKey) return setReadResponseIds([]);
+    try {
+      const raw: unknown = JSON.parse(window.localStorage.getItem(readKey) ?? '[]');
+      setReadResponseIds(Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string') : []);
+    } catch {
+      setReadResponseIds([]);
+    }
+  }, [readKey]);
+  const rememberRead = (ids: string[]) => {
+    if (!readKey || ids.length === 0) return;
+    setReadResponseIds((prev) => {
+      const next = Array.from(new Set([...prev, ...ids])).slice(-200);
+      try {
+        window.localStorage.setItem(readKey, JSON.stringify(next));
+      } catch {
+        /* storage blocked: read state just lasts until reload */
+      }
+      return next;
+    });
+  };
   const [markRead] = useMarkNotificationReadMutation();
   const [removeDonationMutation] = useRemoveDonationMutation();
-  const notifications = activeDonorId ? notificationsQuery.data?.notifications ?? [] : [];
-  const unreadCount = activeDonorId ? notificationsQuery.data?.unreadCount ?? 0 : 0;
+  const donorNotifications = activeDonorId ? notificationsQuery.data?.notifications ?? [] : [];
+  const requesterNotifications = (user ? requesterQuery.data?.notifications ?? [] : []).map((n) => ({
+    ...n,
+    isRead: readResponseIds.includes(n.id),
+  }));
+  const notifications = [...donorNotifications, ...requesterNotifications].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const navigate = useCallback(
     (screen: ScreenId) => {
@@ -144,6 +177,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const markNotificationRead = (id: string) => {
+    if (id.startsWith('resp:')) return rememberRead([id]);
     if (!activeDonorId) return;
     markRead({ donorId: activeDonorId, id });
   };
@@ -157,9 +191,10 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const clearAllNotifications = () => {
+    rememberRead(notifications.filter((n) => !n.isRead && n.id.startsWith('resp:')).map((n) => n.id));
     if (!activeDonorId) return;
     for (const notification of notifications) {
-      if (!notification.isRead) markRead({ donorId: activeDonorId, id: notification.id });
+      if (!notification.isRead && !notification.id.startsWith('resp:')) markRead({ donorId: activeDonorId, id: notification.id });
     }
   };
 

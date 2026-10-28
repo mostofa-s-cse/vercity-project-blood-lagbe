@@ -16,7 +16,12 @@ export function getPrisma(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL is not set');
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+    // Keep each serverless instance's pool tiny and short-lived: Supabase's pooler allows only ~15 clients
+    // in session mode (EMAXCONNSESSION), and every warm instance holds its own pool. Override with DB_POOL_MAX.
+    const max = Number(process.env.DB_POOL_MAX) > 0 ? Number(process.env.DB_POOL_MAX) : 2;
+    globalForPrisma.prisma = new PrismaClient({
+      adapter: new PrismaPg({ connectionString, max, idleTimeoutMillis: 5_000, connectionTimeoutMillis: 10_000 }),
+    });
   }
   return globalForPrisma.prisma;
 }

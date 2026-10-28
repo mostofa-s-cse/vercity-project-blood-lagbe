@@ -8,6 +8,7 @@ import { sampleRequests } from '../data/sample';
 import { isValidBdPhone } from '../utils/phone';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { MapView } from './MapView';
 import { TurnstileWidget } from './TurnstileWidget';
@@ -109,6 +110,11 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   // "I can donate" form.
   const [respondTarget, setRespondTarget] = useState<RequestDto | null>(null);
   const [form, setForm] = useState<Responder>({ name: '', phone: '' });
+  // A signed-in person answers with the name and phone from their account, and cannot change them here
+  // (change them in the account). A field the account does not have yet stays editable.
+  const { user } = useAuth();
+  const nameLocked = Boolean(user?.name);
+  const phoneLocked = Boolean(user?.phone);
   const [formError, setFormError] = useState<string | null>(null);
   const [respondDone, setRespondDone] = useState(false);
   const [respondedIds, setRespondedIds] = useState<Set<string>>(() => new Set());
@@ -205,7 +211,8 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
 
   const openRespond = (request: RequestDto) => {
     sound.playTap();
-    setForm(readResponder());
+    const remembered = readResponder();
+    setForm({ name: user?.name || remembered.name, phone: user?.phone || remembered.phone });
     setFormError(null);
     setRespondDone(false);
     setRespondTarget(request);
@@ -341,7 +348,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
         <div className="flex flex-col gap-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100">
           <div className="flex flex-wrap justify-between items-center gap-1 text-xs">
             <span className="text-slate-600 font-medium">
-              {t.hub.bagsPledgedLabel} <strong className="text-slate-900">{t.hub.pledgedOf(request.bagsPledged, request.bags)}</strong>
+              {t.hub.bagsPledgedLabel} <strong className="text-slate-900">{t.hub.pledgedOf(Math.min(request.bagsPledged, request.bags), request.bags)}</strong>
             </span>
             <span className="text-red-600 font-bold">{t.hub.fulfilledStatus(fulfilledPct, stillNeeded)}</span>
           </div>
@@ -752,11 +759,13 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
                     type="text"
                     value={form.name}
                     onChange={(event) => setForm((f) => ({ ...f, name: event.target.value }))}
+                    readOnly={nameLocked}
+                    aria-readonly={nameLocked}
                     placeholder={t.hub.namePlaceholder}
                     autoComplete="name"
                     maxLength={80}
                     required
-                    className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={`px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 ${nameLocked ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : ''}`}
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
@@ -766,13 +775,21 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
                     inputMode="tel"
                     value={form.phone}
                     onChange={(event) => setForm((f) => ({ ...f, phone: event.target.value }))}
+                    readOnly={phoneLocked}
+                    aria-readonly={phoneLocked}
                     placeholder={t.hub.phonePlaceholder}
                     autoComplete="tel"
                     maxLength={20}
                     required
-                    className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={`px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 ${phoneLocked ? 'bg-slate-100 text-slate-600 cursor-not-allowed' : ''}`}
                   />
                 </label>
+                {(nameLocked || phoneLocked) && (
+                  <p className="text-[11px] text-slate-500 flex items-start gap-1">
+                    <span className="material-symbols-outlined text-sm text-slate-500">lock</span>
+                    <span>{t.hub.accountDetailsLocked}</span>
+                  </p>
+                )}
                 <p className="text-[11px] text-slate-500 flex items-start gap-1">
                   <span className="material-symbols-outlined text-sm text-emerald-600">shield</span>
                   <span>{t.hub.respondPrivacy}</span>

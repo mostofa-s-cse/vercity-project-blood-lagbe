@@ -7,12 +7,19 @@ import { ADMIN_AREA_PERMISSIONS, type Permission } from '../lib/permissions';
 import { can as claimsCan, canManageHospital as claimsCanManageHospital } from '../lib/roles';
 import { announceDonorProfileChange, browserStorage, clearMyDonorProfiles } from '../lib/myDonorProfile';
 import { normalizePhoneForAuth } from '../lib/phoneAuth';
+import { profileFromMetadata, type SignupProfileInput } from '../lib/signupProfile';
+import type { BloodGroupValue } from '../lib/validation';
 
 export interface AuthUser {
   id: string;
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
+  /** From sign-up (see src/lib/signupProfile.ts); null when the person signed up before these were asked. */
+  phone: string | null;
+  bloodGroup: BloodGroupValue | null;
+  age: number | null;
+  area: string | null;
   /** Supabase app_metadata: only the service key or SQL can change it, never the person. */
   appMetadata: Record<string, unknown>;
 }
@@ -41,7 +48,7 @@ interface AuthContextType {
    * No confirmation-link wait (see src/lib/emailAuth.ts): creates the account server-side already
    * confirmed, then signs in immediately with the same password. `error` is a short error code, or null.
    */
-  signUpWithEmail: (email: string, password: string, name?: string) => Promise<{ error: string | null }>;
+  signUpWithEmail: (email: string, password: string, profile: SignupProfileInput) => Promise<{ error: string | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithPhone: (phone: string, password: string) => Promise<{ error: string | null }>;
   /**
@@ -62,11 +69,16 @@ const asText = (value: unknown): string | null => (typeof value === 'string' && 
 function toAuthUser(user: User | null | undefined): AuthUser | null {
   if (!user) return null;
   const meta = user.user_metadata ?? {};
+  const stored = profileFromMetadata(meta);
   return {
     id: user.id,
     email: user.email ?? null,
-    name: asText(meta.full_name) ?? asText(meta.name),
+    name: stored.name,
     avatarUrl: asText(meta.avatar_url) ?? asText(meta.picture),
+    phone: stored.phone ?? asText(user.phone),
+    bloodGroup: stored.bloodGroup,
+    age: stored.age,
+    area: stored.area,
     appMetadata: user.app_metadata ?? {},
   };
 }
@@ -120,21 +132,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabase]);
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string, name?: string) => {
+    async (email: string, password: string, profile: SignupProfileInput) => {
       if (!supabase) return { error: 'not_configured' };
       const response = await fetch('/api/auth/signup-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, profile }),
       });
       if (!response.ok) {
         const body: unknown = await response.json().catch(() => null);
         const error = body && typeof body === 'object' && 'error' in body ? String((body as { error: unknown }).error) : 'sign_up_failed';
-        return { error };
+        const field = body && typeof body === 'object' && 'field' in body ? String((body as { field: unknown }).field) : null;
+        return { error: error === 'invalid_input' && field ? `invalid_${field}` : error };
       }
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { error: error.code ?? 'sign_in_failed' };
-      setUser(toAuthUser(data.user));
+      // The sign-in request has been seen to hang after the account was created (the session still lands).
+      // Do not leave the form spinning: after a few seconds, trust a session that exists.
+      const signedIn = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+      ]);
+      if (signedIn === null) {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) return { error: 'sign_in_failed' };
+        setUser(toAuthUser(data.session.user));
+        return { error: null };
+      }
+      if (signedIn.error) return { error: signedIn.error.code ?? 'sign_in_failed' };
+      setUser(toAuthUser(signedIn.data.user));
       return { error: null };
     },
     [supabase]

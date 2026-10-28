@@ -31,3 +31,15 @@ test('createEmailAccount: no error but no user either is still a failure, never 
   const result = await createEmailAccount(admin, { email: 'a@example.com', password: 'x' });
   assert.deepEqual(result, { error: 'create_failed' });
 });
+
+test('createEmailAccount: passes the whole metadata object to the new user', async () => {
+  let seen: Record<string, unknown> | undefined;
+  const admin: EmailAuthAdmin = {
+    createUser: async (attrs) => {
+      seen = attrs.user_metadata;
+      return { data: { user: { id: 'user-2' } }, error: null };
+    },
+  };
+  await createEmailAccount(admin, { email: 'a@example.com', password: 'x', metadata: { name: 'Rahim', phone: '01711223344' } });
+  assert.deepEqual(seen, { name: 'Rahim', phone: '01711223344' });
+});

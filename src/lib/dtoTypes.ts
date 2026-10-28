@@ -145,6 +145,8 @@ export interface NotificationDto {
   donationId: string | null;
   donationCode: string | null;
   donationUnits: number | null;
+  /** Set on a `donor_responded` notification (shown to the requester): who said they can donate. */
+  responderName?: string | null;
   isRead: boolean;
   createdAt: string;
 }

@@ -47,8 +47,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const prisma = getPrisma();
     const userId = await getCurrentUserId();
-    // If this phone belongs to a registered donor, link the answer to that donor.
-    const donor = await prisma.donor.findFirst({ where: { phone }, select: { id: true } });
+    // Link the answer to the signed-in person's own donor profile first, else to a donor with this phone.
+    const donor = await prisma.donor.findFirst({
+      where: userId ? { OR: [{ userId }, { phone }] } : { phone },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
 
     const outcome = await prisma.$transaction(async (tx) => {
       const found = await tx.sosRequest.findUnique({ where: { id }, select: { status: true } });

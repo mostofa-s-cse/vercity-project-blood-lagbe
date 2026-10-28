@@ -55,6 +55,7 @@ export const hub: Hub = {
   namePlaceholder: 'পুরো নাম',
   phoneLabel: 'আপনার ফোন নম্বর',
   phonePlaceholder: '01XXXXXXXXX',
+  accountDetailsLocked: 'আপনার অ্যাকাউন্ট থেকে নেওয়া হয়েছে, তাই এখানে বদলানো যাবে না।',
   respondPrivacy: 'আপনার ফোন নম্বর শুধু যিনি রিকোয়েস্টটি দিয়েছেন তিনিই দেখতে পাবেন, সবার তালিকায় দেখানো হয় না।',
   respondSubmit: 'পাঠান',
   respondSending: 'পাঠানো হচ্ছে…',

@@ -187,6 +187,12 @@ export function createApiSlice({
         providesTags: ['Notification'],
       }),
 
+      /** Answers ("I can donate") to the signed-in person's own requests, shown in their bell. */
+      getRequesterNotifications: build.query<{ notifications: NotificationDto[] }, void>({
+        query: () => 'notifications/requests',
+        providesTags: ['Notification', 'Request'],
+      }),
+
       markNotificationRead: build.mutation<{ notification: NotificationDto }, { donorId: string; id: string; token?: string }>({
         query: ({ donorId, id, token }) => ({
           url: `donors/${encodeURIComponent(donorId)}/notifications/${encodeURIComponent(id)}`,
@@ -394,6 +400,7 @@ export const {
   useGetRadiusQuery,
   useSaveRadiusMutation,
   useGetDonorNotificationsQuery,
+  useGetRequesterNotificationsQuery,
   useReopenRequestMutation,
   useRemoveDonationMutation,
   useMarkNotificationReadMutation,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createEmailAccount, type EmailAuthAdmin } from '@/lib/emailAuth';
+import { parseSignupProfile, profileToMetadata } from '@/lib/signupProfile';
 import { isSameOrigin } from '@/lib/originCheck';
 import { syncProfile } from '@/lib/profile';
 import { checkRateLimit, clientKey } from '@/lib/rateLimit';
@@ -13,7 +14,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 interface Body {
   email?: unknown;
   password?: unknown;
-  name?: unknown;
+  profile?: unknown;
 }
 
 /**
@@ -47,9 +48,12 @@ export async function POST(request: Request) {
   if (typeof body.password !== 'string' || body.password.length < 6) {
     return NextResponse.json({ error: 'invalid_input', field: 'password' }, { status: 400 });
   }
-  const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : undefined;
+  const parsed = parseSignupProfile(body.profile);
+  if (parsed.error) return NextResponse.json({ error: 'invalid_input', field: parsed.error }, { status: 400 });
+  const profile = parsed.value;
+  const metadata = profileToMetadata(profile);
 
-  const result = await createEmailAccount(admin, { email: body.email, password: body.password, name });
+  const result = await createEmailAccount(admin, { email: body.email, password: body.password, metadata });
   if ('error' in result) {
     return NextResponse.json({ error: result.error }, { status: result.error === 'email_taken' ? 409 : 500 });
   }
@@ -57,7 +61,7 @@ export async function POST(request: Request) {
   // this path never hits that route at all, so it has to happen here instead — otherwise donor
   // registration and the claim route would silently never link to this brand new account.
   try {
-    await syncProfile({ id: result.userId, email: body.email, user_metadata: name ? { name } : undefined });
+    await syncProfile({ id: result.userId, email: body.email, user_metadata: metadata });
   } catch (error) {
     console.error('Could not create profile for new email account', error);
   }

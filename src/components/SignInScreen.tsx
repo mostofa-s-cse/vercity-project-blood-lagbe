@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { safeNextPath } from '../lib/safeRedirect';
 import { localizedPath } from '../utils/routes';
 import { isValidBdPhone } from '../utils/phone';
+import { BLOOD_GROUPS } from '../lib/validation';
 
 interface SignInScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -34,6 +35,12 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // Sign-up only: name and phone are required, the rest is optional (see src/lib/signupProfile.ts).
+  const [fullName, setFullName] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
+  const [bloodGroup, setBloodGroup] = useState('');
+  const [age, setAge] = useState('');
+  const [area, setArea] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,6 +76,21 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
       setFormError(t.register.mobileError);
       return;
     }
+    if (mode === 'signup' && method === 'email') {
+      if (fullName.trim().length < 2) {
+        setFormError(t.auth.invalidName);
+        return;
+      }
+      if (!isValidBdPhone(signupPhone.trim())) {
+        setFormError(t.auth.invalidPhone);
+        return;
+      }
+      const ageNumber = Number(age);
+      if (age.trim() && (!Number.isInteger(ageNumber) || ageNumber < 18 || ageNumber > 65)) {
+        setFormError(t.auth.invalidAge);
+        return;
+      }
+    }
     if (mode === 'signup' && password !== confirmPassword) {
       setFormError(t.auth.passwordsDontMatch);
       return;
@@ -79,7 +101,13 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
     // server-side permission check on the target route), and this component unmounts with it. Clearing
     // it early would re-enable the button and make the wait look like nothing happened.
     if (mode === 'signup') {
-      const result = method === 'email' ? await signUpWithEmail(trimmedEmail, password) : await signUpWithPhone(trimmedPhone, password);
+      const result = method === 'email' ? await signUpWithEmail(trimmedEmail, password, {
+            name: fullName.trim(),
+            phone: signupPhone.trim(),
+            bloodGroup,
+            age: age.trim(),
+            area: area.trim(),
+          }) : await signUpWithPhone(trimmedPhone, password);
       if (result.error) {
         setFormError(errorText(result.error));
         setSubmitting(false);
@@ -131,6 +159,37 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
             </button>
           </div>
           */}
+
+          {mode === 'signup' && method === 'email' && (
+            <>
+              <div>
+                <label htmlFor={`${uid}-name`} className={labelClass}>{t.auth.nameLabel}</label>
+                <input
+                  id={`${uid}-name`}
+                  type="text"
+                  autoComplete="name"
+                  placeholder={t.auth.namePlaceholder}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor={`${uid}-phone`} className={labelClass}>{t.auth.phoneLabel}</label>
+                <input
+                  id={`${uid}-phone`}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder={t.auth.phonePlaceholder}
+                  value={signupPhone}
+                  onChange={(e) => setSignupPhone(e.target.value)}
+                  className={inputClass}
+                />
+                <p className="mt-1 text-[11px] text-slate-500">{t.auth.phoneHint}</p>
+              </div>
+            </>
+          )}
 
           {method === 'email' ? (
             <div>
@@ -194,6 +253,58 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
             </div>
           )}
 
+          {mode === 'signup' && method === 'email' && (
+            <>
+              <div>
+                <label htmlFor={`${uid}-bg`} className={labelClass}>
+                  {t.auth.bloodGroupLabel} <span className="font-medium text-slate-500">{t.auth.optionalTag}</span>
+                </label>
+                <select
+                  id={`${uid}-bg`}
+                  value={bloodGroup}
+                  onChange={(e) => setBloodGroup(e.target.value)}
+                  className={`${inputClass} cursor-pointer`}
+                >
+                  <option value="">{t.auth.bloodGroupNone}</option>
+                  {BLOOD_GROUPS.map((group) => (
+                    <option key={group} value={group}>{group}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor={`${uid}-age`} className={labelClass}>
+                    {t.auth.ageLabel} <span className="font-medium text-slate-500">{t.auth.optionalTag}</span>
+                  </label>
+                  <input
+                    id={`${uid}-age`}
+                    type="number"
+                    inputMode="numeric"
+                    min="18"
+                    max="65"
+                    placeholder={t.auth.agePlaceholder}
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor={`${uid}-area`} className={labelClass}>
+                    {t.auth.areaLabel} <span className="font-medium text-slate-500">{t.auth.optionalTag}</span>
+                  </label>
+                  <input
+                    id={`${uid}-area`}
+                    type="text"
+                    placeholder={t.auth.areaPlaceholder}
+                    value={area}
+                    onChange={(e) => setArea(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           {mode === 'signin' && (
             <button
               type="button"
@@ -208,7 +319,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
 
           <button
             type="submit"
-            disabled={submitting || !(method === 'email' ? email : phone) || !password}
+            disabled={submitting || !(method === 'email' ? email : phone) || !password || (mode === 'signup' && method === 'email' && (!fullName.trim() || !signupPhone.trim()))}
             className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-extrabold text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             {submitting && <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>}

@@ -79,6 +79,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
           ) : (
             notifications.map((notif) => {
               const isGift = notif.type === 'donation_confirmed';
+              const isResponse = notif.type === 'donor_responded';
               return (
                 <div
                   key={notif.id}
@@ -91,7 +92,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <span className="font-extrabold text-xs text-slate-900 leading-snug">
-                      {isGift ? t.notifications.donationConfirmedTitle : t.notifications.bloodNeeded(notif.bloodGroup)}
+                      {isGift ? t.notifications.donationConfirmedTitle : isResponse ? t.notifications.donorRespondedTitle : t.notifications.bloodNeeded(notif.bloodGroup)}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono shrink-0">
                       {new Date(notif.createdAt).toLocaleString()}
@@ -101,12 +102,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   <p className="text-xs text-slate-600 leading-relaxed mb-3">
                     {isGift
                       ? t.notifications.donationConfirmedMessage(notif.donationUnits ?? 1, notif.place, notif.donationCode ?? '')
-                      : t.notifications.message(notif.bloodGroup, notif.place)}
+                      : isResponse
+                        ? t.notifications.donorRespondedMessage(notif.responderName ?? '', notif.bloodGroup, notif.place)
+                        : t.notifications.message(notif.bloodGroup, notif.place)}
                   </p>
 
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs">
                     <span className={`px-2 py-0.5 rounded-md text-white font-black text-[10px] ${isGift ? 'bg-emerald-600' : 'bg-red-600'}`}>
-                      {isGift ? notif.donationCode : t.notifications.bloodNeeded(notif.bloodGroup)}
+                      {isGift ? notif.donationCode : isResponse ? notif.bloodGroup : t.notifications.bloodNeeded(notif.bloodGroup)}
                     </span>
 
                     <div className="flex items-center gap-2 ml-auto">
@@ -115,11 +118,11 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           e.stopPropagation();
                           sound.playEmergencyChime();
                           onClose();
-                          onNavigate(isGift ? 'donor-passport' : 'emergency-hub');
+                          onNavigate(isGift ? 'donor-passport' : isResponse ? 'request-tracking' : 'emergency-hub');
                         }}
                         className={`px-3 py-1 rounded-lg text-white font-bold text-[11px] shadow-xs cursor-pointer ${isGift ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
                       >
-                        {isGift ? t.notifications.viewPassport : t.notifications.respondNow}
+                        {isGift ? t.notifications.viewPassport : isResponse ? t.notifications.trackRequest : t.notifications.respondNow}
                       </button>
                       {isGift && notif.donationId && (
                         <button

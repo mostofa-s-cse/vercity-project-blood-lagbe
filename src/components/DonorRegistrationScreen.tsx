@@ -53,6 +53,18 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
     setShowForm(false);
   }, [user?.id]);
   const mineQuery = useGetDonorsQuery({ mine: true, pageSize: 1 }, { skip: !user });
+  // What the person gave at sign-up pre-fills the form; they can still change it here.
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user || prefilledFor === user.id) return;
+    setPrefilledFor(user.id);
+    if (user.name) setName((v) => v || user.name!);
+    if (user.phone) setPhone((v) => v || user.phone!);
+    if (user.bloodGroup) setBloodGroup((v) => v ?? (user.bloodGroup as BloodGroup));
+    if (user.area) setLocation((v) => v || user.area!);
+    if (user.age) setAge((v) => v || String(user.age));
+    if (user.email) setEmail((v) => v || user.email!);
+  }, [user, prefilledFor]);
   const [showForm, setShowForm] = useState(false);
   const activeId = showForm ? null : rememberedId ?? mineQuery.data?.donors[0]?.id ?? null;
 
@@ -83,7 +95,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   const [pledge, setPledge] = useState(false);
 
   // Optional "More details"
-  const [age, setAge] = useState('24');
+  const [age, setAge] = useState('');
   const [gender, setGender] = useState<'Male' | 'Female'>('Male');
   const dhakaDivision = BD_DIVISIONS.find((d) => d.name === 'Dhaka') ?? BD_DIVISIONS[0];
   const [divisionId, setDivisionId] = useState(dhakaDivision.id);
@@ -94,10 +106,10 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   // Stored as real district + division names (e.g. "Dhaka, Dhaka"); UI language only changes the select labels.
   const division = selectedDistrict && selectedDivision ? `${selectedDistrict.name}, ${selectedDivision.name}` : '';
   const [email, setEmail] = useState('');
-  const [weightKg, setWeightKg] = useState('65');
-  const [lastDonationMonths, setLastDonationMonths] = useState('4');
+  const [weightKg, setWeightKg] = useState('');
+  const [lastDonationMonths, setLastDonationMonths] = useState('');
   const [vehicle, setVehicle] = useState('Personal Motorcycle');
-  const [nearestHospital, setNearestHospital] = useState('Dhaka Medical College Hospital');
+  const [nearestHospital, setNearestHospital] = useState('');
 
   const [submittedDonor, setSubmittedDonor] = useState<Donor | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -123,7 +135,13 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       const trimmedName = name.trim() || undefined;
       const result =
         claimMethod === 'email'
-          ? await signUpWithEmail(claimEmail.trim().toLowerCase(), claimPassword, trimmedName)
+          ? await signUpWithEmail(claimEmail.trim().toLowerCase(), claimPassword, {
+              name: name.trim(),
+              phone: phone.trim(),
+              bloodGroup: bloodGroup ?? '',
+              age: age.trim(),
+              area: location.trim(),
+            })
           : await signUpWithPhone(claimPhone.trim(), claimPassword, trimmedName);
       if (result.error) {
         setClaimError(result.error);
@@ -187,14 +205,14 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       phone: trimmedPhone,
       bloodGroup,
       area: createdDonor.location,
-      age: createdDonor.age,
+      age: parseInt(age) || undefined,
       gender,
       division,
       email: email.trim() || undefined,
-      weightKg: createdDonor.weightKg,
-      lastDonationMonths: parseInt(lastDonationMonths) || 4,
+      weightKg: parseInt(weightKg) || undefined,
+      lastDonationMonths: lastDonationMonths.trim() === '' ? undefined : parseInt(lastDonationMonths),
       vehicle,
-      nearestHospital,
+      nearestHospital: nearestHospital.trim() || undefined,
       isAvailable,
       turnstileToken: turnstileToken ?? undefined,
     })

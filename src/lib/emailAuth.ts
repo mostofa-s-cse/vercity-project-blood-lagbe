@@ -23,13 +23,15 @@ export interface EmailAuthAdmin {
 /** Creates the account and reports why, never silently succeeding without a real user id. */
 export async function createEmailAccount(
   admin: EmailAuthAdmin,
-  { email, password, name }: { email: string; password: string; name?: string }
+  { email, password, name, metadata }: { email: string; password: string; name?: string; metadata?: Record<string, unknown> }
 ): Promise<{ userId: string } | { error: 'email_taken' | 'create_failed' }> {
+  // `metadata` (name, phone, blood group, ...) wins over the bare `name` shortcut.
+  const userMetadata = metadata ?? (name ? { name } : undefined);
   const { data, error } = await admin.createUser({
     email,
     password,
     email_confirm: true,
-    ...(name ? { user_metadata: { name } } : {}),
+    ...(userMetadata ? { user_metadata: userMetadata } : {}),
   });
   if (error) return { error: /already|registered|exists/i.test(error.message) ? 'email_taken' : 'create_failed' };
   if (!data.user) return { error: 'create_failed' };
