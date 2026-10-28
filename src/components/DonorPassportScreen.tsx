@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { bnDigits } from '../lib/bnDigits';
 import { useAuth } from '../context/AuthContext';
 import { useGetDonorDonationsQuery, useRemoveDonationMutation, useGetDonorQuery, useGetDonorsQuery } from '../store/api';
 import { DONATION_COOLDOWN_DAYS } from '../lib/eligibility';
@@ -287,8 +288,8 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center">
-                  <span className="text-3xl font-black text-slate-900">{Math.min(currentElapsed, DONATION_COOLDOWN_DAYS)}</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">{t.passport.ofDays}</span>
+                  <span className="text-3xl font-black text-slate-900">{language === 'bn' ? bnDigits(isEligible ? 0 : daysLeft) : isEligible ? 0 : daysLeft}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">{t.passport.daysLeftLabel}</span>
                 </div>
               </div>
 

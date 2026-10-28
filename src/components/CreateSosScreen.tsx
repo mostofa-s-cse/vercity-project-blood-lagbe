@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { BloodGroup, ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { buildSosPost } from '../utils/sosPost';
 import { isValidBdPhone } from '../utils/phone';
 import { useCreateSosMutation } from '../store/api';
@@ -50,6 +51,12 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
   const [place, setPlace] = useState('');
   const [phone1, setPhone1] = useState('');
   const [phone2, setPhone2] = useState('');
+  // The contact number starts as the one on the account (still editable: the family's number may differ).
+  const { user } = useAuth();
+  const accountPhone = user?.phone ?? '';
+  useEffect(() => {
+    if (accountPhone) setPhone1((v) => v || accountPhone);
+  }, [accountPhone]);
   const [showPhone2, setShowPhone2] = useState(false);
   const [within1Hour, setWithin1Hour] = useState(true);
 
@@ -199,7 +206,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
     setBloodGroup(null);
     setBags(1);
     setPlace('');
-    setPhone1('');
+    setPhone1(accountPhone);
     setPhone2('');
     setShowPhone2(false);
     setWithin1Hour(true);

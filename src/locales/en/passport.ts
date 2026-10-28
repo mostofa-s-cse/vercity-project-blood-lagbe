@@ -32,6 +32,7 @@ export const passport = {
   cooldownTitle: 'Biological Rest Cooldown',
   eligibleNow: 'Eligible Now',
   restingPeriod: 'Resting Period',
+  daysLeftLabel: 'days left',
   ofDays: 'of 90 Days',
   regenerated: 'Your hemoglobin & red blood cells are 100% regenerated.',
   daysRemaining: (n: number) => `${n} days remaining before safe donation.`,
