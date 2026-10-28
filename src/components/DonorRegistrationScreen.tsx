@@ -220,6 +220,8 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       .then((saved) => {
         rememberDonor(donorStorage(), { id: saved.id, token: saved.manageToken });
         announceDonorProfileChange();
+        // Registered while signed in: the server already linked it to the account, nothing to claim.
+        if (user) setClaimAttempted(true);
         // So the optional "save to an account" section below can claim it without a reload.
         setRememberedId(saved.id);
       })
