@@ -1,4 +1,5 @@
 import { isValidBdPhone } from '../utils/phone.ts';
+import { parseDivision } from './divisions.ts';
 import { isPermission, normalizePermissions, type Permission } from './permissions.ts';
 import { REQUEST_STATUSES, type RequestStatusValue } from './requestStatus.ts';
 
@@ -39,6 +40,8 @@ export interface DonorInput {
 }
 
 export interface SosInput {
+  /** A canonical division name, when the form sent one. */
+  division?: string;
   area?: string;
   problem?: string;
   patientName?: string;
@@ -161,6 +164,11 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
   if (!raw.phones.every((phone) => typeof phone === 'string' && isValidBdPhone(phone))) return { value: null, error: 'phones' };
   const area = optionalText(raw.area, 120);
   if (area === null) return { value: null, error: 'area' };
+  let division: string | undefined;
+  if (raw.division !== undefined && raw.division !== null && raw.division !== '') {
+    division = parseDivision(raw.division) ?? undefined;
+    if (!division) return { value: null, error: 'division' };
+  }
   const problem = optionalText(raw.problem, 120);
   if (problem === null) return { value: null, error: 'problem' };
   const patientName = optionalPersonName(raw.patientName);
@@ -179,6 +187,7 @@ export function parseSosInput(raw: unknown): ParseResult<SosInput> {
   return {
     error: null,
     value: {
+      division,
       area,
       problem,
       patientName,
@@ -500,7 +509,16 @@ function readNear(params: Params): ParseResult<NearQuery | undefined> {
   return { error: null, value: { lat, lng, radiusKm } };
 }
 
+/** `division=Dhaka` on a list query: a canonical name (or a known spelling), nothing else. */
+function readDivision(params: Params): { value: string | undefined; error: string | null } {
+  const raw = params.get('division');
+  if (raw === null || raw === '' || raw === 'ALL') return { value: undefined, error: null };
+  const division = parseDivision(raw);
+  return division ? { value: division, error: null } : { value: undefined, error: 'division' };
+}
+
 export interface DonorQuery {
+  division: string | undefined;
   bloodGroup: BloodGroupValue | undefined;
   q: string | undefined;
   available: boolean;
@@ -519,9 +537,12 @@ export function parseDonorQuery(params: Params): ParseResult<DonorQuery> {
   const q = (params.get('q') ?? '').trim().slice(0, 60);
   const near = readNear(params);
   if (near.error) return { value: null, error: near.error };
+  const division = readDivision(params);
+  if (division.error) return { value: null, error: division.error };
   return {
     error: null,
     value: {
+      division: division.value,
       bloodGroup: group ? (group as BloodGroupValue) : undefined,
       q: q || undefined,
       available: readFlag(params.get('available')),
@@ -533,6 +554,7 @@ export function parseDonorQuery(params: Params): ParseResult<DonorQuery> {
 }
 
 export interface RequestQuery {
+  division: string | undefined;
   status: RequestStatusValue | undefined;
   emergency: boolean;
   bloodGroup: BloodGroupValue | undefined;
@@ -558,6 +580,8 @@ export function parseRequestQuery(params: Params): ParseResult<RequestQuery> {
   if (group !== null && group !== '' && !isBloodGroup(group)) return { value: null, error: 'bloodGroup' };
   const near = readNear(params);
   if (near.error) return { value: null, error: near.error };
+  const division = readDivision(params);
+  if (division.error) return { value: null, error: division.error };
 
   const ids = [
     ...new Set(
@@ -571,6 +595,7 @@ export function parseRequestQuery(params: Params): ParseResult<RequestQuery> {
   return {
     error: null,
     value: {
+      division: division.value,
       status: status ? (status as RequestStatusValue) : undefined,
       emergency: readFlag(params.get('emergency')),
       bloodGroup: group ? (group as BloodGroupValue) : undefined,
@@ -583,6 +608,7 @@ export function parseRequestQuery(params: Params): ParseResult<RequestQuery> {
 }
 
 export interface OrganizationQuery {
+  division: string | undefined;
   /** "Near me" / nearest-hospital: sort by distance from this point instead of the default order. */
   near: NearQuery | undefined;
 }
@@ -591,7 +617,9 @@ export interface OrganizationQuery {
 export function parseOrganizationQuery(params: Params): ParseResult<OrganizationQuery> {
   const near = readNear(params);
   if (near.error) return { value: null, error: near.error };
-  return { error: null, value: { near: near.value } };
+  const division = readDivision(params);
+  if (division.error) return { value: null, error: division.error };
+  return { error: null, value: { near: near.value, division: division.value } };
 }
 
 const ALERT_URGENCIES = ['code_red', 'critical', 'urgent'] as const;

@@ -25,19 +25,6 @@ export const header = {
   },
   signIn: 'Sign in',
   signOut: 'Sign out',
-  divisions: {
-    dhakaCentral: 'Dhaka Central (DMCH / BSMMU)',
-    dhakaNorth: 'Dhaka North (Uttara / Kurmitola)',
-    chattogram: 'Chattogram Port Hub',
-    sylhet: 'Sylhet Osmani Zone',
-    rajshahi: 'Rajshahi Sadar',
-  },
-  divisionsShort: {
-    dhakaCentral: 'Dhaka Central',
-    dhakaNorth: 'Dhaka North',
-    chattogram: 'Chattogram',
-    sylhet: 'Sylhet',
-    rajshahi: 'Rajshahi',
-  },
+  allDivisions: 'All divisions',
 };
 export type Header = typeof header;

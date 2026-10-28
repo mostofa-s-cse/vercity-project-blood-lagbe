@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { BLOOD_GROUPS, type BloodGroupValue } from '../lib/validation';
 import type { DonorDto } from '../lib/dtoTypes';
+import { useAppState } from '../context/AppStateContext';
 import { useGetDonorsQuery, useLazyGetDonorContactQuery } from '../store/api';
 import { isDatabaseOff } from '../store/errors';
 import { sampleContactPhone, sampleDonors } from '../data/sample';
@@ -74,12 +75,17 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const filterKey = JSON.stringify([selectedGroup, search, onlyAvailable, near?.lat, near?.lng, near?.radiusKm]);
+  // The header's division filter ("ALL" = every division).
+  const { selectedDivision } = useAppState();
+  const division = selectedDivision === 'ALL' ? undefined : selectedDivision;
+
+  const filterKey = JSON.stringify([division, selectedGroup, search, onlyAvailable, near?.lat, near?.lng, near?.radiusKm]);
   const [pageState, setPageState] = useState<{ key: string; page: number }>({ key: filterKey, page: 1 });
   const page = pageState.key === filterKey ? pageState.page : 1;
 
   const { currentData, error, isFetching, refetch } = useGetDonorsQuery(
     {
+      division,
       bloodGroup: selectedGroup === 'ALL' ? undefined : selectedGroup,
       q: search || undefined,
       available: onlyAvailable || undefined,

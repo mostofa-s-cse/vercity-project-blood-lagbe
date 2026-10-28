@@ -110,6 +110,9 @@ model SosRequest {
   /// Same rule as Donor.latitude/longitude: a real coordinate for "near me" sort and distance, null until shared.
   latitude        Float?
   longitude       Float?
+  /// One of the eight divisions (canonical names in src/data/bdGeo.ts), chosen on the SOS form or worked out
+  /// from the place/area; null when neither says. The header's division filter reads this.
+  division        String?
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at")
   completedAt     DateTime?         @map("completed_at")
@@ -120,6 +123,7 @@ model SosRequest {
   @@index([status, createdAt])
   @@index([isCritical, status, createdAt])
   @@index([userId])
+  @@index([division, status])
   @@map("sos_requests")
 }
 

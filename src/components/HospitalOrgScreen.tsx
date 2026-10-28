@@ -4,6 +4,7 @@ import { SAMPLE_HOSPITAL_ORGS, SAMPLE_CAMPS } from '../data/mockData';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useAppState } from '../context/AppStateContext';
 import { fetchHospitalStock, saveHospitalStock, type HospitalStockMap } from '../lib/api';
 import { useApplyOrganizationMutation, useGetOrganizationsQuery, type OrganizationApplyPayload } from '../store/api';
 import { isDatabaseOff } from '../store/errors';
@@ -99,7 +100,10 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   }, [coords]);
 
   // Real organizations replace the sample list once they load; without a database this stays the sample.
-  const { currentData: orgsData, error: orgsError } = useGetOrganizationsQuery();
+  const { selectedDivision } = useAppState();
+  const { currentData: orgsData, error: orgsError } = useGetOrganizationsQuery(
+    selectedDivision === 'ALL' ? undefined : { division: selectedDivision }
+  );
   const orgsDemo = isDatabaseOff(orgsError);
   const stockRef = useRef<HospitalStockMap | null>(null);
 

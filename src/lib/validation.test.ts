@@ -373,13 +373,13 @@ const params = (query: string) => new URLSearchParams(query);
 test('donor query defaults', () => {
   const result = parseDonorQuery(params(''));
   assert.equal(result.error, null);
-  if (!result.error) assert.deepEqual(result.value, { bloodGroup: undefined, q: undefined, available: false, mine: false, near: undefined, page: 1, pageSize: 20 });
+  if (!result.error) assert.deepEqual(result.value, { division: undefined, bloodGroup: undefined, q: undefined, available: false, mine: false, near: undefined, page: 1, pageSize: 20 });
 });
 
 test('donor query reads its filters', () => {
   const result = parseDonorQuery(params('bloodGroup=O%2B&q=%20dhanmondi%20&available=true&mine=1&page=3&pageSize=10'));
   assert.equal(result.error, null);
-  if (!result.error) assert.deepEqual(result.value, { bloodGroup: 'O+', q: 'dhanmondi', available: true, mine: true, near: undefined, page: 3, pageSize: 10 });
+  if (!result.error) assert.deepEqual(result.value, { division: undefined, bloodGroup: 'O+', q: 'dhanmondi', available: true, mine: true, near: undefined, page: 3, pageSize: 10 });
 });
 
 test('donor query rejects an unknown blood group but clamps paging quietly', () => {
@@ -401,10 +401,10 @@ test('donor query rejects an unknown blood group but clamps paging quietly', () 
 test('request query defaults and filters', () => {
   const none = parseRequestQuery(params(''));
   assert.equal(none.error, null);
-  if (!none.error) assert.deepEqual(none.value, { status: undefined, emergency: false, bloodGroup: undefined, ids: undefined, mine: false, near: undefined, page: 1, pageSize: 20 });
+  if (!none.error) assert.deepEqual(none.value, { division: undefined, status: undefined, emergency: false, bloodGroup: undefined, ids: undefined, mine: false, near: undefined, page: 1, pageSize: 20 });
   const some = parseRequestQuery(params('status=DONOR_FOUND&emergency=true&bloodGroup=AB-&mine=1&page=2'));
   assert.equal(some.error, null);
-  if (!some.error) assert.deepEqual(some.value, { status: 'DONOR_FOUND', emergency: true, bloodGroup: 'AB-', ids: undefined, mine: true, near: undefined, page: 2, pageSize: 20 });
+  if (!some.error) assert.deepEqual(some.value, { division: undefined, status: 'DONOR_FOUND', emergency: true, bloodGroup: 'AB-', ids: undefined, mine: true, near: undefined, page: 2, pageSize: 20 });
 });
 
 test('request query rejects unknown status and blood group', () => {
@@ -467,4 +467,27 @@ test('an optional latitude/longitude on donor, SOS and organization-apply input:
 
   assert.equal(parseDonorUpdateInput({ latitude: 23.81, longitude: 90.41 }).error, null);
   assert.equal(parseDonorUpdateInput({ latitude: 23.81 }).error, 'latitude');
+});
+
+test('list queries read a division (any known spelling) and reject an unknown one; ALL means every division', () => {
+  const donors = parseDonorQuery(params('division=Dhaka'));
+  if (!donors.error) assert.equal(donors.value.division, 'Dhaka');
+  const requests = parseRequestQuery(params('division=chittagong'));
+  if (!requests.error) assert.equal(requests.value.division, 'Chattagram');
+  const orgs = parseOrganizationQuery(params('division=Sylhet'));
+  if (!orgs.error) assert.equal(orgs.value.division, 'Sylhet');
+  const all = parseRequestQuery(params('division=ALL'));
+  if (!all.error) assert.equal(all.value.division, undefined);
+  assert.equal(parseDonorQuery(params('division=Atlantis')).error, 'division');
+  assert.equal(parseRequestQuery(params('division=Atlantis')).error, 'division');
+  assert.equal(parseOrganizationQuery(params('division=Atlantis')).error, 'division');
+});
+
+test('SOS input takes an optional division and rejects an unknown one', () => {
+  const base = { bloodGroup: 'O+', bags: 1, place: 'Dhaka Medical College Hospital', phones: ['01711223344'], isCritical: true, language: 'bn', postText: 'x' };
+  const ok = parseSosInput({ ...base, division: 'Khulna' });
+  if (!ok.error) assert.equal(ok.value.division, 'Khulna');
+  const none = parseSosInput(base);
+  if (!none.error) assert.equal(none.value.division, undefined);
+  assert.equal(parseSosInput({ ...base, division: 'Atlantis' }).error, 'division');
 });

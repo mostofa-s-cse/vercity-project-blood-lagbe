@@ -27,6 +27,8 @@ export interface NearParams {
 }
 
 export interface DonorQuery extends NearParams {
+  /** A canonical division name (see src/lib/divisions.ts); leave out for every division. */
+  division?: string;
   bloodGroup?: string;
   /** Text searched in the donor's name and area. */
   q?: string;
@@ -37,7 +39,9 @@ export interface DonorQuery extends NearParams {
   pageSize?: number;
 }
 
-export type OrganizationQuery = NearParams;
+export interface OrganizationQuery extends NearParams {
+  division?: string;
+}
 
 export interface OrganizationApplyPayload {
   name: string;
@@ -72,6 +76,7 @@ export interface DonorUpdatePayload {
 }
 
 export interface RequestsQuery extends NearParams {
+  division?: string;
   status?: string;
   emergency?: boolean;
   bloodGroup?: string;
@@ -135,6 +140,7 @@ export function createApiSlice({
         query: (args) => {
           const a = (args ?? {}) as DonorQuery;
           return `donors${queryString([
+            ['division', a.division],
             ['bloodGroup', a.bloodGroup],
             ['q', a.q],
             ['available', a.available],
@@ -228,6 +234,7 @@ export function createApiSlice({
         query: (args) => {
           const a = (args ?? {}) as RequestsQuery;
           return `requests${queryString([
+            ['division', a.division],
             ['status', a.status],
             ['emergency', a.emergency],
             ['bloodGroup', a.bloodGroup],
@@ -311,6 +318,7 @@ export function createApiSlice({
         query: (args) => {
           const a = (args ?? {}) as OrganizationQuery;
           return `organizations${queryString([
+            ['division', a.division],
             ['lat', a.lat],
             ['lng', a.lng],
             ['radiusKm', a.radiusKm],

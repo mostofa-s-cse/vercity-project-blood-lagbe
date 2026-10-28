@@ -5,12 +5,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ScreenId, BloodGroup } from '../types/blood';
 import type { NotificationDto } from '../lib/dtoTypes';
 import { browserStorage as donorStorage, DONOR_PROFILE_CHANGED, readMyDonorProfiles } from '../lib/myDonorProfile';
+import { parseDivision } from '../lib/divisions';
 import { sound } from '../utils/audio';
 import { pathToScreen, screenPath } from '../utils/routes';
 import { usePersistentState } from '../utils/persistentState';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { useGetDonorNotificationsQuery, useGetRequesterNotificationsQuery, useGetDonorsQuery, useMarkNotificationReadMutation, useRemoveDonationMutation } from '../store/api';
+
+const DIVISION_KEY = 'bloodlagbe.division';
 
 interface RequisitionModalState {
   isOpen: boolean;
@@ -73,7 +76,25 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { language, t } = useLanguage();
 
   // Kept across the remount a language switch causes, so switching language keeps the session's data.
-  const [selectedDivision, setSelectedDivision] = usePersistentState<string>('selectedDivision', 'Dhaka Central');
+  // The header's division filter. Remembered across reloads (read after mount so the server and browser
+  // render the same first markup); "ALL" shows every division.
+  const [selectedDivision, setSelectedDivisionState] = useState<string>('ALL');
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(DIVISION_KEY);
+      if (saved && (saved === 'ALL' || parseDivision(saved) === saved)) setSelectedDivisionState(saved);
+    } catch {
+      /* storage blocked: the choice just lasts until reload */
+    }
+  }, []);
+  const setSelectedDivision = useCallback((division: string) => {
+    setSelectedDivisionState(division);
+    try {
+      window.localStorage.setItem(DIVISION_KEY, division);
+    } catch {
+      /* see above */
+    }
+  }, []);
   const [isAudioMuted, setIsAudioMuted] = usePersistentState<boolean>('isAudioMuted', false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [requisitionModal, setRequisitionModal] = useState<RequisitionModalState>({ isOpen: false });

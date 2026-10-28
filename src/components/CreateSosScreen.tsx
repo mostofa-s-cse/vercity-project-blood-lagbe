@@ -3,6 +3,8 @@ import { BloodGroup, ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useAppState } from '../context/AppStateContext';
+import { BD_DIVISIONS } from '../data/bdGeo';
 import { buildSosPost } from '../utils/sosPost';
 import { isValidBdPhone } from '../utils/phone';
 import { useCreateSosMutation } from '../store/api';
@@ -45,6 +47,10 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
 
   // Form
   const [area, setArea] = useState('');
+  // The division this request is for (it decides who sees it under the header's division filter). Starts as
+  // the header's choice; empty means the server works it out from the place/area.
+  const { selectedDivision } = useAppState();
+  const [division, setDivision] = useState(selectedDivision === 'ALL' ? '' : selectedDivision);
   const [problem, setProblem] = useState('');
   const [bloodGroup, setBloodGroup] = useState<BloodGroup | null>(null);
   const [bags, setBags] = useState(1);
@@ -151,6 +157,7 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
 
     // Without a database the demo still shows the success page; the request is just not saved.
     void createSos({
+      division: division || undefined,
       area: area.trim() || undefined,
       problem: problem.trim() || undefined,
       patientName: patientName.trim() || undefined,
@@ -367,6 +374,26 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
         onSubmit={handleSubmit}
         className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm flex flex-col gap-6"
       >
+        {/* 0. Division */}
+        <div>
+          <label htmlFor={`${ids}-division`} className={labelClass}>
+            {t.sos.division} <span className="font-normal text-slate-400">({t.sos.optional})</span>
+          </label>
+          <select
+            id={`${ids}-division`}
+            value={division}
+            onChange={(e) => setDivision(e.target.value)}
+            className={`${inputClass} ${borderFor(false)} cursor-pointer`}
+          >
+            <option value="">{t.sos.divisionAuto}</option>
+            {BD_DIVISIONS.map((d) => (
+              <option key={d.id} value={d.name}>
+                {language === 'bn' ? d.bnName : d.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* 1. Area */}
         <div>
           <label htmlFor={areaId} className={labelClass}>

@@ -27,18 +27,5 @@ export const header: Header = {
   },
   signIn: 'সাইন ইন',
   signOut: 'সাইন আউট',
-  divisions: {
-    dhakaCentral: 'ঢাকা সেন্ট্রাল (DMCH / BSMMU)',
-    dhakaNorth: 'ঢাকা উত্তর (উত্তরা / কুর্মিটোলা)',
-    chattogram: 'চট্টগ্রাম পোর্ট হাব',
-    sylhet: 'সিলেট ওসমানী জোন',
-    rajshahi: 'রাজশাহী সদর',
-  },
-  divisionsShort: {
-    dhakaCentral: 'ঢাকা সেন্ট্রাল',
-    dhakaNorth: 'ঢাকা উত্তর',
-    chattogram: 'চট্টগ্রাম',
-    sylhet: 'সিলেট',
-    rajshahi: 'রাজশাহী',
-  },
+  allDivisions: 'সব বিভাগ',
 };

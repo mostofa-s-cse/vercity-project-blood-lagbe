@@ -18,6 +18,8 @@ export interface DonorPayload {
 }
 
 export interface SosPayload {
+  /** A canonical division name; the server works one out from the place/area when this is left out. */
+  division?: string;
   area?: string;
   problem?: string;
   patientName?: string;

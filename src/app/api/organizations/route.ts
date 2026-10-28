@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { toOrganizationDto } from '@/lib/dto';
+import { divisionOf } from '@/lib/divisions';
 import { boundingBox, haversineDistanceKm } from '@/lib/geo';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { parseOrganizationQuery } from '@/lib/validation';
@@ -16,16 +17,20 @@ export async function GET(request: Request) {
 
   const parsed = parseOrganizationQuery(new URL(request.url).searchParams);
   if (parsed.error) return NextResponse.json({ error: 'invalid_query', field: parsed.error }, { status: 400 });
-  const { near } = parsed.value;
+  const { near, division } = parsed.value;
+  // An organization's division/district are free text ("Dhaka Central", "Chittagong"): read them as a division.
+  const inDivision = (row: { division: string | null; district: string | null }) =>
+    !division || (divisionOf(row.division) ?? divisionOf(row.district)) === division;
 
   try {
     const prisma = getPrisma();
 
     if (near) {
       const box = boundingBox({ lat: near.lat, lng: near.lng }, near.radiusKm);
-      const rows = await prisma.organization.findMany({
+      const found = await prisma.organization.findMany({
         where: { latitude: { gte: box.minLat, lte: box.maxLat }, longitude: { gte: box.minLng, lte: box.maxLng } },
       });
+      const rows = found.filter(inDivision);
       const withDistance = rows
         .map((row) => ({ row, distanceKm: haversineDistanceKm(near, { lat: row.latitude!, lng: row.longitude! }) }))
         .filter(({ distanceKm }) => distanceKm <= near.radiusKm)
@@ -33,7 +38,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ organizations: withDistance.map(({ row, distanceKm }) => toOrganizationDto(row, distanceKm)) });
     }
 
-    const rows = await prisma.organization.findMany({ orderBy: { createdAt: 'asc' } });
+    const rows = (await prisma.organization.findMany({ orderBy: { createdAt: 'asc' } })).filter(inDivision);
     return NextResponse.json({ organizations: rows.map((row) => toOrganizationDto(row)) });
   } catch (error) {
     console.error('Could not load organizations', error);

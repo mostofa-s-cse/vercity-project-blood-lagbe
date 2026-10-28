@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   const parsed = parseRequestQuery(new URL(request.url).searchParams);
   if (parsed.error) return NextResponse.json({ error: 'invalid_query', field: parsed.error }, { status: 400 });
-  const { status, emergency, bloodGroup, ids, mine, near, page, pageSize } = parsed.value;
+  const { status, emergency, bloodGroup, ids, mine, near, division, page, pageSize } = parsed.value;
 
   let userId: string | null = null;
   if (mine) {
@@ -35,6 +35,7 @@ export async function GET(request: Request) {
     ...(bloodGroup ? { bloodGroup: DB_BLOOD_GROUP[bloodGroup] as BloodGroup } : {}),
     ...(ids ? { id: { in: ids } } : {}),
     ...(userId ? { userId } : {}),
+    ...(division ? { division } : {}),
     // A cheap pre-filter; the exact Haversine cutoff and sort happen below, in application code.
     ...(nearBox
       ? { latitude: { gte: nearBox.minLat, lte: nearBox.maxLat }, longitude: { gte: nearBox.minLng, lte: nearBox.maxLng } }

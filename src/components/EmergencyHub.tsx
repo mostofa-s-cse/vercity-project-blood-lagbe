@@ -10,6 +10,7 @@ import { isValidBdPhone } from '../utils/phone';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useAppState } from '../context/AppStateContext';
 import { localizedPath } from '../utils/routes';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { MapView } from './MapView';
@@ -107,7 +108,9 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   const [showMap, setShowMap] = useState(false);
 
   // Pages added with "Load more", remembered per filter: a new filter starts again from the first page.
-  const filterKey = `${selectedBlood}|${emergencyOnly}|${nearMeOn}`;
+  const { selectedDivision } = useAppState();
+  const division = selectedDivision === 'ALL' ? undefined : selectedDivision;
+  const filterKey = `${division ?? 'ALL'}|${selectedBlood}|${emergencyOnly}|${nearMeOn}`;
   const [extra, setExtra] = useState<{ key: string; count: number }>({ key: filterKey, count: 0 });
   const extraPages = extra.key === filterKey ? extra.count : 0;
 
@@ -128,11 +131,12 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   const queryArgs = useMemo<RequestsQuery>(
     () => ({
       pageSize: PAGE_SIZE,
+      ...(division ? { division } : {}),
       ...(selectedBlood !== 'ALL' ? { bloodGroup: selectedBlood } : {}),
       ...(emergencyOnly ? { emergency: true } : {}),
       ...(near ?? {}),
     }),
-    [selectedBlood, emergencyOnly, near?.lat, near?.lng, near?.radiusKm]
+    [division, selectedBlood, emergencyOnly, near?.lat, near?.lng, near?.radiusKm]
   );
   const { currentData, error, refetch } = useGetRequestsQuery({ ...queryArgs, page: 1 });
   const isDemo = isDatabaseOff(error);

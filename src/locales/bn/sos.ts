@@ -11,6 +11,8 @@ export const sos: Sos = {
   subtitle: 'অল্প কিছু তথ্য দিন। আমরা একটি ছোট পোস্ট বানিয়ে দেব, যা সাথে সাথে শেয়ার করতে পারবেন।',
   backToHub: 'হাবে ফিরে যান',
   optional: 'ঐচ্ছিক',
+  division: 'বিভাগ',
+  divisionAuto: 'হাসপাতাল/স্থান দেখে নির্ধারণ হবে',
   area: 'এলাকা',
   areaPlaceholder: 'যেমন: হবিগঞ্জ',
   problem: 'রোগীর সমস্যা',

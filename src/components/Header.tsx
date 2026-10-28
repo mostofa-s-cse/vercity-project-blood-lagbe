@@ -3,6 +3,7 @@ import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { AuthButton } from './AuthButton';
 import { useAuth } from '../context/AuthContext';
+import { BD_DIVISIONS } from '../data/bdGeo';
 import { useLanguage } from '../context/LanguageContext';
 import { useAlert } from '../context/AlertContext';
 
@@ -32,6 +33,17 @@ export const Header: React.FC<HeaderProps> = ({
   const { getActiveAlertTexts } = useAlert();
   const { can } = useAuth();
   const alertMessages = getActiveAlertTexts(language);
+  // The division filter: every list (requests, donors, hospitals) reads it. "ALL" shows everything.
+  const divisionOptions = (
+    <>
+      <option value="ALL">{t.header.allDivisions}</option>
+      {BD_DIVISIONS.map((d) => (
+        <option key={d.id} value={d.name}>
+          {language === 'bn' ? d.bnName : d.name}
+        </option>
+      ))}
+    </>
+  );
 
   const allNavItems: { id: ScreenId; label: string; icon: string; badge?: string }[] = [
     { id: 'emergency-hub', label: t.header.nav.emergencyHub, icon: 'emergency_home' },
@@ -154,11 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => onSelectDivision(e.target.value)}
               className="bg-transparent font-bold outline-none cursor-pointer pr-1 text-xs"
             >
-              <option value="Dhaka Central">{t.header.divisions.dhakaCentral}</option>
-              <option value="Dhaka North">{t.header.divisions.dhakaNorth}</option>
-              <option value="Chattogram Port">{t.header.divisions.chattogram}</option>
-              <option value="Sylhet Sadar">{t.header.divisions.sylhet}</option>
-              <option value="Rajshahi Division">{t.header.divisions.rajshahi}</option>
+              {divisionOptions}
             </select>
           </div>
         </div>
@@ -282,11 +290,7 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => onSelectDivision(e.target.value)}
               className="font-bold text-slate-800 bg-transparent outline-none text-xs"
             >
-              <option value="Dhaka Central">{t.header.divisionsShort.dhakaCentral}</option>
-              <option value="Dhaka North">{t.header.divisionsShort.dhakaNorth}</option>
-              <option value="Chattogram Port">{t.header.divisionsShort.chattogram}</option>
-              <option value="Sylhet Sadar">{t.header.divisionsShort.sylhet}</option>
-              <option value="Rajshahi Division">{t.header.divisionsShort.rajshahi}</option>
+              {divisionOptions}
             </select>
           </div>
 

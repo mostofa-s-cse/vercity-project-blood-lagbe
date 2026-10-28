@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { BloodGroup, Prisma } from '@/generated/prisma/client';
 import { toDonorDto } from '@/lib/dto';
+import { divisionAliases } from '@/lib/divisions';
 import { DONATION_COOLDOWN_DAYS } from '@/lib/eligibility';
 import { boundingBox, haversineDistanceKm } from '@/lib/geo';
 import { hashToken, newManageToken } from '@/lib/manageToken';
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 
   const parsed = parseDonorQuery(new URL(request.url).searchParams);
   if (parsed.error) return NextResponse.json({ error: 'invalid_query', field: parsed.error }, { status: 400 });
-  const { bloodGroup, q, available, mine, near, page, pageSize } = parsed.value;
+  const { bloodGroup, q, available, mine, near, division, page, pageSize } = parsed.value;
 
   let userId: string | null = null;
   if (mine) {
@@ -54,6 +55,10 @@ export async function GET(request: Request) {
               ],
             },
           ]
+        : []),
+      // A donor's `division` is stored as "District, Division" (or older free text): match any spelling of it.
+      ...(division
+        ? [{ OR: divisionAliases(division).map((alias) => ({ division: { contains: alias, mode: 'insensitive' as const } })) }]
         : []),
       // A cheap pre-filter; the exact Haversine cutoff and sort happen below, in application code.
       ...(nearBox

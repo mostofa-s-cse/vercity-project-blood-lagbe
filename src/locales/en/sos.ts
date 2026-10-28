@@ -4,6 +4,8 @@ export const sos = {
   subtitle: 'Fill in a few details. We make a short post you can share right away.',
   backToHub: 'Back to Hub',
   optional: 'optional',
+  division: 'Division',
+  divisionAuto: 'Work it out from the hospital',
   area: 'Area',
   areaPlaceholder: 'e.g. Habiganj',
   problem: 'Patient problem',

@@ -8,6 +8,7 @@ import { sendEmail, sendSms } from '@/lib/notifyChannels';
 import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { checkRateLimit, clientKey } from '@/lib/rateLimit';
+import { divisionOf } from '@/lib/divisions';
 import { getSupabaseEnv } from '@/lib/supabase/env';
 import { getCurrentUserId } from '@/lib/supabase/server';
 import { turnstileTokenFromBody, verifyTurnstileToken } from '@/lib/turnstile';
@@ -61,6 +62,8 @@ export async function POST(request: Request) {
       data: {
         userId: profile?.id ?? null,
         manageTokenHash: hashToken(manageToken),
+        // The form's choice wins; otherwise worked out from the hospital/place, then the area (null if neither names one).
+        division: input.division ?? divisionOf(input.place) ?? divisionOf(input.area),
         area: input.area,
         problem: input.problem,
         patientName: input.patientName,
