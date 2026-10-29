@@ -18,6 +18,11 @@ import {
   parseFraudStatusInput,
   parseOrganizationApplyInput,
   parseOrganizationDecisionInput,
+  parseOrganizationUpdateInput,
+  parseCampInput,
+  parseRequisitionInput,
+  parseRequisitionStatusInput,
+  parseBatchInput,
   parseStatusInput,
   parseStockInput,
 } from './validation.ts';
@@ -490,4 +495,58 @@ test('SOS input takes an optional division and rejects an unknown one', () => {
   const none = parseSosInput(base);
   if (!none.error) assert.equal(none.value.division, undefined);
   assert.equal(parseSosInput({ ...base, division: 'Atlantis' }).error, 'division');
+});
+
+test('an organization update needs at least one valid field and keeps only the ones sent', () => {
+  assert.equal(parseOrganizationUpdateInput({}).error, 'body');
+  assert.equal(parseOrganizationUpdateInput(null).error, 'body');
+  const ok = parseOrganizationUpdateInput({ name: ' City Hospital ', hotline: '16263', totalBeds: 120 });
+  assert.equal(ok.error, null);
+  if (!ok.error) assert.deepEqual(ok.value, { name: 'City Hospital', hotline: '16263', totalBeds: 120 });
+  assert.equal(parseOrganizationUpdateInput({ name: 'x' }).error, 'name');
+  assert.equal(parseOrganizationUpdateInput({ type: 'charity' }).error, 'type');
+  assert.equal(parseOrganizationUpdateInput({ icuBeds: -2 }).error, 'icuBeds');
+});
+
+test('a camp needs a title, venue and a real date; target defaults to 200', () => {
+  const base = { title: 'Winter blood drive', venue: 'Town Hall, Khulna', date: '2026-12-05' };
+  const ok = parseCampInput(base);
+  assert.equal(ok.error, null);
+  if (!ok.error) assert.deepEqual(ok.value, { ...base, timeRange: undefined, targetBags: 200 });
+  assert.equal(parseCampInput({ ...base, title: 'ab' }).error, 'title');
+  assert.equal(parseCampInput({ ...base, venue: '' }).error, 'venue');
+  assert.equal(parseCampInput({ ...base, date: '2026-13-40' }).error, 'date');
+  assert.equal(parseCampInput({ ...base, date: 'tomorrow' }).error, 'date');
+  assert.equal(parseCampInput({ ...base, targetBags: 0 }).error, 'targetBags');
+  assert.equal(parseCampInput({ ...base, targetBags: 50, timeRange: '9am-4pm' }).error, null);
+});
+
+test('a requisition needs patient, blood group, bags, doctor and BMDC number', () => {
+  const base = { patientName: 'Rahim Uddin', bloodGroup: 'B-', bags: 2, doctorName: 'Dr. Salma Akter', bmdcNumber: 'A-12345' };
+  const ok = parseRequisitionInput(base);
+  assert.equal(ok.error, null);
+  if (!ok.error) assert.deepEqual(ok.value, { ...base, ward: undefined });
+  assert.equal(parseRequisitionInput({ ...base, bloodGroup: 'Z+' }).error, 'bloodGroup');
+  assert.equal(parseRequisitionInput({ ...base, bags: 0 }).error, 'bags');
+  assert.equal(parseRequisitionInput({ ...base, bags: 21 }).error, 'bags');
+  assert.equal(parseRequisitionInput({ ...base, bmdcNumber: '' }).error, 'bmdcNumber');
+  assert.equal(parseRequisitionInput({ ...base, doctorName: undefined }).error, 'doctorName');
+  assert.equal(parseRequisitionInput({ ...base, patientName: 'R' }).error, 'patientName');
+});
+
+test('a requisition status is fulfilled or cancelled only', () => {
+  assert.equal(parseRequisitionStatusInput({ status: 'fulfilled' }).error, null);
+  assert.equal(parseRequisitionStatusInput({ status: 'cancelled' }).error, null);
+  for (const bad of [{ status: 'issued' }, { status: 'x' }, {}, null]) assert.notEqual(parseRequisitionStatusInput(bad).error, null);
+});
+
+test('a stock batch needs a blood group, units and a future expiry date', () => {
+  const now = new Date('2026-10-29T00:00:00Z');
+  const ok = parseBatchInput({ bloodGroup: 'O+', units: 10, expiresAt: '2026-12-01' }, now);
+  assert.equal(ok.error, null);
+  if (!ok.error) assert.deepEqual(ok.value, { bloodGroup: 'O+', units: 10, expiresAt: '2026-12-01' });
+  assert.equal(parseBatchInput({ bloodGroup: 'O+', units: 0, expiresAt: '2026-12-01' }, now).error, 'units');
+  assert.equal(parseBatchInput({ bloodGroup: 'Q', units: 1, expiresAt: '2026-12-01' }, now).error, 'bloodGroup');
+  assert.equal(parseBatchInput({ bloodGroup: 'O+', units: 1, expiresAt: '2026-10-01' }, now).error, 'expiresAt');
+  assert.equal(parseBatchInput({ bloodGroup: 'O+', units: 1, expiresAt: 'soon' }, now).error, 'expiresAt');
 });

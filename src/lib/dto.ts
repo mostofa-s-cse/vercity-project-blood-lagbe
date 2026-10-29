@@ -1,5 +1,5 @@
-import type { AuditLog, Donation, EmergencyAlert, EmergencyRadius, Donor, FraudIncident, Notification, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
-import type { AuditLogDto, DonationDto, DonorDto, FraudIncidentDto, NotificationDto, OrganizationDto, RequestDto, ResponseDto } from './dtoTypes';
+import type { AuditLog, Camp, Requisition, StockBatch, Donation, EmergencyAlert, EmergencyRadius, Donor, FraudIncident, Notification, Organization, RequestResponse, SosRequest } from '../generated/prisma/client';
+import type { AuditLogDto, CampDto, RequisitionDto, StockBatchDto, DonationDto, DonorDto, FraudIncidentDto, NotificationDto, OrganizationDto, RequestDto, ResponseDto } from './dtoTypes';
 import type { CriticalAlert, EmergencyRadiusConfig } from './alertList';
 import { isEligible } from './eligibility';
 import { maskPhone } from './phoneMask';
@@ -178,5 +178,45 @@ export function toRadiusDto(row: EmergencyRadius): EmergencyRadiusConfig {
     customTextEn: row.customTextEn ?? undefined,
     isActive: row.isActive,
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function toCampDto(row: Camp): CampDto {
+  return {
+    id: row.id,
+    hospitalId: row.hospitalId,
+    title: row.title,
+    venue: row.venue,
+    organizer: row.organizer,
+    date: row.date,
+    timeRange: row.timeRange,
+    targetBags: row.targetBags,
+    registeredDonors: row.registeredBy.length,
+  };
+}
+
+export function toRequisitionDto(row: Requisition): RequisitionDto {
+  return {
+    id: row.id,
+    hospitalId: row.hospitalId,
+    patientName: row.patientName,
+    bloodGroup: BLOOD_GROUP_FROM_DB[row.bloodGroup],
+    bags: row.bags,
+    doctorName: row.doctorName,
+    bmdcNumber: row.bmdcNumber,
+    ward: row.ward,
+    status: row.status as RequisitionDto['status'],
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export function toStockBatchDto(row: StockBatch): StockBatchDto {
+  return {
+    id: row.id,
+    hospitalId: row.hospitalId,
+    bloodGroup: BLOOD_GROUP_FROM_DB[row.bloodGroup],
+    units: row.units,
+    expiresAt: row.expiresAt,
+    receivedAt: row.receivedAt.toISOString(),
   };
 }

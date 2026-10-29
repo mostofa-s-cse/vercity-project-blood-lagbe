@@ -67,3 +67,15 @@ export async function saveHospitalStock(hospitalId: string, bloodGroup: string, 
     return false;
   }
 }
+
+/** Removes one blood group from a hospital's saved stock. Resolves to true on success; never throws. */
+export async function clearHospitalStock(hospitalId: string, bloodGroup: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/hospitals/${encodeURIComponent(hospitalId)}/stock?bloodGroup=${encodeURIComponent(bloodGroup)}`, {
+      method: 'DELETE',
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}

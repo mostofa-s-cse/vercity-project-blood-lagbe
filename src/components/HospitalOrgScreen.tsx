@@ -5,9 +5,19 @@ import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useAppState } from '../context/AppStateContext';
-import { fetchHospitalStock, saveHospitalStock, type HospitalStockMap } from '../lib/api';
-import { useApplyOrganizationMutation, useGetOrganizationsQuery, type OrganizationApplyPayload } from '../store/api';
-import { isDatabaseOff } from '../store/errors';
+import { clearHospitalStock, fetchHospitalStock, saveHospitalStock, type HospitalStockMap } from '../lib/api';
+import {
+  useApplyOrganizationMutation,
+  useCreateCampMutation,
+  useDeleteCampMutation,
+  useGetCampsQuery,
+  useGetOrganizationsQuery,
+  useRegisterForCampMutation,
+  type OrganizationApplyPayload,
+} from '../store/api';
+import type { CampDto } from '../lib/dtoTypes.ts';
+import { BatchesPanel, RequisitionsPanel } from './HospitalOpsPanels';
+import { apiStatus, isDatabaseOff } from '../store/errors';
 import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
 import { haversineDistanceKm } from '../lib/geo.ts';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -57,7 +67,8 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const { configured, loading: authLoading, user, can, canManageHospital } = useAuth();
   const [selectedOrgId, setSelectedOrgId] = useState<string>(SAMPLE_HOSPITAL_ORGS[0].id);
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
-  const [camps, setCamps] = useState<DonationCamp[]>(SAMPLE_CAMPS);
+  const [sampleCamps, setSampleCamps] = useState<DonationCamp[]>(SAMPLE_CAMPS);
+  const [setCountInputs, setSetCountInputs] = useState<Partial<Record<BloodGroup, string>>>({});
   const [activeTab, setActiveTab] = useState<'inventory' | 'requisitions' | 'camps' | 'dispatch' | 'map'>('inventory');
 
   // New Camp Modal state
@@ -119,6 +130,41 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
       active = false;
     };
   }, []);
+
+  // A batch or requisition changed stock on the server: read the saved counts again.
+  const reloadStock = async () => {
+    const saved = await fetchHospitalStock();
+    if (!saved) return;
+    stockRef.current = saved;
+    setHospitals(prev => mergeSavedStock(prev, saved));
+  };
+
+  // Camps: real ones once the database answers; without it the sample camps and local changes stay.
+  const { currentData: campsData, error: campsError } = useGetCampsQuery();
+  const campsDemo = !campsData || isDatabaseOff(campsError);
+  const [createCamp] = useCreateCampMutation();
+  const [deleteCamp] = useDeleteCampMutation();
+  const [registerForCamp] = useRegisterForCampMutation();
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const camps: DonationCamp[] = campsDemo
+    ? sampleCamps
+    : campsData.camps.map((camp: CampDto) => {
+        const host = hospitals.find(h => h.id === camp.hospitalId);
+        return {
+          id: camp.id,
+          title: camp.title,
+          organizer: camp.organizer,
+          venue: camp.venue,
+          division: host?.division ?? '',
+          date: camp.date,
+          timeRange: camp.timeRange ?? '',
+          targetBags: camp.targetBags,
+          registeredDonors: camp.registeredDonors,
+          contactNumber: host?.hotline ?? '',
+          status: camp.date < todayIso ? 'completed' : 'upcoming',
+        };
+      });
+  const campHospitalId = (campId: string) => campsData?.camps.find(c => c.id === campId)?.hospitalId ?? '';
 
   // Rejected applications aren't a usable facility here; everything else (pending + approved) is.
   useEffect(() => {
@@ -217,20 +263,94 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
     showToast(t.hospitals.toastStockSaveFailed);
   };
 
-  const handleRegisterForCamp = (campId: string) => {
-    sound.playSuccessTone();
-    setCamps(prev => prev.map(c => {
-      if (c.id === campId) {
-        return { ...c, registeredDonors: c.registeredDonors + 1 };
-      }
-      return c;
-    }));
-    showToast(t.hospitals.toastCampRegistered);
+  // Set one group to an exact number of bags.
+  const handleSetStock = async (group: BloodGroup) => {
+    if (!canEdit) return;
+    const raw = setCountInputs[group];
+    const next = Number(raw);
+    if (raw === undefined || raw === '' || !Number.isInteger(next) || next < 0 || next > 9999) return;
+    const hospitalId = selectedOrg.id;
+    const current = selectedOrg.bloodStock[group] || 0;
+    if (next === current) return;
+    sound.playTap();
+    setHospitals(prev => withGroupUnits(prev, hospitalId, group, next));
+    setSetCountInputs(prev => ({ ...prev, [group]: '' }));
+    showToast(t.hospitals.toastStockSet(group, next));
+    if (!configured) return;
+    if (await saveHospitalStock(hospitalId, group, next)) return;
+    setHospitals(prev => withGroupUnits(prev, hospitalId, group, current));
+    showToast(t.hospitals.toastStockSaveFailed);
   };
 
-  const handleCreateCampSubmit = (e: React.FormEvent) => {
+  // Take a group out of the saved stock (it shows 0 again until the hospital reports it).
+  const handleClearStock = async (group: BloodGroup) => {
+    if (!canEdit) return;
+    const hospitalId = selectedOrg.id;
+    const current = selectedOrg.bloodStock[group] || 0;
+    sound.playTap();
+    setHospitals(prev => withGroupUnits(prev, hospitalId, group, 0));
+    showToast(t.hospitals.toastStockCleared(group));
+    if (!configured) return;
+    if (await clearHospitalStock(hospitalId, group)) {
+      if (stockRef.current?.[hospitalId]) delete stockRef.current[hospitalId][group];
+      return;
+    }
+    setHospitals(prev => withGroupUnits(prev, hospitalId, group, current));
+    showToast(t.hospitals.toastStockSaveFailed);
+  };
+
+  const handleRegisterForCamp = async (campId: string) => {
+    if (campsDemo) {
+      sound.playSuccessTone();
+      setSampleCamps(prev => prev.map(c => (c.id === campId ? { ...c, registeredDonors: c.registeredDonors + 1 } : c)));
+      showToast(t.hospitals.toastCampRegistered);
+      return;
+    }
+    try {
+      await registerForCamp(campId).unwrap();
+      sound.playSuccessTone();
+      showToast(t.hospitals.toastCampRegistered);
+    } catch (error) {
+      showToast(apiStatus(error) === 401 ? t.hospitals.toastCampSignIn : t.hospitals.toastCampFailed);
+    }
+  };
+
+  const handleDeleteCamp = async (campId: string) => {
+    if (campsDemo) {
+      setSampleCamps(prev => prev.filter(c => c.id !== campId));
+      showToast(t.hospitals.toastCampDeleted);
+      return;
+    }
+    try {
+      await deleteCamp(campId).unwrap();
+      showToast(t.hospitals.toastCampDeleted);
+    } catch {
+      showToast(t.hospitals.toastCampFailed);
+    }
+  };
+
+  const handleCreateCampSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canCreateCamp || !newCampTitle || !newCampVenue) return;
+    if (!campsDemo) {
+      try {
+        await createCamp({
+          hospitalId: selectedOrg.id,
+          title: newCampTitle.trim(),
+          venue: newCampVenue.trim(),
+          date: newCampDate,
+          targetBags: parseInt(newCampTarget) || undefined,
+        }).unwrap();
+        sound.playSuccessTone();
+        setIsCampModalOpen(false);
+        setNewCampTitle('');
+        setNewCampVenue('');
+        showToast(t.hospitals.toastCampCreated);
+      } catch {
+        showToast(t.hospitals.toastCampFailed);
+      }
+      return;
+    }
     sound.playSuccessTone();
     const newCamp: DonationCamp = {
       id: `CAMP-${Date.now().toString().slice(-4)}`,
@@ -245,7 +365,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
       contactNumber: selectedOrg.hotline,
       status: 'upcoming'
     };
-    setCamps([newCamp, ...camps]);
+    setSampleCamps([newCamp, ...sampleCamps]);
     setIsCampModalOpen(false);
     setNewCampTitle('');
     setNewCampVenue('');
@@ -495,7 +615,8 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
 
                     {/* Quick Add / Deduct buttons (only for people who may change this hospital's stock) */}
                     {canEdit ? (
-                      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200/60">
+                      <div className="pt-2 border-t border-slate-200/60 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleUpdateStock(group, -1)}
                           title={t.hospitals.deductUnitTitle}
@@ -511,6 +632,34 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
                           {t.hospitals.plusOne}
                         </button>
                       </div>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={9999}
+                          aria-label={t.hospitals.setCountLabel}
+                          placeholder={t.hospitals.setCountLabel}
+                          value={setCountInputs[group] ?? ''}
+                          onChange={(e) => setSetCountInputs(prev => ({ ...prev, [group]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSetStock(group); }}
+                          className="min-w-0 flex-1 px-2 py-1 rounded-lg border border-slate-300 text-[11px] font-semibold outline-none focus:border-red-500"
+                        />
+                        <button
+                          onClick={() => handleSetStock(group)}
+                          className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold cursor-pointer"
+                        >
+                          {t.hospitals.setCountSave}
+                        </button>
+                        <button
+                          onClick={() => handleClearStock(group)}
+                          title={t.hospitals.clearGroupTitle}
+                          aria-label={t.hospitals.clearGroupTitle}
+                          className="p-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-600 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                      </div>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-1 pt-2 border-t border-slate-200/60 text-[11px] font-semibold text-slate-500">
                         <span className="material-symbols-outlined text-sm">visibility</span>
@@ -522,6 +671,10 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
               })}
             </div>
           </div>
+
+          {canEdit && configured && (
+            <BatchesPanel hospitalId={selectedOrg.id} showToast={showToast} onStockChanged={reloadStock} />
+          )}
         </div>
       )}
 
@@ -558,6 +711,14 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
               <li>{t.hospitals.protocol3}</li>
             </ul>
           </div>
+
+          {configured && (canEdit ? (
+            <RequisitionsPanel hospitalId={selectedOrg.id} showToast={showToast} onStockChanged={reloadStock} />
+          ) : (
+            <p className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+              {t.hospitals.reqStaffOnly}
+            </p>
+          ))}
         </div>
       )}
 
@@ -597,7 +758,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800">
                       {t.hospitals.campStatus[camp.status]}
                     </span>
-                    <span className="text-[11px] font-bold text-slate-400 font-mono">{camp.id}</span>
+                    <span className="text-[11px] font-bold text-slate-400 font-mono">{camp.id.length <= 12 ? camp.id : ''}</span>
                   </div>
 
                   <h4 className="font-extrabold text-slate-900 text-sm leading-snug">{camp.title}</h4>
@@ -632,7 +793,16 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  {(campsDemo ? canCreateCamp : canManageHospital(campHospitalId(camp.id))) && (
+                    <button
+                      onClick={() => handleDeleteCamp(camp.id)}
+                      title={t.hospitals.campDelete}
+                      className="p-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-600 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-base">delete</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => handleRegisterForCamp(camp.id)}
                     className="w-full py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs"
@@ -775,7 +945,9 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
                     {t.hospitals.dateLabel}
                   </label>
                   <input
-                    type="text"
+                    type="date"
+                    required={!campsDemo}
+                    min={todayIso}
                     placeholder={t.hospitals.datePlaceholder}
                     value={newCampDate}
                     onChange={(e) => setNewCampDate(e.target.value)}

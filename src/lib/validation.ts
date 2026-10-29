@@ -732,3 +732,140 @@ export function parseRadiusInput(raw: unknown): ParseResult<RadiusInput> {
   value.isActive = raw.isActive;
   return { error: null, value };
 }
+
+export type OrganizationUpdateInput = Partial<Omit<OrganizationApplyInput, 'latitude' | 'longitude'>>;
+
+/**
+ * An admin's edit of an organization: only the fields sent are changed, at least one is required.
+ * Same limits as the public application.
+ */
+export function parseOrganizationUpdateInput(raw: unknown): ParseResult<OrganizationUpdateInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  const value: OrganizationUpdateInput = {};
+
+  if (raw.name !== undefined) {
+    const name = text(raw.name, 2, 160);
+    if (name === null) return { value: null, error: 'name' };
+    value.name = name;
+  }
+  if (raw.type !== undefined) {
+    if (typeof raw.type !== 'string' || !(ORGANIZATION_TYPES as readonly string[]).includes(raw.type)) {
+      return { value: null, error: 'type' };
+    }
+    value.type = raw.type as OrganizationType;
+  }
+  if (raw.address !== undefined) {
+    const address = text(raw.address, 5, 200);
+    if (address === null) return { value: null, error: 'address' };
+    value.address = address;
+  }
+  if (raw.licenseNumber !== undefined) {
+    const licenseNumber = text(raw.licenseNumber, 2, 80);
+    if (licenseNumber === null) return { value: null, error: 'licenseNumber' };
+    value.licenseNumber = licenseNumber;
+  }
+  for (const [key, max] of [['division', 60], ['district', 60], ['hotline', 30], ['emergencyContact', 30], ['directorName', 80]] as const) {
+    const field = optionalText(raw[key], max);
+    if (field === null) return { value: null, error: key };
+    if (field !== undefined) value[key] = field;
+  }
+  const totalBeds = optionalInt(raw.totalBeds, 0, 20_000);
+  if (totalBeds === null) return { value: null, error: 'totalBeds' };
+  if (totalBeds !== undefined) value.totalBeds = totalBeds;
+  const icuBeds = optionalInt(raw.icuBeds, 0, 5_000);
+  if (icuBeds === null) return { value: null, error: 'icuBeds' };
+  if (icuBeds !== undefined) value.icuBeds = icuBeds;
+
+  if (Object.keys(value).length === 0) return { value: null, error: 'body' };
+  return { error: null, value };
+}
+
+/** A calendar date as `YYYY-MM-DD` that really exists (no 2026-13-40), or null. */
+function isoDate(value: unknown): string | null {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value ? null : value;
+}
+
+export interface CampInput {
+  title: string;
+  venue: string;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  timeRange: string | undefined;
+  targetBags: number;
+}
+
+/** A donation camp a hospital schedules. */
+export function parseCampInput(raw: unknown): ParseResult<CampInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  const title = text(raw.title, 3, 120);
+  if (title === null) return { value: null, error: 'title' };
+  const venue = text(raw.venue, 3, 160);
+  if (venue === null) return { value: null, error: 'venue' };
+  const date = isoDate(raw.date);
+  if (date === null) return { value: null, error: 'date' };
+  const timeRange = optionalText(raw.timeRange, 40);
+  if (timeRange === null) return { value: null, error: 'timeRange' };
+  const targetBags = optionalInt(raw.targetBags, 1, 100_000);
+  if (targetBags === null) return { value: null, error: 'targetBags' };
+  return { error: null, value: { title, venue, date, timeRange, targetBags: targetBags ?? 200 } };
+}
+
+export interface RequisitionInput {
+  patientName: string;
+  bloodGroup: BloodGroupValue;
+  bags: number;
+  doctorName: string;
+  bmdcNumber: string;
+  ward: string | undefined;
+}
+
+/** A clinical blood requisition a hospital issues for one patient. */
+export function parseRequisitionInput(raw: unknown): ParseResult<RequisitionInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  const patientName = text(raw.patientName, 2, 80);
+  if (patientName === null) return { value: null, error: 'patientName' };
+  if (!isBloodGroup(raw.bloodGroup)) return { value: null, error: 'bloodGroup' };
+  if (typeof raw.bags !== 'number' || !Number.isInteger(raw.bags) || raw.bags < 1 || raw.bags > 20) {
+    return { value: null, error: 'bags' };
+  }
+  const doctorName = text(raw.doctorName, 2, 80);
+  if (doctorName === null) return { value: null, error: 'doctorName' };
+  const bmdcNumber = text(raw.bmdcNumber, 3, 20);
+  if (bmdcNumber === null) return { value: null, error: 'bmdcNumber' };
+  const ward = optionalText(raw.ward, 60);
+  if (ward === null) return { value: null, error: 'ward' };
+  return { error: null, value: { patientName, bloodGroup: raw.bloodGroup, bags: raw.bags, doctorName, bmdcNumber, ward } };
+}
+
+const REQUISITION_CLOSINGS = ['fulfilled', 'cancelled'] as const;
+export type RequisitionClosing = (typeof REQUISITION_CLOSINGS)[number];
+
+/** How an open requisition is closed. */
+export function parseRequisitionStatusInput(raw: unknown): ParseResult<{ status: RequisitionClosing }> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  if (typeof raw.status !== 'string' || !(REQUISITION_CLOSINGS as readonly string[]).includes(raw.status)) {
+    return { value: null, error: 'status' };
+  }
+  return { error: null, value: { status: raw.status as RequisitionClosing } };
+}
+
+export interface BatchInput {
+  bloodGroup: BloodGroupValue;
+  units: number;
+  /** `YYYY-MM-DD`. */
+  expiresAt: string;
+}
+
+/** Blood bags received into a hospital or blood bank, with the date they expire (today or later). */
+export function parseBatchInput(raw: unknown, now: Date = new Date()): ParseResult<BatchInput> {
+  if (!isObject(raw)) return { value: null, error: 'body' };
+  if (!isBloodGroup(raw.bloodGroup)) return { value: null, error: 'bloodGroup' };
+  if (typeof raw.units !== 'number' || !Number.isInteger(raw.units) || raw.units < 1 || raw.units > 9999) {
+    return { value: null, error: 'units' };
+  }
+  const expiresAt = isoDate(raw.expiresAt);
+  if (expiresAt === null || expiresAt < now.toISOString().slice(0, 10)) return { value: null, error: 'expiresAt' };
+  return { error: null, value: { bloodGroup: raw.bloodGroup, units: raw.units, expiresAt } };
+}

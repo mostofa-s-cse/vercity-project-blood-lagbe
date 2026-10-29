@@ -175,3 +175,39 @@ export interface OrganizationDto {
   /** Straight-line distance from a `near` query's point, or `null` without one. */
   distanceKm: number | null;
 }
+
+export interface CampDto {
+  id: string;
+  hospitalId: string;
+  title: string;
+  venue: string;
+  organizer: string;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  timeRange: string | null;
+  targetBags: number;
+  registeredDonors: number;
+}
+
+export interface RequisitionDto {
+  id: string;
+  hospitalId: string;
+  patientName: string;
+  bloodGroup: BloodGroupValue;
+  bags: number;
+  doctorName: string;
+  bmdcNumber: string;
+  ward: string | null;
+  status: 'issued' | 'fulfilled' | 'cancelled';
+  createdAt: string;
+}
+
+export interface StockBatchDto {
+  id: string;
+  hospitalId: string;
+  bloodGroup: BloodGroupValue;
+  units: number;
+  /** `YYYY-MM-DD`. */
+  expiresAt: string;
+  receivedAt: string;
+}

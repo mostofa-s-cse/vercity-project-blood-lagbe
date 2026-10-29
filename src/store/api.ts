@@ -10,6 +10,9 @@ import type {
   FraudIncidentDto,
   NotificationDto,
   OrganizationDto,
+  CampDto,
+  RequisitionDto,
+  StockBatchDto,
   RequestDetailResponse,
   RequestDto,
   RequestListResponse,
@@ -37,6 +40,33 @@ export interface DonorQuery extends NearParams {
   mine?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+export type OrganizationUpdatePayload = Partial<Omit<OrganizationApplyPayload, 'latitude' | 'longitude' | 'turnstileToken'>>;
+
+export interface CampPayload {
+  title: string;
+  venue: string;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  timeRange?: string;
+  targetBags?: number;
+}
+
+export interface RequisitionPayload {
+  patientName: string;
+  bloodGroup: string;
+  bags: number;
+  doctorName: string;
+  bmdcNumber: string;
+  ward?: string;
+}
+
+export interface BatchPayload {
+  bloodGroup: string;
+  units: number;
+  /** `YYYY-MM-DD`. */
+  expiresAt: string;
 }
 
 export interface OrganizationQuery extends NearParams {
@@ -134,7 +164,7 @@ export function createApiSlice({
     reducerPath: 'api',
     baseQuery: fetchBaseQuery({ baseUrl, fetchFn }),
     keepUnusedDataFor,
-    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification', 'Donation', 'Alert', 'Radius'],
+    tagTypes: ['Donor', 'Request', 'Fraud', 'Organization', 'Notification', 'Donation', 'Alert', 'Radius', 'Camp', 'Requisition', 'Batch'],
     endpoints: (build) => ({
       getDonors: build.query<DonorListResponse, DonorQuery | void>({
         query: (args) => {
@@ -337,6 +367,70 @@ export function createApiSlice({
         invalidatesTags: ['Organization'],
       }),
 
+      updateOrganization: build.mutation<{ organization: OrganizationDto }, { id: string } & OrganizationUpdatePayload>({
+        query: ({ id, ...body }) => ({ url: `admin/organizations/${encodeURIComponent(id)}`, method: 'PUT', body }),
+        invalidatesTags: ['Organization'],
+      }),
+
+      deleteOrganization: build.mutation<{ id: string }, string>({
+        query: (id) => ({ url: `admin/organizations/${encodeURIComponent(id)}`, method: 'DELETE' }),
+        invalidatesTags: ['Organization', 'Camp', 'Requisition', 'Batch'],
+      }),
+
+      getCamps: build.query<{ camps: CampDto[] }, void>({
+        query: () => 'camps',
+        providesTags: ['Camp'],
+      }),
+
+      createCamp: build.mutation<{ camp: CampDto }, { hospitalId: string } & CampPayload>({
+        query: ({ hospitalId, ...body }) => ({ url: `hospitals/${encodeURIComponent(hospitalId)}/camps`, method: 'POST', body }),
+        invalidatesTags: ['Camp'],
+      }),
+
+      deleteCamp: build.mutation<{ id: string }, string>({
+        query: (id) => ({ url: `camps/${encodeURIComponent(id)}`, method: 'DELETE' }),
+        invalidatesTags: ['Camp'],
+      }),
+
+      registerForCamp: build.mutation<{ camp: CampDto }, string>({
+        query: (id) => ({ url: `camps/${encodeURIComponent(id)}/register`, method: 'POST' }),
+        invalidatesTags: ['Camp'],
+      }),
+
+      getRequisitions: build.query<{ requisitions: RequisitionDto[] }, string>({
+        query: (hospitalId) => `hospitals/${encodeURIComponent(hospitalId)}/requisitions`,
+        providesTags: ['Requisition'],
+      }),
+
+      issueRequisition: build.mutation<{ requisition: RequisitionDto }, { hospitalId: string } & RequisitionPayload>({
+        query: ({ hospitalId, ...body }) => ({ url: `hospitals/${encodeURIComponent(hospitalId)}/requisitions`, method: 'POST', body }),
+        invalidatesTags: ['Requisition'],
+      }),
+
+      closeRequisition: build.mutation<{ requisition: RequisitionDto }, { hospitalId: string; id: string; status: 'fulfilled' | 'cancelled' }>({
+        query: ({ hospitalId, id, status }) => ({
+          url: `hospitals/${encodeURIComponent(hospitalId)}/requisitions/${encodeURIComponent(id)}`,
+          method: 'PATCH',
+          body: { status },
+        }),
+        invalidatesTags: ['Requisition'],
+      }),
+
+      getBatches: build.query<{ batches: StockBatchDto[] }, string>({
+        query: (hospitalId) => `hospitals/${encodeURIComponent(hospitalId)}/batches`,
+        providesTags: ['Batch'],
+      }),
+
+      receiveBatch: build.mutation<{ batch: StockBatchDto; units: number }, { hospitalId: string } & BatchPayload>({
+        query: ({ hospitalId, ...body }) => ({ url: `hospitals/${encodeURIComponent(hospitalId)}/batches`, method: 'POST', body }),
+        invalidatesTags: ['Batch'],
+      }),
+
+      discardBatch: build.mutation<{ id: string; units: number }, { hospitalId: string; id: string }>({
+        query: ({ hospitalId, id }) => ({ url: `hospitals/${encodeURIComponent(hospitalId)}/batches/${encodeURIComponent(id)}`, method: 'DELETE' }),
+        invalidatesTags: ['Batch'],
+      }),
+
       /** The alerts the header ribbon shows (active only). Public. */
       getAlerts: build.query<{ alerts: CriticalAlert[] }, void>({
         query: () => 'alerts',
@@ -400,6 +494,18 @@ export const {
   useGetOrganizationsQuery,
   useApplyOrganizationMutation,
   useReviewOrganizationMutation,
+  useUpdateOrganizationMutation,
+  useDeleteOrganizationMutation,
+  useGetCampsQuery,
+  useCreateCampMutation,
+  useDeleteCampMutation,
+  useRegisterForCampMutation,
+  useGetRequisitionsQuery,
+  useIssueRequisitionMutation,
+  useCloseRequisitionMutation,
+  useGetBatchesQuery,
+  useReceiveBatchMutation,
+  useDiscardBatchMutation,
   useGetAlertsQuery,
   useGetAdminAlertsQuery,
   useAddAlertMutation,

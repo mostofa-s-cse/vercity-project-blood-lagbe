@@ -324,18 +324,72 @@ model EmergencyAlert {
 
 /// The one emergency radius setting (a single row, id "default"). Saved whole by an admin with `panel.alerts`.
 model EmergencyRadius {
-  id            String   @id @default("default")
-  zone          String
-  radiusKm      Int      @map("radius_km")
-  requestCount  Int      @map("request_count")
-  hospitals     String
+  id           String   @id @default("default")
+  zone         String
+  radiusKm     Int      @map("radius_km")
+  requestCount Int      @map("request_count")
+  hospitals    String
   /// Replaces the generated sentence when set.
-  customTextBn  String?  @map("custom_text_bn")
-  customTextEn  String?  @map("custom_text_en")
-  isActive      Boolean  @default(true) @map("is_active")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  customTextBn String?  @map("custom_text_bn")
+  customTextEn String?  @map("custom_text_en")
+  isActive     Boolean  @default(true) @map("is_active")
+  updatedAt    DateTime @updatedAt @map("updated_at")
   /// Email of whoever last changed it.
-  updatedBy     String?  @map("updated_by")
+  updatedBy    String?  @map("updated_by")
 
   @@map("emergency_radius")
+}
+
+/// A donation camp a hospital or organization schedules. `hospitalId` is an Organization id (or a sample id).
+model Camp {
+  id           String   @id @default(cuid())
+  hospitalId   String   @map("hospital_id")
+  title        String
+  venue        String
+  organizer    String
+  /// `YYYY-MM-DD`.
+  date         String
+  timeRange    String?  @map("time_range")
+  targetBags   Int      @default(200) @map("target_bags")
+  /// Supabase user ids that signed up to donate; one per person.
+  registeredBy String[] @default([]) @map("registered_by")
+  createdBy    String?  @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([hospitalId])
+  @@map("camps")
+}
+
+/// A clinical blood requisition. `status`: 'issued' | 'fulfilled' | 'cancelled'. Fulfilling takes the bags out of stock.
+model Requisition {
+  id          String     @id @default(cuid())
+  hospitalId  String     @map("hospital_id")
+  patientName String     @map("patient_name")
+  bloodGroup  BloodGroup @map("blood_group")
+  bags        Int
+  doctorName  String     @map("doctor_name")
+  bmdcNumber  String     @map("bmdc_number")
+  ward        String?
+  status      String     @default("issued")
+  createdBy   String?    @map("created_by")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  closedAt    DateTime?  @map("closed_at")
+
+  @@index([hospitalId])
+  @@map("requisitions")
+}
+
+/// Bags received with an expiry date. Receiving adds `units` to HospitalStock; discarding removes what is left.
+model StockBatch {
+  id         String     @id @default(cuid())
+  hospitalId String     @map("hospital_id")
+  bloodGroup BloodGroup @map("blood_group")
+  units      Int
+  /// `YYYY-MM-DD`.
+  expiresAt  String     @map("expires_at")
+  receivedBy String?    @map("received_by")
+  receivedAt DateTime   @default(now()) @map("received_at")
+
+  @@index([hospitalId])
+  @@map("stock_batches")
 }
