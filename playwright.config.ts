@@ -23,7 +23,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: PW_MODE === 'real' ? /(sos-lifecycle|donor-profile)\.spec\.ts/ : 'demo-mode.spec.ts',
+  testMatch: PW_MODE === 'real' ? /(sos-lifecycle|donor-profile|two-hospitals)\.spec\.ts/ : 'demo-mode.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -31,6 +31,8 @@ export default defineConfig({
   use: {
     ...devices['Desktop Chrome'],
     baseURL: BASE_URL,
+    // PW_SLOWMO=300 slows every step so a person can watch a --headed run.
+    launchOptions: { slowMo: Number(process.env.PW_SLOWMO) || 0 },
   },
   webServer: {
     command: `npm run dev -- -p ${PORT}`,

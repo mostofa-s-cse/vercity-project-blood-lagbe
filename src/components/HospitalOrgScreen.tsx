@@ -17,6 +17,7 @@ import {
 } from '../store/api';
 import type { CampDto } from '../lib/dtoTypes.ts';
 import { BatchesPanel, RequisitionsPanel } from './HospitalOpsPanels';
+import { createSerialQueue } from '../lib/serialQueue.ts';
 import { apiStatus, isDatabaseOff } from '../store/errors';
 import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
 import { haversineDistanceKm } from '../lib/geo.ts';
@@ -53,6 +54,9 @@ const withGroupUnits = (
     const bloodStock = { ...h.bloodStock, [group]: units };
     return { ...h, bloodStock, availableBags: sumStock(bloodStock) };
   });
+
+/** Stock saves carry the absolute count, so saves of one hospital group go to the server in click order. */
+const stockSaveQueue = createSerialQueue();
 
 interface HospitalOrgScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -252,7 +256,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
 
     // Demo mode keeps changes local; with sign-in set up, save to the server (which checks the role again).
     if (!configured) return;
-    const saved = await saveHospitalStock(hospitalId, group, next);
+    const saved = await stockSaveQueue(`${hospitalId}:${group}`, () => saveHospitalStock(hospitalId, group, next));
     if (saved) return;
     // Undo, unless a later change already replaced this value.
     setHospitals(prev => {
@@ -277,7 +281,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
     setSetCountInputs(prev => ({ ...prev, [group]: '' }));
     showToast(t.hospitals.toastStockSet(group, next));
     if (!configured) return;
-    if (await saveHospitalStock(hospitalId, group, next)) return;
+    if (await stockSaveQueue(`${hospitalId}:${group}`, () => saveHospitalStock(hospitalId, group, next))) return;
     setHospitals(prev => withGroupUnits(prev, hospitalId, group, current));
     showToast(t.hospitals.toastStockSaveFailed);
   };
@@ -291,7 +295,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
     setHospitals(prev => withGroupUnits(prev, hospitalId, group, 0));
     showToast(t.hospitals.toastStockCleared(group));
     if (!configured) return;
-    if (await clearHospitalStock(hospitalId, group)) {
+    if (await stockSaveQueue(`${hospitalId}:${group}`, () => clearHospitalStock(hospitalId, group))) {
       if (stockRef.current?.[hospitalId]) delete stockRef.current[hospitalId][group];
       return;
     }
