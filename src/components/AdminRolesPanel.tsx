@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { SAMPLE_HOSPITAL_ORGS } from '../data/mockData';
 import { useLanguage } from '../context/LanguageContext';
+import { useGetOrganizationsQuery } from '../store/api';
 import type { GrantDto, RoleDto } from '../lib/grantDto';
 import { PERMISSION_GROUPS, normalizePermissions, type Permission } from '../lib/permissions';
 import type { Admin } from '../locales/en/admin';
@@ -86,7 +87,15 @@ export const AdminRolesPanel: React.FC = () => {
   // Grant form
   const [email, setEmail] = useState('');
   const [roleId, setRoleId] = useState('');
-  const [hospitalId, setHospitalId] = useState(SAMPLE_HOSPITAL_ORGS[0]?.id ?? '');
+  const [pickedHospitalId, setHospitalId] = useState('');
+
+  // Real organizations (pending and approved) once the database answers; the sample hospitals until then.
+  const { currentData: orgsData } = useGetOrganizationsQuery();
+  const realHospitals = (orgsData?.organizations ?? [])
+    .filter((o) => o.status !== 'rejected')
+    .map((o) => ({ id: o.id, name: o.name, shortCode: o.shortCode ?? '' }));
+  const hospitalOptions = realHospitals.length > 0 ? realHospitals : SAMPLE_HOSPITAL_ORGS;
+  const hospitalId = pickedHospitalId || hospitalOptions[0]?.id || '';
 
   const refresh = useCallback(async (showSpinner: boolean) => {
     if (showSpinner) setLoad({ kind: 'loading' });
@@ -165,8 +174,8 @@ export const AdminRolesPanel: React.FC = () => {
 
   const hospitalName = (id: string | null): string => {
     if (!id) return '';
-    const hospital = SAMPLE_HOSPITAL_ORGS.find((h) => h.id === id);
-    return hospital ? `${hospital.name} (${hospital.shortCode})` : id;
+    const hospital = [...realHospitals, ...SAMPLE_HOSPITAL_ORGS].find((h) => h.id === id);
+    return hospital ? (hospital.shortCode ? `${hospital.name} (${hospital.shortCode})` : hospital.name) : id;
   };
 
   const formatDate = (iso: string): string => {
@@ -619,9 +628,9 @@ export const AdminRolesPanel: React.FC = () => {
                   aria-describedby="access-hospital-hint"
                   className={inputClass}
                 >
-                  {SAMPLE_HOSPITAL_ORGS.map((hospital) => (
+                  {hospitalOptions.map((hospital) => (
                     <option key={hospital.id} value={hospital.id}>
-                      {hospital.name} ({hospital.shortCode})
+                      {hospital.shortCode ? `${hospital.name} (${hospital.shortCode})` : hospital.name}
                     </option>
                   ))}
                 </select>

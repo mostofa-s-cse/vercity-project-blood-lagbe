@@ -429,7 +429,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
             >
               {hospitals.map(h => (
                 <option key={h.id} value={h.id}>
-                  {h.name} ({h.shortCode})
+                  {h.shortCode ? `${h.name} (${h.shortCode})` : h.name}
                 </option>
               ))}
             </select>
@@ -888,7 +888,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
             <MapView
               markers={hospitals
                 .filter((h) => h.latitude != null && h.longitude != null)
-                .map((h) => ({ id: h.id, lat: h.latitude!, lng: h.longitude!, label: `${h.name} (${h.shortCode})` }))}
+                .map((h) => ({ id: h.id, lat: h.latitude!, lng: h.longitude!, label: h.shortCode ? `${h.name} (${h.shortCode})` : h.name }))}
               center={coords ?? undefined}
             />
           ) : (

@@ -19,3 +19,4 @@ src/generated/
 
 # Local throwaway Postgres data for development (see .dev-db/start.sh); the scripts are tracked
 .dev-db/pgdata/
+videos/

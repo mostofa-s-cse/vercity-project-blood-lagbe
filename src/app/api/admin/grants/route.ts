@@ -5,14 +5,20 @@ import { grantErrorResponse } from '@/lib/apiErrors';
 import { writeAuditLog } from '@/lib/auditLog';
 import { toGrantDto } from '@/lib/grantDto';
 import { getGrantService } from '@/lib/grants';
-import { isDatabaseConfigured } from '@/lib/prisma';
+import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
 import { isServiceKeyConfigured } from '@/lib/supabase/admin';
 import { parseGrantInput } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const HOSPITAL_IDS = SAMPLE_HOSPITAL_ORGS.map((hospital) => hospital.id);
+const SAMPLE_HOSPITAL_IDS = SAMPLE_HOSPITAL_ORGS.map((hospital) => hospital.id);
+
+/** The hospitals a role can be tied to: the sample ones plus every real organization that was not rejected. */
+async function knownHospitalIds(): Promise<string[]> {
+  const orgs = await getPrisma().organization.findMany({ where: { status: { not: 'rejected' } }, select: { id: true } });
+  return [...SAMPLE_HOSPITAL_IDS, ...orgs.map((org) => org.id)];
+}
 
 /** Lists who has which role. Needs `roles.manage`. */
 export async function GET() {
@@ -46,7 +52,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
-  const parsed = parseGrantInput(body, HOSPITAL_IDS);
+  const parsed = parseGrantInput(body, await knownHospitalIds());
   if (parsed.error) return NextResponse.json({ error: 'invalid_input', field: parsed.error }, { status: 400 });
 
   try {
