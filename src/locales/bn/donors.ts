@@ -6,7 +6,7 @@ export const donors: Donors = {
   donorRegistryTitle: 'রক্তদাতা খুঁজুন',
   donorRegistryDesc:
     'রক্তের গ্রুপ, নাম বা এলাকা দিয়ে স্বেচ্ছাসেবী রক্তদাতা খুঁজুন এবং সরাসরি কল করুন। "কল" চাপার আগ পর্যন্ত ফোন নম্বর লুকানো থাকে।',
-  broadcastSosBtn: 'তৎক্ষণাৎ SOS অ্যালার্ট পাঠান',
+  broadcastSosBtn: 'তাৎক্ষণিক SOS অ্যালার্ট পাঠান',
   navDonorPassport: 'ডোনার পাসপোর্ট',
   filterBloodGroup: 'রক্তের গ্রুপ ফিল্টার:',
   allGroups: 'সব',
