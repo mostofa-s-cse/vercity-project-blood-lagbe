@@ -31,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       onClearAll={app.clearAllNotifications}
       onRemoveDonation={app.removeDonation}
       onNavigate={app.navigate}
+      onOpenRequest={app.openRequestFromNotification}
     />
   );
 

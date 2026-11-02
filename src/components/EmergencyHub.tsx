@@ -3,7 +3,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { BloodGroup, ScreenId } from '../types/blood';
 import type { RequestDto } from '../lib/dtoTypes';
 import { REQUEST_STATUSES, remainingSeconds } from '../lib/requestStatus';
-import { useGetRequestsQuery, useRespondToRequestMutation, type RequestsQuery } from '../store/api';
+import { useGetRequestQuery, useGetRequestsQuery, useRespondToRequestMutation, type RequestsQuery } from '../store/api';
 import { apiErrorCode, apiStatus, isDatabaseOff } from '../store/errors';
 import { sampleRequests } from '../data/sample';
 import { isValidBdPhone } from '../utils/phone';
@@ -108,7 +108,7 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
   const [showMap, setShowMap] = useState(false);
 
   // Pages added with "Load more", remembered per filter: a new filter starts again from the first page.
-  const { selectedDivision } = useAppState();
+  const { selectedDivision, focusRequestId, clearFocusRequest } = useAppState();
   const division = selectedDivision === 'ALL' ? undefined : selectedDivision;
   const filterKey = `${division ?? 'ALL'}|${selectedBlood}|${emergencyOnly}|${nearMeOn}`;
   const [extra, setExtra] = useState<{ key: string; count: number }>({ key: filterKey, count: 0 });
@@ -251,6 +251,19 @@ export const EmergencyHub: React.FC<EmergencyHubProps> = ({ onNavigate }) => {
     if (!isClosed(request)) openRespond(request);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, firstPage]);
+
+  // A clicked notification: fetch that exact request (it may not be on the first page) and open its form.
+  const focused = useGetRequestQuery(focusRequestId ?? '', { skip: !focusRequestId });
+  useEffect(() => {
+    if (!focusRequestId) return;
+    if (focused.data) {
+      clearFocusRequest();
+      if (!isClosed(focused.data.request)) openRespond(focused.data.request);
+    } else if (focused.error) {
+      clearFocusRequest();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequestId, focused.data, focused.error]);
 
   useEffect(() => {
     if (!respondTarget) return;

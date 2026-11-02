@@ -52,6 +52,10 @@ interface AppStateValue {
   closeNotifications: () => void;
   markNotificationRead: (id: string) => void;
   clearAllNotifications: () => void;
+  /** Request a clicked notification points at: the hub opens its "I can donate" form, then clears this. */
+  focusRequestId: string | null;
+  openRequestFromNotification: (requestId: string) => void;
+  clearFocusRequest: () => void;
   removeDonation: (donationId: string) => void;
   toastMessage: string | null;
   dismissToast: () => void;
@@ -97,6 +101,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
   const [isAudioMuted, setIsAudioMuted] = usePersistentState<boolean>('isAudioMuted', false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
+  const [focusRequestId, setFocusRequestId] = useState<string | null>(null);
   const [requisitionModal, setRequisitionModal] = useState<RequisitionModalState>({ isOpen: false });
   const [isCreateSosModalOpen, setIsCreateSosModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -233,6 +238,12 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     closeNotifications: () => setIsNotificationsOpen(false),
     markNotificationRead,
     clearAllNotifications,
+    focusRequestId,
+    openRequestFromNotification: (requestId: string) => {
+      setFocusRequestId(requestId);
+      navigate('emergency-hub');
+    },
+    clearFocusRequest: () => setFocusRequestId(null),
     removeDonation,
     toastMessage,
     dismissToast: () => setToastMessage(null),

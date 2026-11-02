@@ -12,6 +12,8 @@ interface NotificationsModalProps {
   onClearAll: () => void;
   onRemoveDonation: (donationId: string) => void;
   onNavigate: (screen: ScreenId) => void;
+  /** Opens the emergency hub on this request's "I can donate" form. */
+  onOpenRequest: (requestId: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -21,7 +23,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onMarkAsRead,
   onClearAll,
   onRemoveDonation,
-  onNavigate
+  onNavigate,
+  onOpenRequest
 }) => {
   const { t } = useLanguage();
 
@@ -83,7 +86,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               return (
                 <div
                   key={notif.id}
-                  onClick={() => onMarkAsRead(notif.id)}
+                  onClick={() => {
+                    onMarkAsRead(notif.id);
+                    if (!isGift && !isResponse && notif.requestId) {
+                      sound.playEmergencyChime();
+                      onClose();
+                      onOpenRequest(notif.requestId);
+                    }
+                  }}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                     !notif.isRead
                       ? 'bg-red-50/70 border-red-200'
@@ -118,7 +128,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           e.stopPropagation();
                           sound.playEmergencyChime();
                           onClose();
-                          onNavigate(isGift ? 'donor-passport' : isResponse ? 'request-tracking' : 'emergency-hub');
+                          if (!isGift && !isResponse && notif.requestId) onOpenRequest(notif.requestId);
+                          else onNavigate(isGift ? 'donor-passport' : isResponse ? 'request-tracking' : 'emergency-hub');
                         }}
                         className={`px-3 py-1 rounded-lg text-white font-bold text-[11px] shadow-xs cursor-pointer ${isGift ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
                       >
