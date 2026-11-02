@@ -23,7 +23,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: PW_MODE === 'real' ? /(sos-lifecycle|donor-profile|two-hospitals)\.spec\.ts/ : 'demo-mode.spec.ts',
+  testMatch: PW_MODE === 'real' ? /(sos-lifecycle|donor-profile|two-hospitals|session-fixes)\.spec\.ts/ : 'demo-mode.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
