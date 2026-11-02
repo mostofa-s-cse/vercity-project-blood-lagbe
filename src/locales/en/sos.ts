@@ -74,6 +74,9 @@ export const sos = {
     amount: (bags: number) => `${bags} bag(s)`,
     place: 'Donation place',
     contact: 'Contact',
+    patientName: 'Patient',
+    patientAge: 'Age',
+    attendantName: 'Attendant',
   },
 };
 

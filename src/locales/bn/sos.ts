@@ -81,5 +81,8 @@ export const sos: Sos = {
     amount: (bags: number) => `${toBnDigits(bags)} ব্যাগ`,
     place: 'রক্তদানের স্থান',
     contact: 'যোগাযোগ',
+    patientName: 'রোগীর নাম',
+    patientAge: 'রোগীর বয়স',
+    attendantName: 'সঙ্গীর নাম',
   },
 };

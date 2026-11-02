@@ -10,6 +10,9 @@ const labels: SosPostLabels = {
   amount: (bags) => `${bags} bag(s)`,
   place: 'Place',
   contact: 'Contact',
+  patientName: 'Patient',
+  patientAge: 'Age',
+  attendantName: 'Attendant',
 };
 
 const full = {
@@ -65,4 +68,20 @@ test('trims the text fields', () => {
   assert.ok(post.startsWith('NEED BLOOD - Habiganj\n'));
   assert.ok(post.includes('📈Problem : Pregnant\n'));
   assert.ok(post.includes('🏘Place : Hospital\n'));
+});
+
+test('adds patient name, age and attendant lines after the problem when given', () => {
+  const post = buildSosPost({ ...full, patientName: ' Rahim ', patientAge: 45, attendantName: ' Karim ' }, labels);
+  assert.deepEqual(post.split('\n').slice(0, 5), [
+    'NEED BLOOD - Habiganj',
+    '📈Problem : Pregnant',
+    '🧑Patient : Rahim',
+    '🎂Age : 45',
+    '🤝Attendant : Karim',
+  ]);
+});
+
+test('leaves out patient lines that are empty or missing', () => {
+  const post = buildSosPost({ ...full, patientName: ' ', patientAge: undefined, attendantName: '' }, labels);
+  assert.ok(!post.includes('Patient :') && !post.includes('Age :') && !post.includes('Attendant :'));
 });

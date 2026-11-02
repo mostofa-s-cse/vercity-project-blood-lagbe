@@ -7,6 +7,9 @@ export interface SosPostLabels {
   amount: (bags: number) => string;
   place: string;
   contact: string;
+  patientName: string;
+  patientAge: string;
+  attendantName: string;
 }
 
 export interface SosPostInput {
@@ -16,6 +19,9 @@ export interface SosPostInput {
   bags: number;
   place: string;
   phones: string[];
+  patientName?: string;
+  patientAge?: number;
+  attendantName?: string;
 }
 
 /**
@@ -30,6 +36,13 @@ export function buildSosPost(input: SosPostInput, labels: SosPostLabels): string
 
   const lines = [labels.title(input.area.trim())];
   if (problem) lines.push(`📈${labels.problem} : ${problem}`);
+  const patientName = (input.patientName ?? '').trim();
+  const attendantName = (input.attendantName ?? '').trim();
+  if (patientName) lines.push(`🧑${labels.patientName} : ${patientName}`);
+  if (typeof input.patientAge === 'number' && Number.isFinite(input.patientAge)) {
+    lines.push(`🎂${labels.patientAge} : ${Math.floor(input.patientAge)}`);
+  }
+  if (attendantName) lines.push(`🤝${labels.attendantName} : ${attendantName}`);
   lines.push(`🩸${labels.bloodGroup} : ${input.bloodGroup}`);
   lines.push(`💉${labels.amountLabel} : ${labels.amount(bags)}`);
   if (place) lines.push(`🏘${labels.place} : ${place}`);

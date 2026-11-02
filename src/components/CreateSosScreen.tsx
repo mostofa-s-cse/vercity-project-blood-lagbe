@@ -102,8 +102,19 @@ export const CreateSosScreen: React.FC<CreateSosScreenProps> = ({ onNavigate, on
   );
 
   const phones = showPhone2 ? [phone1, phone2] : [phone1];
+  const ageText = patientAgeText.trim();
   const postText = buildSosPost(
-    { area, problem, bloodGroup: bloodGroup ?? t.sos.missingGroup, bags, place, phones },
+    {
+      area,
+      problem,
+      bloodGroup: bloodGroup ?? t.sos.missingGroup,
+      bags,
+      place,
+      phones,
+      patientName,
+      patientAge: /^\d+$/.test(ageText) ? Number(ageText) : undefined,
+      attendantName,
+    },
     t.sos.post
   );
 
