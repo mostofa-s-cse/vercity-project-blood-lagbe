@@ -21,6 +21,7 @@ const PROTECTED_PATHS: Record<string, Requirement> = {
   '/admin': { level: 'admin', permission: 'panel.open' },
   '/command': { level: 'admin', permission: 'ops.command' },
   '/passport': { level: 'user' },
+  '/account': { level: 'user' },
   '/tracking': { level: 'user' },
   '/sos': { level: 'user' },
 };

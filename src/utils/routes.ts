@@ -8,6 +8,7 @@ export const SCREEN_PATHS: Record<ScreenId, string> = {
   'donor-register': '/register',
   'hospital-org': '/hospitals',
   'donor-passport': '/passport',
+  account: '/account',
   'ops-command': '/command',
   'admin-panel': '/admin',
   'user-docs': '/docs',

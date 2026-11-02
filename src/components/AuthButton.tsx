@@ -81,6 +81,17 @@ export const AuthButton: React.FC<AuthButtonProps> = ({ onNavigate }) => {
             role="menuitem"
             onClick={() => {
               setIsMenuOpen(false);
+              onNavigate('account');
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-base">manage_accounts</span>
+            {t.header.myAccount}
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              setIsMenuOpen(false);
               void signOut();
             }}
             className="flex w-full items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"

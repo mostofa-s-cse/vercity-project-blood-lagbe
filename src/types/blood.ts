@@ -9,6 +9,7 @@ export type ScreenId =
   | 'request-tracking'
   | 'donor-register'
   | 'donor-passport'
+  | 'account'
   | 'hospital-org'
   | 'admin-panel'
   | 'ops-command'

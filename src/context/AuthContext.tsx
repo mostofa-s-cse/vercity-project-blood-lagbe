@@ -56,6 +56,8 @@ interface AuthContextType {
    * then signs in with the same password. Never has a "check your phone" step, unlike email sign-up.
    */
   signUpWithPhone: (phone: string, password: string, name?: string) => Promise<{ error: string | null }>;
+  /** Changes the signed-in person's name, phone and/or email (all optional, at least one). `error` is a short code, or null. A new email is what they sign in with from then on. */
+  updateAccount: (update: { name?: string; phone?: string; email?: string }) => Promise<{ error: string | null }>;
   /** Always resolves the same way whether or not the email has an account (Supabase's own anti-enumeration behaviour). */
   requestPasswordReset: (email: string, next?: string) => Promise<{ error: string | null }>;
   /** Only works while the browser holds the short-lived recovery session the reset-password link's callback created. */
@@ -231,6 +233,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [supabase]
   );
 
+  const updateAccount = useCallback(
+    async (update: { name?: string; phone?: string; email?: string }) => {
+      if (!supabase) return { error: 'not_configured' };
+      const response = await fetch('/api/account', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(update),
+      }).catch(() => null);
+      if (!response) return { error: 'network' };
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        const error = body && typeof body === 'object' && 'error' in body ? String((body as { error: unknown }).error) : 'update_failed';
+        const field = body && typeof body === 'object' && 'field' in body ? String((body as { field: unknown }).field) : null;
+        return { error: error === 'invalid_input' && field ? `invalid_${field}` : error };
+      }
+      // The server changed the account; pull the new values into this browser's session right away.
+      const { data } = await supabase.auth.refreshSession();
+      if (data.session) setUser(toAuthUser(data.session.user));
+      return { error: null };
+    },
+    [supabase]
+  );
+
   const configured = supabase !== null;
   const adminOpen = process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true';
   const claims = user ? { sub: user.id, app_metadata: user.appMetadata } : null;
@@ -259,6 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUpWithPhone,
         requestPasswordReset,
         updatePassword,
+        updateAccount,
       }}
     >
       {children}
