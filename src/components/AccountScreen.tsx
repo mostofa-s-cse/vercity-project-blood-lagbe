@@ -1,7 +1,8 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { ScreenId } from '../types/blood';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { downscaleImage } from '../utils/downscaleImage';
 
 interface AccountScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -17,7 +18,10 @@ const buttonClass =
 export const AccountScreen: React.FC<AccountScreenProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
   const uid = useId();
-  const { configured, loading, user, updateAccount, updatePassword } = useAuth();
+  const { configured, loading, user, updateAccount, updatePassword, updateAvatar, removeAvatar } = useAuth();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoMessage, setPhotoMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -42,6 +46,33 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onNavigate }) => {
   if (!configured || loading || !user) return null;
 
   const errorText = (code: string) => (t.account.errors as Record<string, string>)[code] ?? t.account.errors.generic;
+
+  const photoErrorText = (code: string) => {
+    if (code === 'too_large') return t.account.errors.photoTooLarge;
+    if (code === 'unsupported_type' || code === 'process_failed' || code === 'empty') return t.account.errors.photoUnsupported;
+    if (code === 'not_configured') return t.account.errors.photoUnavailable;
+    return errorText(code);
+  };
+
+  const onPhotoChosen = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // so choosing the same file again still fires
+    if (!file || photoBusy) return;
+    setPhotoBusy(true);
+    setPhotoMessage(null);
+    const { error } = await updateAvatar(await downscaleImage(file));
+    setPhotoBusy(false);
+    setPhotoMessage(error ? { kind: 'error', text: photoErrorText(error) } : { kind: 'ok', text: t.account.photoSaved });
+  };
+
+  const onPhotoRemove = async () => {
+    if (photoBusy) return;
+    setPhotoBusy(true);
+    setPhotoMessage(null);
+    const { error } = await removeAvatar();
+    setPhotoBusy(false);
+    setPhotoMessage(error ? { kind: 'error', text: photoErrorText(error) } : { kind: 'ok', text: t.account.photoRemoved });
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -93,6 +124,39 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onNavigate }) => {
         </h1>
         <p className="text-xs text-slate-500 mt-1">{t.account.subtitle}</p>
       </div>
+
+      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+        {user.avatarUrl ? (
+          <img src={user.avatarUrl} alt="" referrerPolicy="no-referrer" className="h-20 w-20 shrink-0 rounded-full object-cover ring-2 ring-slate-200" />
+        ) : (
+          <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-slate-900 text-2xl font-black text-white">
+            {((user.name ?? user.email ?? '?')[0] ?? '?').toUpperCase()}
+          </span>
+        )}
+        <div className="flex flex-col gap-2 min-w-0">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900">{t.account.photoTitle}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{t.account.photoHint}</p>
+          </div>
+          <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoChosen} className="hidden" aria-label={t.account.choosePhoto} />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={photoBusy} onClick={() => fileInput.current?.click()} className={buttonClass}>
+              {photoBusy ? t.account.uploading : user.avatarUrl ? t.account.changePhoto : t.account.choosePhoto}
+            </button>
+            {user.avatarUrl && (
+              <button
+                type="button"
+                disabled={photoBusy}
+                onClick={onPhotoRemove}
+                className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 text-sm font-bold transition-colors cursor-pointer"
+              >
+                {t.account.removePhoto}
+              </button>
+            )}
+          </div>
+          {note(photoMessage)}
+        </div>
+      </section>
 
       <form onSubmit={submit} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4" noValidate>
         <div>

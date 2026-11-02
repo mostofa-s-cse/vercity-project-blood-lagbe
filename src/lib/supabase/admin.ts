@@ -4,6 +4,7 @@ import type { AuthAdmin } from '../grantService';
 import type { EmailAuthAdmin } from '../emailAuth';
 import type { PhoneAuthAdmin } from '../phoneAuth';
 import type { AccountAdmin } from '../accountUpdate';
+import { AVATAR_BUCKET, type AvatarStorage } from '../avatarUpload';
 import { getSupabaseEnv } from './env';
 
 /** True when the service key is set. Server-only: this file can never be imported by browser code. */
@@ -55,4 +56,24 @@ export function createAccountAdmin(): (AccountAdmin & { getUserById(id: string):
   if (!env || !serviceKey) return null;
   const client = createClient(env.url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   return client.auth.admin;
+}
+
+/** Public-bucket storage for profile photos (`src/lib/avatarUpload.ts`). Null when the service key is not set. */
+export function createAvatarStorage(): AvatarStorage | null {
+  const env = getSupabaseEnv();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env || !serviceKey) return null;
+  const bucket = createClient(env.url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } }).storage.from(AVATAR_BUCKET);
+  return {
+    async upload(path, bytes, contentType) {
+      // One file per person, replaced on every change. The URL carries ?v=, so a short cache is fine.
+      const { error } = await bucket.upload(path, bytes, { contentType, upsert: true, cacheControl: '3600' });
+      return { error };
+    },
+    async remove(path) {
+      const { error } = await bucket.remove([path]);
+      return { error };
+    },
+    publicUrl: (path) => bucket.getPublicUrl(path).data.publicUrl,
+  };
 }

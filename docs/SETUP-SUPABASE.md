@@ -106,6 +106,28 @@ auth-method-agnostic), not by actually clicking a real confirmation or reset ema
 section turns out not to match your project's defaults, it is likely a Supabase dashboard default that
 changed after this was written, not a bug in the app's code.
 
+## 6b. Profile photos (optional)
+
+People can upload a profile photo on the **My account** page. It needs one storage bucket and the service key
+(`SUPABASE_SERVICE_ROLE_KEY`, already needed for account editing). Without the bucket the page shows
+"Photo upload is not set up on this site yet." and everything else keeps working.
+
+Create the bucket once, either in the dashboard (Storage > New bucket: name `avatars`, **Public bucket** on,
+file size limit `2 MB`, allowed types `image/jpeg, image/png, image/webp`) or in the SQL editor:
+
+```sql
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars', 'avatars', true, 2097152, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+  set public = true, file_size_limit = 2097152, allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
+```
+
+No policies are needed: only our server writes (with the service key), and a public bucket lets anyone with the
+exact link view a file. Our server saves every photo as a 512 px square WebP under `<user id>/avatar.webp`
+(EXIF such as GPS location is removed), so the bucket's limit and types are a second guard, not the only one.
+The link is only used for the owner's own picture today. Before showing other people's photos anywhere (for
+example on donor cards), add moderation and a way to report a photo.
+
 ## 7. Run it
 
 ```bash

@@ -58,6 +58,10 @@ interface AuthContextType {
   signUpWithPhone: (phone: string, password: string, name?: string) => Promise<{ error: string | null }>;
   /** Changes the signed-in person's name, phone and/or email (all optional, at least one). `error` is a short code, or null. A new email is what they sign in with from then on. */
   updateAccount: (update: { name?: string; phone?: string; email?: string }) => Promise<{ error: string | null }>;
+  /** Uploads or replaces the profile photo (the server checks and re-encodes it). `error` is a short code, or null. */
+  updateAvatar: (file: Blob) => Promise<{ error: string | null }>;
+  /** Removes the profile photo; the initials circle shows again. */
+  removeAvatar: () => Promise<{ error: string | null }>;
   /** Always resolves the same way whether or not the email has an account (Supabase's own anti-enumeration behaviour). */
   requestPasswordReset: (email: string, next?: string) => Promise<{ error: string | null }>;
   /** Only works while the browser holds the short-lived recovery session the reset-password link's callback created. */
@@ -256,6 +260,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [supabase]
   );
 
+  /** Sends a request to /api/account/avatar, then pulls the new photo into this browser's session. */
+  const sendAvatar = useCallback(
+    async (init: RequestInit) => {
+      if (!supabase) return { error: 'not_configured' };
+      const response = await fetch('/api/account/avatar', init).catch(() => null);
+      if (!response) return { error: 'network' };
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        return { error: body && typeof body === 'object' && 'error' in body ? String((body as { error: unknown }).error) : 'update_failed' };
+      }
+      const { data } = await supabase.auth.refreshSession();
+      if (data.session) setUser(toAuthUser(data.session.user));
+      return { error: null };
+    },
+    [supabase]
+  );
+  const updateAvatar = useCallback(
+    (file: Blob) => {
+      const form = new FormData();
+      form.append('file', file, 'avatar');
+      return sendAvatar({ method: 'POST', body: form });
+    },
+    [sendAvatar]
+  );
+  const removeAvatar = useCallback(() => sendAvatar({ method: 'DELETE' }), [sendAvatar]);
+
   const configured = supabase !== null;
   const adminOpen = process.env.NEXT_PUBLIC_ADMIN_OPEN === 'true';
   const claims = user ? { sub: user.id, app_metadata: user.appMetadata } : null;
@@ -285,6 +315,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         requestPasswordReset,
         updatePassword,
         updateAccount,
+        updateAvatar,
+        removeAvatar,
       }}
     >
       {children}
