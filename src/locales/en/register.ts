@@ -47,7 +47,7 @@ export const register = {
   summaryStatus: 'Status',
   statusAvailable: 'Available now',
   statusUnavailable: 'Not available right now',
-  viewPassport: 'View Donor Passport',
+  viewPassport: 'View Donor Profile',
   openDirectory: 'Open Donor Directory',
   myProfileTitle: 'My donor profile',
   myProfileDesc: 'This is the donor profile linked to you, so you can update it here.',

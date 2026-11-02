@@ -10,7 +10,7 @@ export const register: DocSection = {
     s3: 'Type your Area, for example "Dhanmondi 27 / Shahbagh". Leave "I am available to donate now" on, or turn it off if you cannot donate at the moment.',
     s4: 'Tick the box confirming that you are healthy, at least 18 years old, weigh 45 kg or more, and want to donate voluntarily and free of charge.',
     s5: 'If you like, open "More details (optional)" to change your age, gender, division, weight, months since your last donation, how you travel and your nearest hospital. You can skip it.',
-    s6: 'Tap "Register as donor". A success screen shows your card, with buttons to "View Donor Passport" or "Open Donor Directory", where your card appears at the top.',
+    s6: 'Tap "Register as donor". A success screen shows your card, with buttons to "View Donor Profile" or "Open Donor Directory", where your card appears at the top.',
   },
   tips: {
     t1: 'The "Register as donor" button stays grey until the four fields are filled, the mobile number is valid and the box is ticked.',

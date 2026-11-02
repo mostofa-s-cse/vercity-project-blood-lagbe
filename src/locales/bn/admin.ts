@@ -50,7 +50,7 @@ export const admin: Admin = {
     createSos: 'রক্তের SOS রিকোয়েস্ট',
     requestTracking: 'রিকোয়েস্ট ট্র্যাকিং',
     hospitalOrg: 'হাসপাতাল ও সংস্থা',
-    donorPassport: 'ডোনার পাসপোর্ট',
+    donorPassport: 'ডোনার প্রোফাইল',
   },
 
   marquee: {

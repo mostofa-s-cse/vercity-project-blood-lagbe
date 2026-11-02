@@ -10,9 +10,9 @@ export const donors: DocSection = {
     s3: 'Tick or untick "Available Now" to show only donors who are currently available, or everyone.',
     s4: 'Read a donor card: initials, name, blood group, area and division, whether the donor is available, age and gender when given, vehicle, the last donation (in months, or "Not stated") and the nearest hospital. A green strip on top means the donor is available.',
     s5: 'Above the cards you see "Showing X of Y donors". The list loads 20 donors at a time; tap "Load more" at the bottom to add the next 20.',
-    s6: 'Tap anywhere on a card to open the donor\'s details. The phone number is shown partly hidden (for example 017••••4315).',
+    s6: 'Tap anywhere on a card to open the donor\'s details. The full phone number is shown on the card and in the details.',
     s7: 'Tap "Call" on a card or in the details. The full number is fetched only at that moment, and your phone or computer is asked to dial it. If it cannot be fetched, a message appears under the button; try again.',
-    s8: 'Need many donors at once? Tap "Broadcast SOS Alert Now" at the top to create an SOS request, or "Donor Passport" to open your own passport.',
+    s8: 'Need many donors at once? Tap "Broadcast SOS Alert Now" at the top to create an SOS request, or "Donor Profile" to open your own profile.',
   },
   tips: {
     t1: 'Full phone numbers are never part of the list. Each one is fetched only when someone presses "Call" for that donor.',

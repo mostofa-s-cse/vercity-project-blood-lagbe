@@ -13,7 +13,7 @@ export const notifications = {
   donorRespondedMessage: (name: string, bloodGroup: string, place: string) =>
     `${name} said they can donate ${bloodGroup} blood at ${place}. Open tracking to call and confirm.`,
   trackRequest: 'Track request',
-  viewPassport: 'See my passport',
+  viewPassport: 'See my profile',
   notMe: "This wasn't me",
   confirmNotMe: 'Remove this donation? Use this only if you did not give blood. The person who posted the request will see that you disputed it.',
 };

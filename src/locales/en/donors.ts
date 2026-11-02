@@ -3,9 +3,9 @@ export const donors = {
   totalDonors: (n: number) => `${n} donors listed`,
   donorRegistryTitle: 'Find a Blood Donor',
   donorRegistryDesc:
-    'Search voluntary donors by blood group, name or area and call them directly. Phone numbers stay hidden until you press Call.',
+    'Search voluntary donors by blood group, name or area and call them directly.',
   broadcastSosBtn: 'Broadcast SOS Alert Now',
-  navDonorPassport: 'Donor Passport',
+  navDonorPassport: 'Donor Profile',
   filterBloodGroup: 'Filter Blood Group:',
   allGroups: 'ALL',
   searchDonorPlaceholder: 'Search donor name, area or division (e.g. Dhanmondi, Dhaka)...',

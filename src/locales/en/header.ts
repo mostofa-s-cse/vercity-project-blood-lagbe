@@ -20,11 +20,12 @@ export const header = {
     donorRegister: 'Register as Donor',
     hospitalOrg: 'Hospitals & Blood Banks',
     adminPanel: 'Admin Panel',
-    donorPassport: 'Donor Passport',
+    donorPassport: 'Donor Profile',
     userDocs: 'User Guide',
   },
   signIn: 'Sign in',
   signOut: 'Sign out',
+  myAccount: 'My account',
   allDivisions: 'All divisions',
 };
 export type Header = typeof header;

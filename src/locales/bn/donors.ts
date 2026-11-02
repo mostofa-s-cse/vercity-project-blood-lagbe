@@ -5,9 +5,9 @@ export const donors: Donors = {
   totalDonors: (n: number) => `${n} জন ডোনার তালিকাভুক্ত`,
   donorRegistryTitle: 'রক্তদাতা খুঁজুন',
   donorRegistryDesc:
-    'রক্তের গ্রুপ, নাম বা এলাকা দিয়ে স্বেচ্ছাসেবী রক্তদাতা খুঁজুন এবং সরাসরি কল করুন। "কল" চাপার আগ পর্যন্ত ফোন নম্বর লুকানো থাকে।',
+    'রক্তের গ্রুপ, নাম বা এলাকা দিয়ে স্বেচ্ছাসেবী রক্তদাতা খুঁজুন এবং সরাসরি কল করুন।',
   broadcastSosBtn: 'তাৎক্ষণিক SOS অ্যালার্ট পাঠান',
-  navDonorPassport: 'ডোনার পাসপোর্ট',
+  navDonorPassport: 'ডোনার প্রোফাইল',
   filterBloodGroup: 'রক্তের গ্রুপ ফিল্টার:',
   allGroups: 'সব',
   searchDonorPlaceholder: 'ডোনারের নাম, এলাকা বা বিভাগ লিখুন (যেমন ধানমন্ডি, ঢাকা)...',

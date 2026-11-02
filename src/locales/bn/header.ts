@@ -22,10 +22,11 @@ export const header: Header = {
     donorRegister: 'ডোনার রেজিস্ট্রেশন',
     hospitalOrg: 'হাসপাতাল ও ব্লাড ব্যাংক',
     adminPanel: 'অ্যাডমিন প্যানেল',
-    donorPassport: 'ডোনার পাসপোর্ট',
+    donorPassport: 'ডোনার প্রোফাইল',
     userDocs: 'ব্যবহার নির্দেশিকা',
   },
   signIn: 'সাইন ইন',
   signOut: 'সাইন আউট',
+  myAccount: 'আমার অ্যাকাউন্ট',
   allDivisions: 'সব বিভাগ',
 };

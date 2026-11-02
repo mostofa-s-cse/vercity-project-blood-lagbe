@@ -48,7 +48,7 @@ export const admin = {
     createSos: 'Create SOS',
     requestTracking: 'Request Tracking',
     hospitalOrg: 'Hospitals & Orgs',
-    donorPassport: 'Donor Passport',
+    donorPassport: 'Donor Profile',
   },
 
   marquee: {

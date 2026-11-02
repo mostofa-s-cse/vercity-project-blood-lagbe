@@ -15,7 +15,7 @@ export const notifications: Notifications = {
   donorRespondedMessage: (name: string, bloodGroup: string, place: string) =>
     `${name} ${place}-এ ${bloodGroup} রক্ত দিতে পারবেন বলে জানিয়েছেন। ট্র্যাকিং-এ গিয়ে ফোন করে নিশ্চিত করুন।`,
   trackRequest: 'ট্র্যাক করুন',
-  viewPassport: 'আমার পাসপোর্ট দেখুন',
+  viewPassport: 'আমার প্রোফাইল দেখুন',
   notMe: 'এটি আমি নই',
   confirmNotMe: 'এই ডোনেশনটি মুছে ফেলবেন? শুধু তখনই করুন যখন আপনি রক্ত দেননি। যিনি রিকোয়েস্ট করেছেন তিনি দেখতে পাবেন যে আপনি আপত্তি জানিয়েছেন।',
 };
