@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { BloodGroup, Prisma } from '@/generated/prisma/client';
 import { toDonorDto } from '@/lib/dto';
 import { divisionAliases } from '@/lib/divisions';
-import { DONATION_COOLDOWN_DAYS } from '@/lib/eligibility';
+import { DONATION_COOLDOWN_DAYS, estimateLastDonationAt } from '@/lib/eligibility';
 import { boundingBox, haversineDistanceKm } from '@/lib/geo';
 import { hashToken, newManageToken } from '@/lib/manageToken';
 import { isSameOrigin } from '@/lib/originCheck';
@@ -156,6 +156,7 @@ export async function POST(request: Request) {
         email: input.email,
         weightKg: input.weightKg,
         lastDonationMonths: input.lastDonationMonths,
+        lastDonationAt: estimateLastDonationAt(input.lastDonationMonths),
         vehicle: input.vehicle,
         nearestHospital: input.nearestHospital,
         isAvailable: input.isAvailable,

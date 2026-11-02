@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { toDonorDto } from '@/lib/dto';
+import { estimateLastDonationAt } from '@/lib/eligibility';
 import { canManageDonor, MANAGE_TOKEN_HEADER } from '@/lib/donorAccess';
 import { isSameOrigin } from '@/lib/originCheck';
 import { getPrisma, isDatabaseConfigured } from '@/lib/prisma';
@@ -52,7 +53,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: hasCredentials ? 'forbidden' : 'unauthorized' }, { status: hasCredentials ? 403 : 401 });
     }
 
-    const updated = await prisma.donor.update({ where: { id }, data: parsed.value });
+    // A changed "last donated N months ago" feeds the 90-day rule too, unless a real recorded donation
+    // exists (that date is the truth and stays).
+    const data: Record<string, unknown> = { ...parsed.value };
+    if (typeof parsed.value.lastDonationMonths === 'number' && (await prisma.donation.count({ where: { donorId: id } })) === 0) {
+      data.lastDonationAt = estimateLastDonationAt(parsed.value.lastDonationMonths);
+    }
+    const updated = await prisma.donor.update({ where: { id }, data });
     return NextResponse.json({ donor: toDonorDto(updated) });
   } catch (error) {
     console.error('Could not update donor', error);

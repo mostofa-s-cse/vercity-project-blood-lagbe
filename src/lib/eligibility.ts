@@ -13,3 +13,13 @@ export function isEligible(lastDonationAt: Date | string | null, now: Date = new
   const elapsedMs = now.getTime() - last;
   return elapsedMs >= DONATION_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 }
+
+/**
+ * A donor's own "I last gave blood N months ago" answer as a date, so it feeds the same 90-day rule as a
+ * recorded donation. A month counts as 30 days, so 3 months is exactly the 90-day cooldown. Not a usable
+ * number (missing, NaN, negative) gives `null`. A real `Donation` row always wins over this estimate.
+ */
+export function estimateLastDonationAt(months: number | null | undefined, now: Date = new Date()): Date | null {
+  if (typeof months !== 'number' || !Number.isFinite(months) || months < 0) return null;
+  return new Date(now.getTime() - Math.floor(months) * 30 * 24 * 60 * 60 * 1000);
+}

@@ -32,6 +32,7 @@ export function toSampleDonorDtos(donors: readonly Donor[], now: Date = new Date
       isEligible: isEligible(lastDonationAt, now),
       vehicle: donor.vehicle,
       nearestHospital: donor.nearestHospital,
+      phone: donor.phone,
       phoneMasked: maskPhone(donor.phone),
       createdAt: new Date(now.getTime() - (index + 1) * HOUR).toISOString(),
       distanceKm: null,

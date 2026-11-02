@@ -22,8 +22,8 @@ test('donors map to the API shape: masked phone, no medical or invented fields',
   assert.equal(dto.area, 'Dhanmondi 27');
   assert.equal(dto.lastDonationMonths, 3);
   assert.equal(dto.phoneMasked, '+88017••••9021');
-  assert.equal(JSON.stringify(dto).includes('1712'), false, 'no full number');
-  assert.deepEqual(Object.keys(dto).sort(), ['age', 'area', 'bloodGroup', 'createdAt', 'distanceKm', 'division', 'gender', 'id', 'isAvailable', 'isEligible', 'lastDonationAt', 'lastDonationMonths', 'name', 'nearestHospital', 'phoneMasked', 'vehicle']);
+  assert.equal(dto.phone.replace(/\D/g, '').endsWith('9021'), true, 'the full number is shown');
+  assert.deepEqual(Object.keys(dto).sort(), ['age', 'area', 'bloodGroup', 'createdAt', 'distanceKm', 'division', 'gender', 'id', 'isAvailable', 'isEligible', 'lastDonationAt', 'lastDonationMonths', 'name', 'nearestHospital', 'phone', 'phoneMasked', 'vehicle']);
 });
 
 test('sample donors keep their order through fixed, decreasing creation times', () => {

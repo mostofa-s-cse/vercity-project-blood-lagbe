@@ -108,14 +108,14 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
     return samples
       .filter((d) => {
         if (selectedGroup !== 'ALL' && d.bloodGroup !== selectedGroup) return false;
-        if (onlyAvailable && !d.isAvailable) return false;
+        if (onlyAvailable && !(d.isAvailable && d.isEligible)) return false;
         if (q) {
           const text = [d.name, d.area, d.division ?? ''].join(' ').toLowerCase();
           if (!text.includes(q)) return false;
         }
         return true;
       })
-      .sort((a, b) => Number(b.isAvailable) - Number(a.isAvailable));
+      .sort((a, b) => Number(b.isAvailable && b.isEligible) - Number(a.isAvailable && a.isEligible));
   }, [samples, selectedGroup, onlyAvailable, search]);
 
   // One server page at a time: `currentData` always belongs to the current filters and page.
@@ -145,7 +145,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
     setCallErrorId(null);
     setCallingId(donor.id);
     try {
-      const phone = demo ? sampleContactPhone(donor.id) : (await getContact(donor.id).unwrap()).phone;
+      const phone = donor.phone || (demo ? sampleContactPhone(donor.id) : (await getContact(donor.id).unwrap()).phone);
       if (!phone) throw new Error('no phone');
       window.location.href = telHref(phone);
     } catch {
@@ -384,7 +384,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
                 className="group bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer hover:border-red-300 relative overflow-hidden"
               >
                 {/* Top Accent Strip */}
-                <div className={`absolute top-0 left-0 right-0 h-1.5 ${donor.isAvailable ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                <div className={`absolute top-0 left-0 right-0 h-1.5 ${(donor.isAvailable && donor.isEligible) ? 'bg-emerald-500' : 'bg-slate-300'}`} />
 
                 <div>
                   {/* Header with Avatar & Blood Badge */}
@@ -394,7 +394,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
                         <div className="w-13 h-13 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-base border-2 border-white shadow-sm">
                           {initials(donor.name)}
                         </div>
-                        {donor.isAvailable && (
+                        {(donor.isAvailable && donor.isEligible) && (
                           <span
                             className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"
                             title={t.donors.available}
@@ -420,21 +420,21 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
                   </div>
 
                   {/* Attributes */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
+                  <div className="flex flex-wrap items-center gap-1.5 mb-3">
                     <span
-                      className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${
-                        donor.isAvailable
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold ${
+                        (donor.isAvailable && donor.isEligible)
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-slate-100 text-slate-600 border-slate-200'
                       }`}
                     >
-                      {donor.isAvailable ? t.donors.available : t.donors.unavailable}
+                      {(donor.isAvailable && donor.isEligible) ? t.donors.available : t.donors.unavailable}
                     </span>
                     {person && (
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">{person}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">{person}</span>
                     )}
                     {donor.vehicle && (
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium flex items-center gap-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium gap-1">
                         <span className="material-symbols-outlined text-xs">two_wheeler</span>
                         {donor.vehicle}
                       </span>
@@ -467,7 +467,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
                   <div className="flex items-center gap-2">
                     <span className="flex-1 text-xs font-bold text-slate-700 tracking-wide flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm text-slate-400">phone</span>
-                      {donor.phoneMasked}
+                      {donor.phone}
                     </span>
                     {callButton(
                       donor,
@@ -535,13 +535,13 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
                 {personLine(selectedDonor) && <p className="text-xs text-slate-500 mt-0.5">{personLine(selectedDonor)}</p>}
                 <div
                   className={`flex items-center gap-1 text-[11px] font-semibold mt-1 ${
-                    selectedDonor.isAvailable ? 'text-emerald-600' : 'text-slate-500'
+                    (selectedDonor.isAvailable && selectedDonor.isEligible) ? 'text-emerald-600' : 'text-slate-500'
                   }`}
                 >
                   <span className="material-symbols-outlined text-sm">
-                    {selectedDonor.isAvailable ? 'check_circle' : 'do_not_disturb_on'}
+                    {(selectedDonor.isAvailable && selectedDonor.isEligible) ? 'check_circle' : 'do_not_disturb_on'}
                   </span>
-                  <span>{selectedDonor.isAvailable ? t.donors.available : t.donors.unavailable}</span>
+                  <span>{(selectedDonor.isAvailable && selectedDonor.isEligible) ? t.donors.available : t.donors.unavailable}</span>
                 </div>
               </div>
             </div>
@@ -567,7 +567,7 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <span className="text-[10px] text-red-600 font-bold uppercase block">{t.donors.phoneLabel}</span>
-                  <span className="text-sm font-extrabold text-slate-900 tracking-wide">{selectedDonor.phoneMasked}</span>
+                  <span className="text-sm font-extrabold text-slate-900 tracking-wide">{selectedDonor.phone}</span>
                 </div>
                 {callButton(
                   selectedDonor,

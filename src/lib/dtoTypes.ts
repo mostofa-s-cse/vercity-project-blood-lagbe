@@ -22,7 +22,9 @@ export interface DonorDto {
   isEligible: boolean;
   vehicle: string | null;
   nearestHospital: string | null;
-  /** For example "017••••4315". The full number is only given by `GET /api/donors/[id]/contact`. */
+  /** The donor's full number, shown in the directory (the owner chose to show numbers openly). */
+  phone: string;
+  /** For example "017••••4315". Still used by the admin list, which reveals the full number on request. */
   phoneMasked: string;
   createdAt: string;
   /** Straight-line distance from a `near` query's point, or `null` without one. Never the donor's own

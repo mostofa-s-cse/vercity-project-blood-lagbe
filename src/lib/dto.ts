@@ -27,6 +27,7 @@ export function toDonorDto(row: Donor, distanceKm: number | null = null): DonorD
     isEligible: isEligible(row.lastDonationAt),
     vehicle: row.vehicle,
     nearestHospital: row.nearestHospital,
+    phone: row.phone,
     phoneMasked: maskPhone(row.phone),
     createdAt: row.createdAt.toISOString(),
     distanceKm,
