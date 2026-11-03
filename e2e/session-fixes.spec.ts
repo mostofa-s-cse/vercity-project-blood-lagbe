@@ -109,6 +109,8 @@ test.describe('2026-11-02 review fixes (real database)', () => {
     await page.getByLabel('Full name').fill(`E2E Bell ${unique}`);
     await page.getByLabel('Mobile number').fill(`018${eightDigits()}`);
     await page.getByLabel('Area').fill(`E2E Area ${unique}`);
+    await page.getByLabel('Division', { exact: true }).selectOption({ label: 'Dhaka' });
+    await page.getByLabel('District', { exact: true }).selectOption({ label: 'Dhaka' });
     await page.getByRole('button', { name: 'A+', exact: true }).click();
     await page.getByRole('checkbox', { name: /I am healthy/ }).check();
     await page.getByRole('button', { name: 'Register as donor', exact: true }).click();
@@ -144,6 +146,55 @@ test.describe('2026-11-02 review fixes (real database)', () => {
     await expect(page).toHaveURL(/\/en\/?$/);
     await expect(page.getByRole('heading', { name: 'I Can Donate' })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(place).first()).toBeVisible();
+  });
+
+  test('registration needs a place; the chosen division drives the filter; moving updates it', async ({ page }) => {
+    const unique = Date.now().toString().slice(-6);
+    const name = `E2E Mover ${unique}`;
+    await page.goto('/en/register');
+    await page.getByLabel('Full name').fill(name);
+    await page.getByLabel('Mobile number').fill(`018${eightDigits()}`);
+    await page.getByLabel('Area').fill(`E2E Area ${unique}`);
+    await page.getByRole('button', { name: 'A+', exact: true }).click();
+    await page.getByRole('checkbox', { name: /I am healthy/ }).check();
+
+    // No default place: nothing is chosen, the district waits for a division, and the form cannot be sent.
+    await expect(page.getByLabel('Division', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('District', { exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Register as donor', exact: true })).toBeDisabled();
+
+    // A donor from Rajshahi picks Rajshahi.
+    await page.getByLabel('Division', { exact: true }).selectOption({ label: 'Rajshahi' });
+    await page.getByLabel('District', { exact: true }).selectOption({ label: 'Rajshahi' });
+    await page.getByRole('button', { name: 'Register as donor', exact: true }).click();
+    await expect(page.getByText('You are now a registered donor')).toBeVisible({ timeout: 10_000 });
+
+    const inDivision = async (division: string) =>
+      (await (await page.request.get(`/api/donors?division=${division}&q=${encodeURIComponent(name)}`)).json()).donors.length;
+    expect(await inDivision('Rajshahi')).toBe(1);
+    expect(await inDivision('Dhaka')).toBe(0);
+
+    // The donor moves to Dhaka and changes it in "My donor profile".
+    await page.goto('/en/register');
+    await expect(page.getByText('Where you live now')).toBeVisible();
+    await expect(page.getByLabel('Division', { exact: true })).toHaveValue(/.+/); // prefilled with Rajshahi
+    await page.getByLabel('Division', { exact: true }).selectOption({ label: 'Dhaka' });
+    await expect(page.getByText('Pick your district to save a new place.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    await page.getByLabel('District', { exact: true }).selectOption({ label: 'Dhaka' });
+    await page.getByLabel('Area').fill(`Mirpur ${unique}`);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText('Saved')).toBeVisible({ timeout: 10_000 });
+
+    expect(await inDivision('Dhaka')).toBe(1);
+    expect(await inDivision('Rajshahi')).toBe(0);
+    const [row] = (await (await page.request.get(`/api/donors?q=${encodeURIComponent(name)}`)).json()).donors;
+    expect(row.area).toBe(`Mirpur ${unique}`);
+    expect(row.division).toBe('Dhaka, Dhaka');
+
+    // Reload: the saved place is what the editor shows.
+    await page.goto('/en/register');
+    await expect(page.getByLabel('Area')).toHaveValue(`Mirpur ${unique}`);
   });
 
   test('Bengali pages say "ডোনার খুঁজুন" and "ডোনার প্রোফাইল", never "ডিরেক্টরি" or "পাসপোর্ট"', async ({ page }) => {

@@ -25,6 +25,8 @@ test.describe('donor profile (signed out, real database)', () => {
     await page.getByLabel('Full name').fill(name);
     await page.getByLabel('Mobile number').fill(phone);
     await page.getByLabel('Area').fill(area);
+    await page.getByLabel('Division', { exact: true }).selectOption({ label: 'Dhaka' });
+    await page.getByLabel('District', { exact: true }).selectOption({ label: 'Dhaka' });
     await page.getByRole('button', { name: 'A+', exact: true }).click();
     await page.getByRole('checkbox', { name: /I am healthy/ }).check();
     await page.getByRole('button', { name: 'Register as donor', exact: true }).click();

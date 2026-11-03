@@ -9,6 +9,7 @@ import type { DonorRegisteredInfo } from '../context/AppStateContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { BD_DIVISIONS, districtsByDivision } from '../data/bdGeo.ts';
+import { divisionString, locationCoords, locationFromDivisionString } from '../lib/donorLocation.ts';
 import { TurnstileWidget } from './TurnstileWidget';
 
 const BLOOD_GROUPS: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -97,14 +98,13 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   // Optional "More details"
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<'Male' | 'Female'>('Male');
-  const dhakaDivision = BD_DIVISIONS.find((d) => d.name === 'Dhaka') ?? BD_DIVISIONS[0];
-  const [divisionId, setDivisionId] = useState(dhakaDivision.id);
-  const districtOptions = useMemo(() => districtsByDivision(divisionId), [divisionId]);
-  const [districtId, setDistrictId] = useState(() => districtsByDivision(dhakaDivision.id).find((d) => d.name === 'Dhaka')?.id ?? '');
-  const selectedDivision = BD_DIVISIONS.find((d) => d.id === divisionId);
-  const selectedDistrict = districtOptions.find((d) => d.id === districtId);
+  // No default: the person picks their own division and district (they decide who is matched to them and
+  // which division filter lists them), so a donor outside Dhaka is never silently filed under Dhaka.
+  const [divisionId, setDivisionId] = useState('');
+  const districtOptions = useMemo(() => (divisionId ? districtsByDivision(divisionId) : []), [divisionId]);
+  const [districtId, setDistrictId] = useState('');
   // Stored as real district + division names (e.g. "Dhaka, Dhaka"); UI language only changes the select labels.
-  const division = selectedDistrict && selectedDivision ? `${selectedDistrict.name}, ${selectedDivision.name}` : '';
+  const division = divisionString(districtId);
   const [email, setEmail] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [lastDonationMonths, setLastDonationMonths] = useState('');
@@ -156,7 +156,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
   const phoneValid = isValidBdPhone(phone);
   const showPhoneError = phoneTouched && !phoneValid;
   const canSubmit =
-    name.trim() !== '' && phoneValid && bloodGroup !== null && location.trim() !== '' && pledge;
+    name.trim() !== '' && phoneValid && bloodGroup !== null && location.trim() !== '' && districtId !== '' && pledge;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,6 +208,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       age: parseInt(age) || undefined,
       gender,
       division,
+      ...locationCoords(districtId),
       email: email.trim() || undefined,
       weightKg: parseInt(weightKg) || undefined,
       lastDonationMonths: lastDonationMonths.trim() === '' ? undefined : parseInt(lastDonationMonths),
@@ -477,6 +478,44 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
             />
           </div>
 
+          {/* 4b. Division and district: required, no default */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor={fieldId('division')} className={labelClass}>{t.register.division}</label>
+              <select
+                id={fieldId('division')}
+                required
+                value={divisionId}
+                onChange={(e) => {
+                  setDivisionId(e.target.value);
+                  setDistrictId('');
+                }}
+                className={`${inputClass} cursor-pointer`}
+              >
+                <option value="">{t.register.selectDivision}</option>
+                {BD_DIVISIONS.map((d) => (
+                  <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor={fieldId('district')} className={labelClass}>{t.register.district}</label>
+              <select
+                id={fieldId('district')}
+                required
+                value={districtId}
+                disabled={!divisionId}
+                onChange={(e) => setDistrictId(e.target.value)}
+                className={`${inputClass} cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-100`}
+              >
+                <option value="">{t.register.selectDistrict}</option>
+                {districtOptions.map((d) => (
+                  <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* 5. Availability switch */}
           <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
             <div>
@@ -560,38 +599,6 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
                 >
                   <option value="Male">{t.register.male}</option>
                   <option value="Female">{t.register.female}</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor={fieldId('division')} className={labelClass}>{t.register.division}</label>
-                <select
-                  id={fieldId('division')}
-                  value={divisionId}
-                  onChange={(e) => {
-                    const nextDivisionId = e.target.value;
-                    setDivisionId(nextDivisionId);
-                    setDistrictId(districtsByDivision(nextDivisionId)[0]?.id ?? '');
-                  }}
-                  className={`${inputClass} cursor-pointer`}
-                >
-                  {BD_DIVISIONS.map((d) => (
-                    <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor={fieldId('district')} className={labelClass}>{t.register.district}</label>
-                <select
-                  id={fieldId('district')}
-                  value={districtId}
-                  onChange={(e) => setDistrictId(e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
-                  {districtOptions.map((d) => (
-                    <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
-                  ))}
                 </select>
               </div>
 
@@ -691,19 +698,28 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
  * SSR-matched elements, and this component itself only ever mounts after hydration (never server-rendered).
  */
 const MyDonorProfilePanel: React.FC<{ id: string; onRegisterAnother: () => void }> = ({ id, onRegisterAnother }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const fieldId = (name: string) => `donor-profile-${name}`;
   const { data, error, isLoading } = useGetDonorQuery(id);
   const [updateDonor, { isLoading: isSaving }] = useUpdateDonorMutation();
   const [isAvailable, setIsAvailable] = useState(true);
   const [lastDonationMonths, setLastDonationMonths] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saved' | 'error'>('idle');
+  // Where the donor lives now: area text plus division and district (see src/lib/donorLocation.ts).
+  const [area, setArea] = useState('');
+  const [editDivisionId, setEditDivisionId] = useState('');
+  const [editDistrictId, setEditDistrictId] = useState('');
+  const editDistrictOptions = useMemo(() => (editDivisionId ? districtsByDivision(editDivisionId) : []), [editDivisionId]);
 
   const donor = data?.donor;
   useEffect(() => {
     if (!donor) return;
     setIsAvailable(donor.isAvailable);
     setLastDonationMonths(donor.lastDonationMonths != null ? String(donor.lastDonationMonths) : '');
+    setArea(donor.area);
+    const saved = locationFromDivisionString(donor.division);
+    setEditDivisionId(saved?.divisionId ?? '');
+    setEditDistrictId(saved?.districtId ?? '');
   }, [donor]);
 
   const isDemo = isDatabaseOff(error);
@@ -711,10 +727,17 @@ const MyDonorProfilePanel: React.FC<{ id: string; onRegisterAnother: () => void 
   const handleSave = () => {
     setSaveState('idle');
     const months = parseInt(lastDonationMonths, 10);
+    // Place fields are only sent when they changed, so an old profile whose place cannot be read back
+    // (free text) can still save its availability without being forced to pick a district first.
+    const newDivision = divisionString(editDistrictId);
+    const areaChanged = area.trim() !== '' && area.trim() !== donor?.area;
+    const placeChanged = newDivision !== '' && newDivision !== donor?.division;
     void updateDonor({
       id,
       isAvailable,
       ...(Number.isFinite(months) ? { lastDonationMonths: months } : {}),
+      ...(areaChanged ? { area: area.trim() } : {}),
+      ...(placeChanged ? { division: newDivision, ...locationCoords(editDistrictId) } : {}),
     })
       .unwrap()
       .then(() => {
@@ -781,12 +804,60 @@ const MyDonorProfilePanel: React.FC<{ id: string; onRegisterAnother: () => void 
             />
           </div>
 
+          <div className="flex flex-col gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">{t.register.editLocationTitle}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{t.register.editLocationHint}</p>
+            </div>
+            <div>
+              <label htmlFor={fieldId('area')} className={labelClass}>{t.register.area}</label>
+              <input id={fieldId('area')} type="text" value={area} onChange={(e) => setArea(e.target.value)} className={inputClass} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor={fieldId('division')} className={labelClass}>{t.register.division}</label>
+                <select
+                  id={fieldId('division')}
+                  value={editDivisionId}
+                  onChange={(e) => {
+                    setEditDivisionId(e.target.value);
+                    setEditDistrictId('');
+                  }}
+                  className={`${inputClass} cursor-pointer`}
+                >
+                  <option value="">{t.register.selectDivision}</option>
+                  {BD_DIVISIONS.map((d) => (
+                    <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor={fieldId('district')} className={labelClass}>{t.register.district}</label>
+                <select
+                  id={fieldId('district')}
+                  value={editDistrictId}
+                  disabled={!editDivisionId}
+                  onChange={(e) => setEditDistrictId(e.target.value)}
+                  className={`${inputClass} cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-100`}
+                >
+                  <option value="">{t.register.selectDistrict}</option>
+                  {editDistrictOptions.map((d) => (
+                    <option key={d.id} value={d.id}>{language === 'bn' ? d.bnName : d.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {editDivisionId !== '' && editDistrictId === '' && (
+              <p className="text-xs font-semibold text-amber-700">{t.register.editLocationNeedDistrict}</p>
+            )}
+          </div>
+
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={handleSave}
-              disabled={isSaving}
-              className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md shadow-red-600/30 cursor-pointer disabled:opacity-60"
+              disabled={isSaving || area.trim() === '' || (editDivisionId !== '' && editDistrictId === '')}
+              className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md shadow-red-600/30 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {t.register.saveChanges}
             </button>
