@@ -3,7 +3,6 @@ import { common } from './bn/common.ts';
 import { header } from './bn/header.ts';
 import { footer } from './bn/footer.ts';
 import { notifications } from './bn/notifications.ts';
-import { requisition } from './bn/requisition.ts';
 import { toast } from './bn/toast.ts';
 import { hub } from './bn/hub.ts';
 import { donors } from './bn/donors.ts';
@@ -24,7 +23,6 @@ export const bn: Translations = {
   header,
   footer,
   notifications,
-  requisition,
   toast,
   hub,
   donors,

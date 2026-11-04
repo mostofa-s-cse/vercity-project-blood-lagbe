@@ -106,7 +106,6 @@ const AdminModal: React.FC<{ label: string; closeLabel: string; onClose: () => v
 
 interface AdminPanelScreenProps {
   onNavigate: (screen: ScreenId) => void;
-  onOpenRequisition: (demand: any) => void;
   onOpenCreateSos: () => void;
 }
 
@@ -130,7 +129,6 @@ const TAB_PERMISSION: Record<AdminTab, Permission> = {
 
 export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   onNavigate,
-  onOpenRequisition,
   onOpenCreateSos
 }) => {
   const { language, toggleLanguage, t } = useLanguage();
@@ -1875,14 +1873,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
 
                 {/* Status Toggle & Slip Inspection Buttons */}
                 <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                  <button
-                    onClick={() => onOpenRequisition({ patientName: req.patientName, hospital: req.place, bloodGroup: req.bloodGroup, bagsRequired: req.bags })}
-                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-sm">prescriptions</span>
-                    <span>{t.admin.requests.doctorSlip}</span>
-                  </button>
-
                   <div className="flex items-center gap-1.5">
                     {moves.includes('DONOR_FOUND') && (
                       <button
@@ -2258,7 +2248,6 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 setIsPortalOpen(false);
                 onNavigate(screen);
               }}
-              onOpenRequisition={onOpenRequisition}
             />
           </div>
         </div>

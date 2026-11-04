@@ -5,7 +5,6 @@ import { useAppState } from '../context/AppStateContext';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { NotificationsModal } from './NotificationsModal';
-import { RequisitionModal } from './RequisitionModal';
 import { CreateSosModal } from './CreateSosModal';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -35,18 +34,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     />
   );
 
-  const requisitionModal = (
-    <RequisitionModal
-      isOpen={app.requisitionModal.isOpen}
-      onClose={app.closeRequisition}
-      patientName={app.requisitionModal.patientName}
-      hospitalName={app.requisitionModal.hospitalName}
-      doctorName={app.requisitionModal.doctorName}
-      bloodGroup={app.requisitionModal.bloodGroup}
-      units={app.requisitionModal.units}
-    />
-  );
-
   const createSosModal = <CreateSosModal isOpen={app.isCreateSosModalOpen} onClose={app.closeCreateSosModal} />;
 
   if (isAdmin) {
@@ -55,7 +42,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {toast}
         {children}
         {notificationsModal}
-        {requisitionModal}
         {createSosModal}
       </div>
     );
@@ -81,7 +67,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Footer onNavigate={app.navigate} />
 
       {notificationsModal}
-      {requisitionModal}
       {createSosModal}
     </div>
   );

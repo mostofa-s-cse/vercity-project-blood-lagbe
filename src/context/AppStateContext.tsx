@@ -15,15 +15,6 @@ import { useGetDonorNotificationsQuery, useGetRequesterNotificationsQuery, useGe
 
 const DIVISION_KEY = 'bloodlagbe.division';
 
-interface RequisitionModalState {
-  isOpen: boolean;
-  patientName?: string;
-  hospitalName?: string;
-  doctorName?: string;
-  bloodGroup?: string;
-  units?: number;
-}
-
 /** What the notification and the toast need to know about a posted SOS. */
 export interface SosCreatedInfo {
   bloodGroup: BloodGroup;
@@ -59,9 +50,6 @@ interface AppStateValue {
   removeDonation: (donationId: string) => void;
   toastMessage: string | null;
   dismissToast: () => void;
-  requisitionModal: RequisitionModalState;
-  openRequisition: (demand: any) => void;
-  closeRequisition: () => void;
   /** Lets a screen that isn't the public /sos page (e.g. the Admin Panel) post a request without
    * leaving where it is. */
   isCreateSosModalOpen: boolean;
@@ -102,7 +90,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isAudioMuted, setIsAudioMuted] = usePersistentState<boolean>('isAudioMuted', false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [focusRequestId, setFocusRequestId] = useState<string | null>(null);
-  const [requisitionModal, setRequisitionModal] = useState<RequisitionModalState>({ isOpen: false });
   const [isCreateSosModalOpen, setIsCreateSosModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -180,18 +167,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     sound.setMuted(nextMuted);
   };
 
-  const openRequisition = (demand: any) => {
-    sound.playTap();
-    setRequisitionModal({
-      isOpen: true,
-      patientName: demand.patientName,
-      hospitalName: demand.hospital,
-      doctorName: demand.doctorName || 'Dr. Ashfaqul Alam, MD (Registrar)',
-      bloodGroup: demand.bloodGroup,
-      units: demand.bagsRequired,
-    });
-  };
-
   const handleSosCreated = ({ bloodGroup, place }: SosCreatedInfo) => {
     // Real compatible donors are matched and notified server-side (POST /api/sos, WP4); this is just
     // the poster's own toast, not a notification.
@@ -247,9 +222,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     removeDonation,
     toastMessage,
     dismissToast: () => setToastMessage(null),
-    requisitionModal,
-    openRequisition,
-    closeRequisition: () => setRequisitionModal({ isOpen: false }),
     isCreateSosModalOpen,
     openCreateSosModal: () => setIsCreateSosModalOpen(true),
     closeCreateSosModal: () => setIsCreateSosModalOpen(false),

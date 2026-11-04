@@ -238,7 +238,6 @@ export const admin = {
     bags: 'Bags',
     contact: 'Contact:',
     defaultPatient: 'Patient',
-    doctorSlip: 'Doctor Slip',
     assign: 'Assign',
     complete: 'Complete',
     cancel: 'Cancel',

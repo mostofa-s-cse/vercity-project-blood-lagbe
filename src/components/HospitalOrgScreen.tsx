@@ -60,12 +60,10 @@ const stockSaveQueue = createSerialQueue();
 
 interface HospitalOrgScreenProps {
   onNavigate: (screen: ScreenId) => void;
-  onOpenRequisition: (demand: any) => void;
 }
 
 export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   onNavigate,
-  onOpenRequisition
 }) => {
   const { t } = useLanguage();
   const { configured, loading: authLoading, user, can, canManageHospital } = useAuth();

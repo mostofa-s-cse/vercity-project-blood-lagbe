@@ -240,7 +240,6 @@ export const admin: Admin = {
     bags: 'ব্যাগ',
     contact: 'যোগাযোগ:',
     defaultPatient: 'রোগী',
-    doctorSlip: 'ডাক্তার স্লিপ',
     assign: 'ডোনার এসাইন',
     complete: 'সম্পন্ন করুন',
     cancel: 'বাতিল',

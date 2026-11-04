@@ -2,7 +2,6 @@ import { common } from './en/common.ts';
 import { header } from './en/header.ts';
 import { footer } from './en/footer.ts';
 import { notifications } from './en/notifications.ts';
-import { requisition } from './en/requisition.ts';
 import { toast } from './en/toast.ts';
 import { hub } from './en/hub.ts';
 import { donors } from './en/donors.ts';
@@ -23,7 +22,6 @@ export const en = {
   header,
   footer,
   notifications,
-  requisition,
   toast,
   hub,
   donors,

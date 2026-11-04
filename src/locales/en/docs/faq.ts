@@ -21,7 +21,7 @@ export const faq: DocFaq = {
     },
     q6: {
       q: 'What is a requisition slip?',
-      a: 'It is the doctor\'s written request for blood. In the app you open a sample slip with a "Doctor Slip" or "Inspect" button in the Admin Panel, Hospitals & Blood Banks or Ops Command. The patient name, blood group and bags come from the request. The rest is sample text, not a real verified document.',
+      a: 'It is a hospital\'s own request for blood. A hospital account (or an admin) issues it on the "Doctor Requisition Desk" tab of the hospital page. When it is marked fulfilled, the bags are taken out of the hospital\'s stock.',
     },
     q7: {
       q: 'How are the header alert ticker and the radius message set, and who can change them?',

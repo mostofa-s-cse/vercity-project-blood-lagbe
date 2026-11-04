@@ -45,7 +45,6 @@ interface FraudRow {
 
 interface OpsCommandScreenProps {
   onNavigate: (screen: ScreenId) => void;
-  onOpenRequisition: (demand: any) => void;
 }
 
 // 'anti-fraud' is hidden for now (see the tab list below); add it back here too.
@@ -53,7 +52,6 @@ const OPS_TABS: OpsSubTab[] = ['overview', 'sos-queue', 'hospitals-stocks', 'sys
 
 export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
   onNavigate,
-  onOpenRequisition,
 }) => {
   const { t, language } = useLanguage();
   // The open tab lives in the URL (/command/sos-queue) so a reload or a shared link lands on the same tab.
@@ -396,7 +394,6 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                   <th className="py-3 px-3">{t.command.colBloodGroup}</th>
                   <th className="py-3 px-3">{t.command.colHospital}</th>
                   <th className="py-3 px-3">{t.command.colUrgency}</th>
-                  <th className="py-3 px-3">{t.command.colSlipStatus}</th>
                   <th className="py-3 px-3 text-right">{t.command.colActions}</th>
                 </tr>
               </thead>
@@ -428,22 +425,6 @@ export const OpsCommandScreen: React.FC<OpsCommandScreenProps> = ({
                         <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[10px] font-bold">
                           {statusLabel(req.status)}
                         </span>
-                      </td>
-                      <td className="py-3.5 px-3">
-                        <button
-                          onClick={() =>
-                            onOpenRequisition({
-                              patientName: req.patientName || req.problem || req.place,
-                              hospital: req.place,
-                              bloodGroup: req.bloodGroup,
-                              bagsRequired: req.bags,
-                            })
-                          }
-                          className="text-red-600 hover:underline font-semibold flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-sm">visibility</span>
-                          <span>{t.command.inspect}</span>
-                        </button>
                       </td>
                       <td className="py-3.5 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
