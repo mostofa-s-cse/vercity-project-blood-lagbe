@@ -3,6 +3,7 @@ import type { AuditLogDto, CampDto, RequisitionDto, StockBatchDto, DonationDto, 
 import type { CriticalAlert, EmergencyRadiusConfig } from './alertList';
 import { isEligible } from './eligibility';
 import { maskPhone } from './phoneMask';
+import { donorPhotoUrl } from './avatarUpload';
 import { BLOOD_GROUP_FROM_DB } from './validation';
 import type { RequestStatusValue } from './requestStatus';
 
@@ -29,6 +30,7 @@ export function toDonorDto(row: Donor, distanceKm: number | null = null): DonorD
     nearestHospital: row.nearestHospital,
     phone: row.phone,
     phoneMasked: maskPhone(row.phone),
+    photoUrl: donorPhotoUrl(process.env.NEXT_PUBLIC_SUPABASE_URL, row.userId),
     createdAt: row.createdAt.toISOString(),
     distanceKm,
   };

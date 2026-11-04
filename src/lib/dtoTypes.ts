@@ -15,6 +15,8 @@ export interface DonorDto {
   age: number | null;
   gender: 'Male' | 'Female' | null;
   isAvailable: boolean;
+  /** The account's profile photo, if the donor is linked to one. May 404; show the initial then. */
+  photoUrl?: string | null;
   lastDonationMonths: number | null;
   /** From a real `Donation` row, if one exists yet (see WP5). `null` for a donor with none. */
   lastDonationAt: string | null;

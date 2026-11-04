@@ -47,6 +47,15 @@ export function avatarPath(userId: string): string {
   return `${userId}/avatar.webp`;
 }
 
+/**
+ * Where a donor's photo would be, if the donor is linked to an account and uploaded one. The file may not
+ * exist (the browser falls back to the initial when it 404s), so no storage call is needed here.
+ */
+export function donorPhotoUrl(supabaseUrl: string | undefined, userId: string | null): string | null {
+  if (!supabaseUrl || !userId || !SAFE_ID.test(userId)) return null;
+  return `${supabaseUrl.replace(/\/+$/, '')}/storage/v1/object/public/avatars/${avatarPath(userId)}`;
+}
+
 /** A new `?v=` each save, so browsers and CDNs do not keep showing the old photo. */
 export function avatarUrlWithVersion(url: string, now: Date): string {
   return `${url}?v=${now.getTime()}`;

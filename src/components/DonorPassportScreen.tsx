@@ -3,6 +3,7 @@ import { ScreenId } from '../types/blood';
 import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { bnDigits } from '../lib/bnDigits';
+import { PhotoOrInitial } from './PhotoOrInitial';
 import { useAuth } from '../context/AuthContext';
 import { useGetDonorDonationsQuery, useRemoveDonationMutation, useGetDonorQuery, useGetDonorsQuery } from '../store/api';
 import { DONATION_COOLDOWN_DAYS } from '../lib/eligibility';
@@ -200,18 +201,16 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
 
           <div className="relative z-10 my-6 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={displayName}
-                  referrerPolicy="no-referrer"
-                  className="w-20 h-20 rounded-2xl object-cover border-2 border-red-500 shadow-xl"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-2xl bg-slate-800 border-2 border-red-500 shadow-xl flex items-center justify-center">
-                  <span className="text-2xl font-black text-white">{(Array.from(displayName)[0] ?? '?').toUpperCase()}</span>
-                </div>
-              )}
+              <PhotoOrInitial
+                src={user?.avatarUrl ?? donor.photoUrl}
+                alt={displayName}
+                imgClassName="w-20 h-20 rounded-2xl object-cover border-2 border-red-500 shadow-xl"
+                fallback={
+                  <div className="w-20 h-20 rounded-2xl bg-slate-800 border-2 border-red-500 shadow-xl flex items-center justify-center">
+                    <span className="text-2xl font-black text-white">{(Array.from(displayName)[0] ?? '?').toUpperCase()}</span>
+                  </div>
+                }
+              />
 
               <div>
                 <h2 className="text-xl font-extrabold text-white">{displayName}</h2>

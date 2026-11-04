@@ -10,6 +10,7 @@ import { sound } from '../utils/audio';
 import { useLanguage } from '../context/LanguageContext';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { Pagination } from './Pagination';
+import { PhotoOrInitial } from './PhotoOrInitial';
 import { pageSlice } from '../lib/pagination';
 
 const NEAR_ME_RADIUS_KM = 50;
@@ -391,9 +392,16 @@ export const DonorDirectory: React.FC<DonorDirectoryProps> = ({ onNavigate }) =>
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="relative shrink-0">
-                        <div className="w-13 h-13 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-base border-2 border-white shadow-sm">
-                          {initials(donor.name)}
-                        </div>
+                        <PhotoOrInitial
+                          src={donor.photoUrl}
+                          alt={donor.name}
+                          imgClassName="w-13 h-13 rounded-full object-cover border-2 border-white shadow-sm"
+                          fallback={
+                            <div className="w-13 h-13 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-base border-2 border-white shadow-sm">
+                              {initials(donor.name)}
+                            </div>
+                          }
+                        />
                         {(donor.isAvailable && donor.isEligible) && (
                           <span
                             className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"

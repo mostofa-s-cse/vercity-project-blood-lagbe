@@ -4,6 +4,7 @@ import {
   AVATAR_MAX_BYTES,
   avatarPath,
   avatarUrlWithVersion,
+  donorPhotoUrl,
   removeAvatar,
   saveAvatar,
   sniffImageType,
@@ -124,4 +125,15 @@ test('removeAvatar deletes the file and clears both photo fields (Google\'s too)
     { remove: 'u1/avatar.webp' },
     { update: 'u1', attrs: { user_metadata: { name: 'Rahim', picture: null, avatar_url: null } } },
   ]);
+});
+
+test('donorPhotoUrl points at the account\'s own avatar file, or nothing', () => {
+  assert.equal(
+    donorPhotoUrl('https://x.supabase.co', 'u-1'),
+    'https://x.supabase.co/storage/v1/object/public/avatars/u-1/avatar.webp',
+  );
+  assert.equal(donorPhotoUrl('https://x.supabase.co/', 'u-1'), 'https://x.supabase.co/storage/v1/object/public/avatars/u-1/avatar.webp');
+  assert.equal(donorPhotoUrl('https://x.supabase.co', null), null, 'donor without an account');
+  assert.equal(donorPhotoUrl(undefined, 'u-1'), null, 'no Supabase configured');
+  assert.equal(donorPhotoUrl('https://x.supabase.co', '../etc'), null, 'unsafe id');
 });
