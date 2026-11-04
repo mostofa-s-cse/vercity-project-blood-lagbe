@@ -159,7 +159,22 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
   const daysLeft = Math.max(0, DONATION_COOLDOWN_DAYS - currentElapsed);
   const nextDate = nextEligibleDate(donor.lastDonationAt, DONATION_COOLDOWN_DAYS);
   const age = ageCheck(donor.age);
-  const displayName = donor.name;
+  // The signed-in person's own profile follows their account (name, email); anyone else's shows what that donor gave.
+  const isMine = !!user && mineQuery.data?.donors[0]?.id === donor.id;
+  const displayName = (isMine && user?.name) || donor.name;
+  // The division is stored as "District, Division"; "Dhaka, Dhaka" should read "Dhaka".
+  const placeDivision = donor.division
+    ? Array.from(new Set(donor.division.split(',').map((p) => p.trim()).filter(Boolean))).join(', ')
+    : null;
+  const vehicleName = donor.vehicle ? (t.register.vehicleNames as Record<string, string>)[donor.vehicle] ?? donor.vehicle : null;
+  const details: { label: string; value: string }[] = [
+    { label: t.passport.phoneLabel, value: donor.phone },
+    ...(isMine && user?.email ? [{ label: t.passport.emailLabel, value: user.email }] : []),
+    ...(donor.age !== null ? [{ label: t.passport.ageLabel, value: t.donors.ageYears(donor.age) }] : []),
+    ...(donor.gender ? [{ label: t.passport.genderLabel, value: t.donors.gender[donor.gender] }] : []),
+    ...(vehicleName ? [{ label: t.passport.vehicleLabel, value: vehicleName }] : []),
+    { label: t.passport.joinedLabel, value: dateText(donor.createdAt) },
+  ];
   const checkClass = (ok: boolean) => (ok ? 'text-emerald-600' : 'text-amber-600');
 
   return (
@@ -219,7 +234,7 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                 </p>
                 <p className="text-[11px] text-red-300 mt-1 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">location_on</span>
-                  {t.passport.locationLine(donor.area, donor.division)}
+                  {t.passport.locationLine(donor.area, placeDivision)}
                 </p>
               </div>
             </div>
@@ -230,6 +245,15 @@ export const DonorPassportScreen: React.FC<DonorPassportScreenProps> = ({ onNavi
                 {donor.bloodGroup.includes('-') ? t.passport.rhNegative : t.passport.rhPositive}
               </span>
             </div>
+          </div>
+
+          <div className="relative z-10 mb-5 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3" aria-label={t.passport.detailsTitle}>
+            {details.map((d) => (
+              <div key={d.label} className="min-w-0">
+                <span className="text-[10px] text-slate-500 block">{d.label}</span>
+                <span className="font-semibold text-slate-100 text-xs break-words">{d.value}</span>
+              </div>
+            ))}
           </div>
 
           <div className="relative z-10 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">

@@ -29,7 +29,10 @@ test.describe('donor profile (signed out, real database)', () => {
     await page.getByLabel('District', { exact: true }).selectOption({ label: 'Dhaka' });
     await page.getByRole('button', { name: 'A+', exact: true }).click();
     await page.getByRole('checkbox', { name: /I am healthy/ }).check();
+    // The success view shows before the save finishes (fire and forget), so wait for the save itself.
+    const saved = page.waitForResponse((r) => r.url().includes('/api/donors') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Register as donor', exact: true }).click();
+    expect((await saved).status()).toBe(201);
 
     await expect(page.getByText('You are now a registered donor')).toBeVisible({ timeout: 10_000 });
 

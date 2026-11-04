@@ -113,7 +113,10 @@ test.describe('2026-11-02 review fixes (real database)', () => {
     await page.getByLabel('District', { exact: true }).selectOption({ label: 'Dhaka' });
     await page.getByRole('button', { name: 'A+', exact: true }).click();
     await page.getByRole('checkbox', { name: /I am healthy/ }).check();
+    // The success view shows before the save finishes (fire and forget), so wait for the save itself.
+    const saved = page.waitForResponse((r) => r.url().includes('/api/donors') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Register as donor', exact: true }).click();
+    expect((await saved).status()).toBe(201);
     await expect(page.getByText('You are now a registered donor')).toBeVisible({ timeout: 10_000 });
 
     await page.route(/\/api\/donors\/[^/]+\/notifications$/, (route) =>
@@ -166,7 +169,10 @@ test.describe('2026-11-02 review fixes (real database)', () => {
     // A donor from Rajshahi picks Rajshahi.
     await page.getByLabel('Division', { exact: true }).selectOption({ label: 'Rajshahi' });
     await page.getByLabel('District', { exact: true }).selectOption({ label: 'Rajshahi' });
+    // The success view shows before the save finishes (fire and forget), so wait for the save itself.
+    const saved = page.waitForResponse((r) => r.url().includes('/api/donors') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Register as donor', exact: true }).click();
+    expect((await saved).status()).toBe(201);
     await expect(page.getByText('You are now a registered donor')).toBeVisible({ timeout: 10_000 });
 
     const inDivision = async (division: string) =>
