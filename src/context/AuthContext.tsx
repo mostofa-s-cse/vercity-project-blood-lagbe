@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import type { User } from '@supabase/supabase-js';
 import { createBrowserSupabase } from '../lib/supabase/client';
 import { ADMIN_AREA_PERMISSIONS, type Permission } from '../lib/permissions';
-import { can as claimsCan, canManageHospital as claimsCanManageHospital } from '../lib/roles';
+import { can as claimsCan, canManageHospital as claimsCanManageHospital, hospitalIdOf } from '../lib/roles';
 import { announceDonorProfileChange, browserStorage, clearMyDonorProfiles } from '../lib/myDonorProfile';
 import { normalizePhoneForAuth } from '../lib/phoneAuth';
 import { profileFromMetadata, type SignupProfileInput } from '../lib/signupProfile';
@@ -41,6 +41,8 @@ interface AuthContextType {
    * Without Supabase (demo mode) everyone may, because nothing is saved.
    */
   canManageHospital: (hospitalId: string) => boolean;
+  /** The hospital this account is tied to (`hospital_id`), or null (admins, donors, demo mode). */
+  ownHospitalId: string | null;
   /** `next` is the same-site path to return to after signing in (default: the current page). */
   signInWithGoogle: (next?: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -306,6 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         can,
         canManageHospital: canManage,
+        ownHospitalId: configured ? hospitalIdOf(claims) : null,
         signInWithGoogle,
         signOut,
         signUpWithEmail,

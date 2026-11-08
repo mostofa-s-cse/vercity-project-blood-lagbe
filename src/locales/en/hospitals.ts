@@ -173,5 +173,6 @@ export const hospitals = {
   toastCampDeleted: 'Camp deleted.',
   toastCampFailed: 'Could not save the camp. Please try again.',
   toastCampSignIn: 'Sign in to register for a camp.',
+  toastCampForbidden: 'You can only schedule camps for your own hospital. Select your hospital first.',
 };
 export type Hospitals = typeof hospitals;

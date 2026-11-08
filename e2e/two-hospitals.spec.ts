@@ -148,6 +148,73 @@ test.describe.serial('hospital and blood bank accounts (real database + Supabase
     await expect.poll(async () => (await bank.request.get('/api/hospitals/stock')).json().then((d) => d.stock?.[ORGS.bank.id]?.['O-'])).toBe(0);
   });
 
+  test('hospital account lands on its own hospital: stock buttons show and a camp can be scheduled', async ({ browser }) => {
+    const page = await signedInPage(browser, ORGS.hospital.email);
+    await page.goto('/en/hospitals');
+    // No manual hospital pick: the page must already be on this account's own hospital.
+    await expect(card(page, 'O+').getByRole('button', { name: '+1' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('View only')).toHaveCount(0);
+
+    await page.getByRole('button', { name: /Camps/ }).first().click();
+    await page.getByRole('button', { name: 'Schedule Blood Camp' }).click();
+    const modal = page.locator('div.fixed', { has: page.getByRole('heading', { name: 'Schedule Blood Drive' }) });
+    await modal.locator('input[type=text]').nth(0).fill(`E2E camp ${RUN}`);
+    await modal.locator('input[type=text]').nth(1).fill('E2E Hall');
+    await modal.locator('input[type=date]').fill(new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10));
+    await modal.locator('button[type=submit]').click();
+    await expect(page.getByText('New blood donation drive scheduled and published!')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(`E2E camp ${RUN}`)).toBeVisible();
+  });
+
+  // Screen recording for the owner: `PW_TUTORIAL=1 PW_SLOWMO=700 PW_MODE=real npx playwright test two-hospitals -g tutorial`.
+  // Writes tutorial-videos/*.webm. Skipped in normal runs.
+  test('tutorial video: stock +/- and blood camp', async ({ browser }) => {
+    test.skip(!process.env.PW_TUTORIAL, 'recording only on request');
+    const context = await browser.newContext({ recordVideo: { dir: 'tutorial-videos', size: { width: 1280, height: 800 } }, viewport: { width: 1280, height: 800 } });
+    const page = await context.newPage();
+    const caption = async (text: string) => {
+      await page.evaluate((message) => {
+        let el = document.getElementById('tutorial-caption');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'tutorial-caption';
+          el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99999;background:#111c;color:#fff;padding:12px 22px;border-radius:14px;font:600 18px system-ui;max-width:90%;text-align:center';
+          document.body.appendChild(el);
+        }
+        el.textContent = message;
+      }, text);
+      await page.waitForTimeout(2200);
+    };
+    await page.goto('/en/sign-in');
+    await page.getByLabel('Email').fill(ORGS.hospital.email);
+    await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page).not.toHaveURL(/sign-in/, { timeout: 20_000 });
+
+    await page.goto('/bn/hospitals');
+    await expect(card(page, 'O+').locator('button').nth(1)).toBeVisible({ timeout: 20_000 });
+    await caption('১. হাসপাতাল অ্যাকাউন্টে সাইন ইন করলে নিজের হাসপাতাল নিজে থেকেই খোলে');
+    await caption('২. প্রতিটি রক্তের গ্রুপে +1 ও -1 বোতাম দেখা যায়');
+    await card(page, 'O+').locator('button').nth(1).click();
+    await card(page, 'O+').locator('button').nth(1).click();
+    await caption('+1 চাপলে মজুত বাড়ে (O+ এখন ২)');
+    await card(page, 'O+').locator('button').nth(0).click();
+    await caption('-1 চাপলে মজুত কমে (O+ এখন ১)');
+
+    await page.getByRole('button', { name: 'রক্তদান ক্যাম্প ও ড্রাইভ' }).click();
+    await caption('৩. ক্যাম্প ট্যাবে যান');
+    await page.locator('button', { has: page.locator('span.material-symbols-outlined', { hasText: 'add_box' }) }).click();
+    const modal = page.locator('div.fixed.inset-0');
+    await modal.locator('input[type=text]').nth(0).fill('রক্তদান ক্যাম্প');
+    await modal.locator('input[type=text]').nth(1).fill('সিটি হাসপাতাল হল');
+    await modal.locator('input[type=date]').fill(new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10));
+    await caption('৪. নাম, স্থান ও তারিখ লিখুন');
+    await modal.locator('button[type=submit]').click();
+    await expect(page.getByText('রক্তদান ক্যাম্প').first()).toBeVisible({ timeout: 10_000 });
+    await caption('৫. ক্যাম্প তৈরি হয়ে তালিকায় এসেছে');
+    await context.close();
+  });
+
   test('a signed-out visitor sees the stock but has no buttons', async ({ browser }) => {
     const page = await (await browser.newContext()).newPage();
     await openHospital(page, ORGS.hospital.name);

@@ -178,4 +178,5 @@ export const hospitals: Hospitals = {
   toastCampDeleted: 'ক্যাম্প মুছে ফেলা হয়েছে।',
   toastCampFailed: 'ক্যাম্প সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
   toastCampSignIn: 'ক্যাম্পে নিবন্ধনের জন্য সাইন ইন করুন।',
+  toastCampForbidden: 'আপনি শুধু নিজের হাসপাতালের জন্য ক্যাম্প তৈরি করতে পারবেন। আগে আপনার হাসপাতাল বেছে নিন।',
 };

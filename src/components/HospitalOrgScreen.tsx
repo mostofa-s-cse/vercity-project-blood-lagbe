@@ -66,7 +66,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   onNavigate,
 }) => {
   const { t } = useLanguage();
-  const { configured, loading: authLoading, user, can, canManageHospital } = useAuth();
+  const { configured, loading: authLoading, user, can, canManageHospital, ownHospitalId } = useAuth();
   const [selectedOrgId, setSelectedOrgId] = useState<string>(SAMPLE_HOSPITAL_ORGS[0].id);
   const [hospitals, setHospitals] = useState<HospitalOrganization[]>(SAMPLE_HOSPITAL_ORGS);
   const [sampleCamps, setSampleCamps] = useState<DonationCamp[]>(SAMPLE_CAMPS);
@@ -176,6 +176,15 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
     const base = toHospitalOrganizations(real);
     setHospitals(stockRef.current ? mergeSavedStock(base, stockRef.current) : base);
   }, [orgsDemo, orgsData]);
+
+  // A hospital account lands on its own hospital (not the first in the list), so it can edit stock and schedule camps.
+  const ownSelectedRef = useRef(false);
+  useEffect(() => {
+    if (!ownHospitalId || ownSelectedRef.current) return;
+    if (!hospitals.some(h => h.id === ownHospitalId)) return;
+    ownSelectedRef.current = true;
+    setSelectedOrgId(ownHospitalId);
+  }, [ownHospitalId, hospitals]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -337,7 +346,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
     if (!campsDemo) {
       try {
         await createCamp({
-          hospitalId: selectedOrg.id,
+          hospitalId: canEdit ? selectedOrg.id : ownHospitalId ?? selectedOrg.id,
           title: newCampTitle.trim(),
           venue: newCampVenue.trim(),
           date: newCampDate,
@@ -348,8 +357,8 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
         setNewCampTitle('');
         setNewCampVenue('');
         showToast(t.hospitals.toastCampCreated);
-      } catch {
-        showToast(t.hospitals.toastCampFailed);
+      } catch (error) {
+        showToast(apiStatus(error) === 403 ? t.hospitals.toastCampForbidden : t.hospitals.toastCampFailed);
       }
       return;
     }
