@@ -37,10 +37,17 @@ config({ path: ['.env.local', '.env'], quiet: true });
  */
 const DEMO_USERS = [
   {
-    email: 'demo@bloodlagbe.test',
+    email: 'donor-demo@bloodlagbe.test',
     password: 'DemoPass123!',
-    name: 'Demo User',
-    note: 'Donor / Blood Seeker — a plain signed-in person, no admin_metadata.role at all',
+    name: 'Donor Demo',
+    note: 'Donor — a plain signed-in person who registers as a donor, no admin_metadata.role at all',
+    appMetadata: null as Record<string, unknown> | null,
+  },
+  {
+    email: 'seeker-demo@bloodlagbe.test',
+    password: 'DemoPass123!',
+    name: 'Seeker Demo',
+    note: 'Blood Seeker — a plain signed-in person who posts and tracks requests',
     appMetadata: null as Record<string, unknown> | null,
   },
   {

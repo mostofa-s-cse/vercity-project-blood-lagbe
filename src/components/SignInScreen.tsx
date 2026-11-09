@@ -18,7 +18,8 @@ const inputClass =
 const labelClass = 'block text-sm font-bold text-slate-800 mb-1.5';
 const DEMO_PASSWORD = 'DemoPass123!';
 const DEMO_ACCOUNTS = [
-  { email: 'demo@bloodlagbe.test', role: 'demoRoleUser' },
+  { email: 'seeker-demo@bloodlagbe.test', role: 'demoRoleSeeker' },
+  { email: 'donor-demo@bloodlagbe.test', role: 'demoRoleDonor' },
   { email: 'hospital-demo@bloodlagbe.test', role: 'demoRoleHospital' },
   { email: 'admin-demo@bloodlagbe.test', role: 'demoRoleAdmin' },
 ] as const;

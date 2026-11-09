@@ -19,11 +19,13 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const PW_MODE = process.env.PW_MODE === 'real' ? 'real' : 'demo';
 const PORT = PW_MODE === 'real' ? 3402 : 3401;
-const BASE_URL = `http://localhost:${PORT}`;
+// PW_BASE_URL runs the specs against an already deployed site (no local dev server is started).
+const REMOTE_URL = process.env.PW_BASE_URL;
+const BASE_URL = REMOTE_URL ?? `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: PW_MODE === 'real' ? /(sos-lifecycle|donor-profile|two-hospitals|session-fixes)\.spec\.ts/ : 'demo-mode.spec.ts',
+  testMatch: PW_MODE === 'real' ? /(sos-lifecycle|donor-profile|two-hospitals|session-fixes|tutorial)\.spec\.ts/ : 'demo-mode.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -34,7 +36,7 @@ export default defineConfig({
     // PW_SLOWMO=300 slows every step so a person can watch a --headed run.
     launchOptions: { slowMo: Number(process.env.PW_SLOWMO) || 0 },
   },
-  webServer: {
+  webServer: REMOTE_URL ? undefined : {
     command: `npm run dev -- -p ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,

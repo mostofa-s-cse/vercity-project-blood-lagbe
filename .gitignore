@@ -21,3 +21,4 @@ src/generated/
 .dev-db/pgdata/
 videos/
 tutorial-videos
+.vercel
