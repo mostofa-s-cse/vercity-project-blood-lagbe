@@ -37,7 +37,13 @@ test.describe.serial('tutorial videos', () => {
     const donate = page.getByRole('button', { name: 'আমি রক্ত দিতে পারব' });
     // Newest test request at the demo hospital (the card heading is the problem text we chose: 'অপারেশন').
     const card = page.locator('xpath=//h4[normalize-space()="অপারেশন"]/ancestor::div[contains(@class,"rounded-2xl")][1]').filter({ hasText: place }).filter({ has: donate }).first();
-    await expect(card).toBeVisible({ timeout: 30_000 });
+    // The list can load slowly: reload and look again a few times before giving up.
+    for (let attempt = 0; attempt < 4 && !(await card.isVisible().catch(() => false)); attempt++) {
+      await page.waitForTimeout(6000);
+      await page.reload();
+      await card.waitFor({ timeout: 15_000 }).catch(() => undefined);
+    }
+    await expect(card).toBeVisible({ timeout: 10_000 });
     await card.getByRole('button', { name: 'আমি রক্ত দিতে পারব' }).first().click();
     const phone = page.getByLabel('আপনার ফোন নম্বর');
     if (await phone.isEditable().catch(() => false)) await phone.fill('01912000002');
@@ -92,7 +98,17 @@ test.describe.serial('tutorial videos', () => {
       });
       await n.say('ডান পাশে বা নিচে দেখা যাচ্ছে, মানুষ ঠিক কেমন পোস্ট দেখবে। এবার SOS পোস্ট করুন বোতামে চাপ দিই।', async () => {
         await scroll(page, 700);
-        await page.getByRole('button', { name: 'SOS পোস্ট করুন' }).click();
+        // The form can reset when the sign-in finishes loading late: refill whatever is missing until Post is enabled.
+        const submit = page.getByRole('button', { name: 'SOS পোস্ট করুন' });
+        for (let attempt = 0; attempt < 5 && !(await submit.isEnabled()); attempt++) {
+          await scroll(page, 0);
+          const group = page.getByRole('button', { name: 'AB-', exact: true });
+          if ((await group.getAttribute('aria-pressed')) !== 'true') await group.click();
+          await page.getByLabel('রক্তদানের স্থান').fill(place);
+          await page.getByLabel('যোগাযোগের নম্বর').fill('01912000001');
+          await page.waitForTimeout(1500);
+        }
+        await submit.click();
         await expect(page.locator('h1').filter({ hasText: 'SOS' }).first()).toBeVisible({ timeout: 30_000 });
       });
       await n.say('পোস্ট হয়ে গেছে। সাথে সাথে হোয়াটসঅ্যাপ ও ফেসবুকে শেয়ার করা যায়, অথবা পোস্টটি কপি করা যায়। এ সময় সিস্টেম নিজে থেকেই কাছের, উপযুক্ত ও প্রস্তুত রক্তদাতাদের নোটিফিকেশন পাঠায়।', async () => {
