@@ -12,12 +12,14 @@ try {
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 export const RUN = 'demo';
+export const DONOR_PHONE = `019${Date.now().toString().slice(-8)}`;
 export const PASSWORD = `Tut-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}!A1`;
 
 export const ORG = { id: 'tut-hosp-demo', name: 'সিটি জেনারেল হাসপাতাল (ডেমো)' };
 export const ACCOUNTS = {
   seeker: { email: `tut.seeker.${RUN}@mailinator.com`, name: 'রহিম উদ্দিন', meta: {} as Record<string, unknown> },
-  donor: { email: `tut.donor.${RUN}@mailinator.com`, name: 'করিম হাসান', meta: {} as Record<string, unknown> },
+  // A new donor login for every run: registering twice with the same login is not allowed, and nothing may be deleted.
+  donor: { email: `tut.donor.${Date.now().toString(36)}@mailinator.com`, name: 'করিম হাসান', meta: {} as Record<string, unknown> },
   hospital: {
     email: `tut.hospital.${RUN}@mailinator.com`,
     name: 'সিটি জেনারেল হাসপাতাল স্টাফ',
@@ -41,7 +43,7 @@ async function adminFetch(path: string, init: RequestInit = {}) {
 
 /**
  * Runs against the live project, so nothing is ever deleted. Accounts and the demo organization are reused between runs
- * (found by email / fixed id), their password is reset for this run, and `parkAccounts` bans the logins afterwards.
+ * (found by email / fixed id), their password is reset for this run, and `removeAccounts` bans the logins afterwards.
  */
 export async function createAccounts() {
   const prisma = getPrisma();
