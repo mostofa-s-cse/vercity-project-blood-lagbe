@@ -42,7 +42,7 @@ export interface DonorQuery extends NearParams {
   pageSize?: number;
 }
 
-export type OrganizationUpdatePayload = Partial<Omit<OrganizationApplyPayload, 'latitude' | 'longitude' | 'turnstileToken'>>;
+export type OrganizationUpdatePayload = Partial<Omit<OrganizationApplyPayload, 'turnstileToken'>>;
 
 export interface CampPayload {
   title: string;

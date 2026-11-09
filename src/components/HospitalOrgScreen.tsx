@@ -24,6 +24,7 @@ import { haversineDistanceKm } from '../lib/geo.ts';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { MapView } from './MapView';
 import { TurnstileWidget } from './TurnstileWidget';
+import { LocationPicker } from './LocationPicker';
 
 /** Total bags of a hospital: always the sum of its blood groups. */
 const sumStock = (stock: HospitalOrganization['bloodStock']): number =>
@@ -212,6 +213,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const [applyDirectorName, setApplyDirectorName] = useState('');
   const [applyTotalBeds, setApplyTotalBeds] = useState('');
   const [applyIcuBeds, setApplyIcuBeds] = useState('');
+  const [applyLocation, setApplyLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [applyTurnstileToken, setApplyTurnstileToken] = useState<string | null>(null);
 
   const handleApplySubmit = async (e: React.FormEvent) => {
@@ -231,6 +233,8 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
         directorName: applyDirectorName.trim() || undefined,
         totalBeds: applyTotalBeds ? Number(applyTotalBeds) : undefined,
         icuBeds: applyIcuBeds ? Number(applyIcuBeds) : undefined,
+        latitude: applyLocation?.lat,
+        longitude: applyLocation?.lng,
         turnstileToken: applyTurnstileToken ?? undefined,
       }).unwrap();
       setApplyName('');
@@ -243,6 +247,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
       setApplyDirectorName('');
       setApplyTotalBeds('');
       setApplyIcuBeds('');
+      setApplyLocation(null);
       showToast(t.hospitals.applySuccess);
     } catch {
       showToast(t.hospitals.applyFailed);
@@ -1175,6 +1180,9 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
             </div>
           </div>
 
+          <div>
+            <LocationPicker value={applyLocation} onChange={setApplyLocation} />
+          </div>
           <TurnstileWidget onVerify={setApplyTurnstileToken} />
 
           <button

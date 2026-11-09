@@ -550,3 +550,22 @@ test('a stock batch needs a blood group, units and a future expiry date', () => 
   assert.equal(parseBatchInput({ bloodGroup: 'O+', units: 1, expiresAt: '2026-10-01' }, now).error, 'expiresAt');
   assert.equal(parseBatchInput({ bloodGroup: 'O+', units: 1, expiresAt: 'soon' }, now).error, 'expiresAt');
 });
+
+test('an organization edit can set or change the map location, as a pair', () => {
+  const ok = parseOrganizationUpdateInput({ latitude: 23.7461, longitude: 90.3742 });
+  assert.equal(ok.error, null);
+  if (!ok.error) assert.deepEqual([ok.value.latitude, ok.value.longitude], [23.7461, 90.3742]);
+  assert.equal(parseOrganizationUpdateInput({ latitude: 23.7 }).error, 'latitude');
+  assert.equal(parseOrganizationUpdateInput({ longitude: 90.3 }).error, 'latitude');
+  assert.equal(parseOrganizationUpdateInput({ latitude: 91, longitude: 90 }).error, 'latitude');
+  assert.equal(parseOrganizationUpdateInput({ latitude: 23, longitude: 181 }).error, 'latitude');
+  assert.equal(parseOrganizationUpdateInput({ latitude: '23', longitude: '90' }).error, 'latitude');
+});
+
+test('an organization application keeps a map location given as a pair', () => {
+  const base = { name: 'Green Life', type: 'blood_bank', address: 'Uttara', licenseNumber: 'LIC-9001' };
+  const result = parseOrganizationApplyInput({ ...base, latitude: 23.87, longitude: 90.4 });
+  assert.equal(result.error, null);
+  if (!result.error) assert.deepEqual([result.value.latitude, result.value.longitude], [23.87, 90.4]);
+  assert.equal(parseOrganizationApplyInput({ ...base, latitude: 23.87 }).error, 'latitude');
+});

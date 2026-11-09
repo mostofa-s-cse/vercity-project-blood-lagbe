@@ -32,6 +32,7 @@ import { apiStatus, isDatabaseOff } from '../store/errors';
 const unavailable = (error: unknown): boolean => isDatabaseOff(error) || apiStatus(error) === 401 || apiStatus(error) === 403;
 import { fetchHospitalStock, type HospitalStockMap } from '../lib/api';
 import { toHospitalOrganizations } from '../lib/organizationMapping.ts';
+import { LocationPicker } from './LocationPicker';
 import { sampleContactPhone, sampleDonors, sampleRequests } from '../data/sample';
 import { canTransition, openRequestCount, type RequestStatusValue } from '../lib/requestStatus';
 import type { DonorDto, FraudIncidentDto, RequestDto } from '../lib/dtoTypes';
@@ -233,7 +234,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const [updateOrganization, { isLoading: savingOrganization }] = useUpdateOrganizationMutation();
   const [deleteOrganization, { isLoading: deletingOrganization }] = useDeleteOrganizationMutation();
   // Edit form for one organization (values kept as text; empty optional ones are not sent).
-  const [editingOrg, setEditingOrg] = useState<{ id: string; name: string; address: string; hotline: string; directorName: string; totalBeds: string; icuBeds: string } | null>(null);
+  const [editingOrg, setEditingOrg] = useState<{ id: string; name: string; address: string; hotline: string; directorName: string; totalBeds: string; icuBeds: string; location: { lat: number; lng: number } | null } | null>(null);
 
   // Selected detail modal
   const [selectedDonor, setSelectedDonor] = useState<DonorDto | null>(null);
@@ -342,7 +343,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
   const handleSaveOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrg) return;
-    const { id, name, address, hotline, directorName, totalBeds, icuBeds } = editingOrg;
+    const { id, name, address, hotline, directorName, totalBeds, icuBeds, location } = editingOrg;
     try {
       await updateOrganization({
         id,
@@ -352,6 +353,8 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
         directorName: directorName.trim() || undefined,
         totalBeds: totalBeds === '' ? undefined : Number(totalBeds),
         icuBeds: icuBeds === '' ? undefined : Number(icuBeds),
+        latitude: location?.lat,
+        longitude: location?.lng,
       }).unwrap();
       setEditingOrg(null);
       showToast(t.admin.hospitals.toastEdited);
@@ -2018,6 +2021,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                           directorName: hosp.directorName,
                           totalBeds: String(hosp.totalBeds),
                           icuBeds: String(hosp.icuBeds),
+                          location: hosp.latitude != null && hosp.longitude != null ? { lat: hosp.latitude, lng: hosp.longitude } : null,
                         })
                       }
                       className="flex-1 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
@@ -2184,7 +2188,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
       {/* Hospital Portal Modal: opens over the dashboard instead of leaving it */}
       {editingOrg && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-          <form onSubmit={handleSaveOrganization} className="bg-white rounded-3xl p-6 w-full max-w-md flex flex-col gap-3 shadow-2xl">
+          <form onSubmit={handleSaveOrganization} className="bg-white rounded-3xl p-6 w-full max-w-lg max-h-[92vh] overflow-y-auto flex flex-col gap-3 shadow-2xl">
             <h3 className="text-base font-black text-slate-900">{t.admin.hospitals.editTitle}</h3>
             {([
               ['name', t.admin.hospitals.fieldName, 'text'],
@@ -2206,6 +2210,7 @@ export const AdminPanelScreen: React.FC<AdminPanelScreenProps> = ({
                 />
               </label>
             ))}
+            <LocationPicker value={editingOrg.location} onChange={(location) => setEditingOrg({ ...editingOrg, location })} />
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"

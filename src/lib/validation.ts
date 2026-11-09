@@ -733,7 +733,7 @@ export function parseRadiusInput(raw: unknown): ParseResult<RadiusInput> {
   return { error: null, value };
 }
 
-export type OrganizationUpdateInput = Partial<Omit<OrganizationApplyInput, 'latitude' | 'longitude'>>;
+export type OrganizationUpdateInput = Partial<OrganizationApplyInput>;
 
 /**
  * An admin's edit of an organization: only the fields sent are changed, at least one is required.
@@ -775,6 +775,9 @@ export function parseOrganizationUpdateInput(raw: unknown): ParseResult<Organiza
   const icuBeds = optionalInt(raw.icuBeds, 0, 5_000);
   if (icuBeds === null) return { value: null, error: 'icuBeds' };
   if (icuBeds !== undefined) value.icuBeds = icuBeds;
+  const latLng = optionalLatLng(raw);
+  if (latLng === null) return { value: null, error: 'latitude' };
+  Object.assign(value, latLng);
 
   if (Object.keys(value).length === 0) return { value: null, error: 'body' };
   return { error: null, value };
