@@ -169,8 +169,10 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
   const campHospitalId = (campId: string) => campsData?.camps.find(c => c.id === campId)?.hospitalId ?? '';
 
   // Rejected applications aren't a usable facility here; everything else (pending + approved) is.
+  const [realReady, setRealReady] = useState(false);
   useEffect(() => {
     if (orgsDemo || !orgsData) return;
+    setRealReady(true);
     const real = orgsData.organizations.filter(o => o.status !== 'rejected');
     if (real.length === 0) return;
     const base = toHospitalOrganizations(real);
@@ -382,6 +384,20 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
     setNewCampVenue('');
     showToast(t.hospitals.toastCampCreated);
   };
+
+  // With a database, never flash the sample hospitals (or another facility) while the real list, the
+  // session and a hospital account's own facility are still loading: show a loading state instead.
+  const waitingForRealList = !orgsDemo && !orgsError && !realReady;
+  const waitingForOwnHospital =
+    !!ownHospitalId && !ownSelectedRef.current && hospitals.some(h => h.id === ownHospitalId) && selectedOrgId !== ownHospitalId;
+  if (waitingForRealList || (configured && authLoading) || waitingForOwnHospital) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-16 flex flex-col items-center gap-3 text-slate-500" role="status" aria-live="polite">
+        <span className="material-symbols-outlined text-3xl text-red-500 animate-spin" aria-hidden="true">progress_activity</span>
+        <span className="text-sm font-semibold">{t.hospitals.loadingFacilities}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 flex flex-col gap-6">

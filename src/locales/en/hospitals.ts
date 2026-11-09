@@ -20,6 +20,7 @@ export const hospitals = {
     map: 'Map',
   },
 
+  loadingFacilities: 'Loading hospitals and blood banks…',
   findNearest: 'Nearest facility',
   locating: 'Locating…',
   nearestFound: (name: string) => `Switched to the nearest facility: ${name}.`,

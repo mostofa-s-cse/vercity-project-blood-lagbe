@@ -22,6 +22,7 @@ export const hospitals: Hospitals = {
     map: 'ম্যাপ',
   },
 
+  loadingFacilities: 'হাসপাতাল ও ব্লাড ব্যাংক লোড হচ্ছে…',
   findNearest: 'নিকটতম প্রতিষ্ঠান',
   locating: 'অবস্থান খোঁজা হচ্ছে…',
   nearestFound: (name: string) => `নিকটতম প্রতিষ্ঠানে পরিবর্তন করা হয়েছে: ${name}।`,
