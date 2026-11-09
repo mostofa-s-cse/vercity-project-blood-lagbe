@@ -35,7 +35,8 @@ export default function MapViewInner({ markers, center }: MapViewInnerProps) {
       center={[center.lat, center.lng]}
       zoom={11}
       scrollWheelZoom={false}
-      style={{ height: '320px', width: '100%', borderRadius: '1rem' }}
+      // Own stacking context: Leaflet's panes use z-index 400-1000 and would otherwise paint over the sticky header (z-50).
+      style={{ height: '320px', width: '100%', borderRadius: '1rem', position: 'relative', zIndex: 0, isolation: 'isolate' }}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
