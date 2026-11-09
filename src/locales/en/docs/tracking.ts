@@ -9,7 +9,7 @@ export const tracking: DocSection = {
     s2: 'On each card, read the blood group and bags needed, the Critical or Normal badge, the status badge, and the three-stage progress bar: Posted, Found, Done.',
     s3: 'See the donation place and area, how many donors have already pledged out of the bags needed, and the attendant\'s name if one was given. Tap a phone number to call.',
     s4: 'Open Answers to see who has offered to donate. Their phone numbers show only when you manage the request; otherwise just their names appear.',
-    s5: 'For a request you manage (its manage token is remembered in this browser, or it is your own signed-in request), use the buttons at the bottom: Mark donor found, Mark completed, Cancel, or Back to pending, depending on the current status. Confirm the prompt for Cancel and Mark completed.',
+    s5: 'When the first donor answers, the request moves to Donor Found by itself. For a request you manage (its manage token is remembered in this browser, or it is your own signed-in request), use the buttons at the bottom: Mark completed (it asks who actually donated), Cancel, or Back to pending, depending on the current status; Mark donor found appears only while nobody has answered yet. Confirm the prompt for Cancel.',
     s6: 'Press Share to copy the request\'s post text, or Post Blood Request at the top to open Create SOS Request. Press Load more if a tab holds more requests than fit on one page.',
   },
   tips: {

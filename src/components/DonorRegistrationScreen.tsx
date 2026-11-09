@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useMemo, useState } from 'react';
 import { ScreenId, Donor, BloodGroup } from '../types/blood';
 import { sound } from '../utils/audio';
-import { isValidBdPhone } from '../utils/phone';
+import { formatBdPhoneIntl, isValidBdPhone } from '../utils/phone';
 import { useClaimDonorMutation, useGetDonorQuery, useGetDonorsQuery, useRegisterDonorMutation, useUpdateDonorMutation } from '../store/api';
 import { isDatabaseOff } from '../store/errors';
 import { browserStorage as donorStorage, announceDonorProfileChange, readMyDonorProfiles, rememberDonor } from '../lib/myDonorProfile';
@@ -193,7 +193,7 @@ export const DonorRegistrationScreen: React.FC<DonorRegistrationScreenProps> = (
       commuteEtaMin: 12,
       vehicle,
       languages: ['Bangla', 'English'],
-      phone: trimmedPhone.startsWith('+880') ? trimmedPhone : `+880 ${trimmedPhone}`,
+      phone: formatBdPhoneIntl(trimmedPhone),
       avatarUrl: gender === 'Female'
         ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
         : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'

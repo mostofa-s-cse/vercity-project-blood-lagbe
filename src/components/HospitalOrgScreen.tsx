@@ -427,7 +427,7 @@ export const HospitalOrgScreen: React.FC<HospitalOrgScreenProps> = ({
               {t.hospitals.switchFacility}
             </span>
             <select
-              value={selectedOrgId}
+              value={selectedOrg.id}
               onChange={(e) => {
                 setSelectedOrgId(e.target.value);
                 sound.playTap();

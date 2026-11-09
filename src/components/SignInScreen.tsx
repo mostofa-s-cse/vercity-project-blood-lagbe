@@ -7,6 +7,7 @@ import { safeNextPath } from '../lib/safeRedirect';
 import { localizedPath } from '../utils/routes';
 import { isValidBdPhone } from '../utils/phone';
 import { BLOOD_GROUPS } from '../lib/validation';
+import { demoAccountsEnabled } from '../lib/demoAccounts';
 
 interface SignInScreenProps {
   onNavigate: (screen: ScreenId) => void;
@@ -21,6 +22,8 @@ const DEMO_ACCOUNTS = [
   { email: 'hospital-demo@bloodlagbe.test', role: 'demoRoleHospital' },
   { email: 'admin-demo@bloodlagbe.test', role: 'demoRoleAdmin' },
 ] as const;
+// Literal env access so Next.js inlines it at build time.
+const SHOW_DEMO_ACCOUNTS = demoAccountsEnabled(process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
@@ -350,7 +353,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onNavigate }) => {
         </button>
         */}
 
-        {mode === 'signin' && (
+        {SHOW_DEMO_ACCOUNTS && mode === 'signin' && (
           <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">{t.auth.demoTitle}</p>
             <ul className="flex flex-col gap-2">
